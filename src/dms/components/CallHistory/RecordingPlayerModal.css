@@ -1,0 +1,20 @@
+/* Recording Player Modal - Simple & Clean */
+.recording-player-modal .MuiIconButton-root {
+    transition: all 0.2s ease;
+}
+
+.recording-player-modal .MuiIconButton-root:hover {
+    transform: scale(1.05);
+}
+
+.recording-player-modal .MuiSlider-root {
+    transition: all 0.2s ease;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    .recording-player-modal .MuiDialog-paper {
+        margin: 16px;
+        width: calc(100% - 32px);
+    }
+}

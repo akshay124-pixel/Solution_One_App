@@ -1,0 +1,636 @@
+/* Navbar */
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #2575fc, #6a11cb);
+  padding: 10px 30px;
+  color: #fff;
+  font-family: "Arial", sans-serif;
+  box-shadow: none !important;
+  border-bottom: none !important;
+  margin-bottom: 0 !important;
+}
+
+/* Logo */
+.navbar-logo .logo-text {
+  font-size: 24px;
+  color: #fff;
+  text-decoration: none;
+  font-weight: bold;
+  transition: color 0.3s ease;
+}
+
+.navbar-logo .logo-text:hover {
+  color: #3498db;
+}
+
+/* Navbar Links */
+.navbar-links {
+  display: flex;
+  gap: 30px;
+}
+
+.navbar-links .nav-link {
+  text-decoration: none;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.navbar-links .nav-link:hover {
+  color: #3498db;
+}
+
+/* User Profile Section */
+.navbar-user {
+  display: flex;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #34495e;
+  padding: 5px 15px;
+  border-radius: 30px;
+  transition: background 0.3s ease;
+}
+
+.user-profile:hover {
+  background: #3498db;
+}
+
+.user-avatar {
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+}
+
+.user-name {
+  font-size: 16px;
+  color: #fff;
+  font-weight: 500;
+}
+
+/* Dropdown Menu */
+.dropdown-menu {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  background: #34495e;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  width: 180px;
+  z-index: 10;
+  transition: opacity 0.3s ease;
+}
+
+.dropdown-item {
+  padding: 10px 20px;
+  text-decoration: none;
+  color: #fff;
+  font-size: 14px;
+  display: block;
+  transition: background 0.3s ease;
+}
+
+.dropdown-item:hover {
+  background: #3498db;
+}
+
+/* Responsive Navbar */
+@media (max-width: 768px) {
+  .navbar {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px;
+  }
+
+  .navbar-links {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+/* Navbar End */
+/* Login SignUp Forms */
+.form-box {
+  max-width: 300px;
+  background: #f1f7fe;
+  overflow: hidden;
+  border-radius: 16px;
+  color: #010101;
+}
+
+.form {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 24px 24px;
+  gap: 16px;
+  text-align: center;
+}
+
+/*Form text*/
+.title {
+  font-weight: bold;
+  font-size: 1.6rem;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: #666;
+}
+
+/*Inputs box*/
+.form-container {
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: #fff;
+  margin: 1rem 0 0.5rem;
+  width: 100%;
+}
+
+.input {
+  background: none;
+  border: 0;
+  outline: 0;
+  height: 40px;
+  width: 100%;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+  padding: 8px 15px;
+}
+
+.form-section {
+  padding: 16px;
+  font-size: 0.85rem;
+  background-color: #e0ecfb;
+  box-shadow: rgb(0 0 0 / 8%) 0 -1px;
+}
+
+.form-section a {
+  font-weight: bold;
+  color: #0066ff;
+  transition: color 0.3s ease;
+}
+
+.form-section a:hover {
+  color: #005ce6;
+  text-decoration: underline;
+}
+
+/*Button*/
+.form button {
+  background: linear-gradient(135deg, #2575fc, #6a11cb);
+  color: #fff;
+  border: 0;
+  border-radius: 24px;
+  padding: 10px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.form button:hover {
+  background-color: #005ce6;
+}
+
+/* End Here */
+/* Logout btn */
+
+.Btn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 38px;
+  margin-right: 50px;
+  height: 38px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition-duration: 0.3s;
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.199);
+  background-color: rgb(243, 36, 36);
+}
+
+/* plus sign */
+.sign {
+  width: 100%;
+  transition-duration: 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sign svg {
+  width: 17px;
+}
+
+.sign svg path {
+  fill: white;
+}
+
+/* text */
+.text {
+  position: absolute;
+  right: 0%;
+  width: 0%;
+  opacity: 0;
+  color: white;
+  font-size: 1.2em;
+  font-weight: 600;
+  transition-duration: 0.3s;
+}
+
+/* hover effect on button width */
+.Btn:hover {
+  width: 125px;
+  border-radius: 40px;
+  transition-duration: 0.3s;
+}
+
+.Btn:hover .sign {
+  width: 30%;
+  transition-duration: 0.3s;
+  padding-left: 20px;
+}
+
+/* hover effect button's text */
+.Btn:hover .text {
+  opacity: 1;
+  width: 70%;
+  transition-duration: 0.3s;
+  padding-right: 10px;
+}
+
+/* button click effect*/
+.Btn:active {
+  transform: translate(2px, 2px);
+}
+
+/* Logout End */
+/* Container Styling */
+.container {
+  padding: 20px;
+
+  font-family: Arial, sans-serif;
+  color: #333;
+  min-height: 100vh;
+}
+
+/* Heading Styling */
+.heading {
+  font-size: 28px;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 20px;
+  text-align: center;
+  background: linear-gradient(135deg, #2575fc, #6a11cb);
+  padding: 12px;
+  border-radius: 8px;
+}
+
+/* Add Button Styling */
+.add-button {
+  background: linear-gradient(135deg, #2575fc, #6a11cb);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition:
+    background-color 0.3s ease,
+    transform 0.2s ease;
+  margin-bottom: 20px;
+  display: block;
+  width: 100%;
+  max-width: 250px;
+  margin: 0 auto 20px;
+}
+
+.add-button:hover {
+  background: linear-gradient(135deg, #6a11cb, #2575fc);
+  transform: translateY(-2px);
+}
+
+/* Table Wrapper Styling */
+.table-wrapper {
+  overflow-x: auto;
+  max-height: 550px;
+
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+/* Table Styling */
+.sales-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sales-table th,
+.sales-table td {
+  padding: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  text-align: left;
+  font-size: 14px;
+  color: #333;
+  white-space: nowrap;
+}
+
+/* Single Gradient Table Header */
+.sales-table thead tr {
+  background: linear-gradient(135deg, #2575fc, #6a11cb);
+}
+
+.sales-table th {
+  font-weight: bold;
+  color: #fff;
+  text-align: center;
+}
+
+/* Table Row Styling */
+.sales-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.sales-table tbody tr:hover {
+  background-color: #f1f1f1;
+  transition: background-color 0.2s ease;
+}
+
+/* Status Column Color Coding */
+.sales-table td:nth-child(5) {
+  font-weight: bold;
+}
+
+.sales-table td:nth-child(5)::before {
+  content: "\2022";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  border-radius: 50%;
+}
+
+/* Responsive Styling */
+@media (max-width: 768px) {
+  .add-button {
+    width: 100%;
+    padding: 14px;
+  }
+
+  .sales-table th,
+  .sales-table td {
+    padding: 10px;
+    font-size: 12px;
+  }
+
+  .heading {
+    font-size: 24px;
+  }
+}
+
+/* Edit Button */
+.editBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  border: none;
+  background-color: rgb(93, 93, 116);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.123);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  transition: all 0.3s;
+}
+
+.editBtn::before {
+  content: "";
+  width: 200%;
+  height: 200%;
+  background-color: rgb(102, 102, 141);
+  position: absolute;
+  z-index: 1;
+  transform: scale(0);
+  transition: all 0.3s;
+  border-radius: 50%;
+  filter: blur(10px);
+}
+
+.editBtn:hover::before {
+  transform: scale(1);
+}
+
+.editBtn:hover {
+  box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.336);
+}
+
+.editBtn svg {
+  height: 17px;
+  fill: white;
+  z-index: 3;
+  transition: all 0.2s;
+  transform-origin: bottom;
+}
+
+.editBtn:hover svg {
+  transform: rotate(-15deg) translateX(5px);
+}
+
+.editBtn::after {
+  content: "";
+  width: 20px;
+  height: 1.9px;
+  position: absolute;
+  bottom: 11px;
+  left: -5px;
+  background-color: white;
+  border-radius: 2px;
+  z-index: 2;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s ease-out;
+}
+
+.editBtn:hover::after {
+  transform: scaleX(1);
+  left: 0px;
+  transform-origin: right;
+}
+
+/* Edit Button end */
+/* Delete bUtton */
+
+.bin-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  background-color: rgb(255, 95, 95);
+  cursor: pointer;
+  border: 3px solid rgb(255, 95, 95);
+  transition-duration: 0.3s;
+}
+
+.bin-bottom {
+  width: 15px;
+}
+
+.bin-top {
+  width: 14px;
+  transform-origin: right;
+  transition-duration: 0.3s;
+}
+
+.bin-button:hover .bin-top {
+  transform: rotate(45deg);
+}
+
+.bin-button:hover {
+  background-color: rgb(255, 0, 0);
+}
+
+.bin-button:active {
+  transform: scale(0.9);
+}
+
+/* End Delete Button */
+/* Footer */
+.footer-container {
+  background: linear-gradient(135deg, #2575fc, #6a11cb);
+  color: #ffffff;
+  padding: 1px;
+
+  text-align: center;
+}
+
+/* Footer End */
+
+/* Install */
+.total-results {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #333;
+
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+/* End Install */
+/* Install Email Spinner */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-top: 2.5px solid #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  box-sizing: border-box;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.mail-btn {
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.mail-btn:hover:not(:disabled) {
+  transform: scale(1.1);
+}
+
+.mail-btn.loading {
+  opacity: 0.85;
+  cursor: not-allowed;
+}
+/* Ends Install Email Spinner */
+
+/* Custom Pagination Styles */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+}
+
+.page-item .page-link {
+  color: #6a11cb;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px; /* Rounded corners */
+  margin: 0 3px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+}
+
+.page-item .page-link:hover {
+  background: linear-gradient(135deg, #2575fc, #6a11cb);
+  color: #fff;
+  border-color: transparent;
+  transform: translateY(-2px); /* Lift effect */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.page-item.active .page-link {
+  background: linear-gradient(135deg, #2575fc, #6a11cb);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 8px rgba(37, 117, 252, 0.4); /* Glow effect matching active color */
+}
+
+.page-item.disabled .page-link {
+  background-color: #f8f9fa;
+  color: #ccc;
+  border-color: #e0e0e0;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Pagination Arrow alignment */
+.page-item:first-child .page-link,
+.page-item:last-child .page-link {
+  border-top-left-radius: 8px; /* Consistent radius */
+  border-bottom-left-radius: 8px;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}

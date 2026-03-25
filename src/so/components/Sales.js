@@ -1296,7 +1296,7 @@ const Sales = () => {
     })();
 
     const socket = io(baseOrigin, {
-      path: "/sales/socket.io",
+      path: process.env.REACT_APP_SO_SOCKET_PATH || "/sales/socket.io",
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 5,

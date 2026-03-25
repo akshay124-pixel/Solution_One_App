@@ -924,7 +924,7 @@ function DashBoard() {
       })();
       socket = io(baseOrigin, {
         auth: { token: `Bearer ${token}` },
-        path: "/crm/socket.io",
+        path: process.env.REACT_APP_CRM_SOCKET_PATH || "/crm/socket.io",
         withCredentials: true,
         reconnection: true,
         reconnectionAttempts: 5,

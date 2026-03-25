@@ -47,7 +47,7 @@ const Navbar = () => {
     if (isAuthenticated) {
       const socketInstance = io(baseOrigin, {
         auth: { token: `Bearer ${getAccessToken()}` },
-        path: "/crm/socket.io",
+        path: process.env.REACT_APP_CRM_SOCKET_PATH || "/crm/socket.io",
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,

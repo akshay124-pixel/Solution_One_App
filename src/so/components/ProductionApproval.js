@@ -44,7 +44,7 @@ const ProductionApproval = () => {
     })();
 
     const socket = io(baseOrigin, {
-      path: "/sales/socket.io",
+      path: process.env.REACT_APP_SO_SOCKET_PATH || "/sales/socket.io",
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,

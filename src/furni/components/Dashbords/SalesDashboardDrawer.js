@@ -221,7 +221,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose, userRole }) => {
     if (isOpen) {
       fetchOrders();
       const socket = io(socketOrigin, {
-        path: "/furni/socket.io",
+        path: process.env.REACT_APP_FURNI_SOCKET_PATH || "/furni/socket.io",
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,

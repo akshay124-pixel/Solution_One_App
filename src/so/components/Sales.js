@@ -1094,7 +1094,20 @@ const Sales = () => {
   const [trackerFilter, setTrackerFilter] = useState("all");
   // TeamBuilder: Controls open/close state of the TeamBuilder modal
   const [isTeamBuilderOpen, setIsTeamBuilderOpen] = useState(false);
-  const userRole = localStorage.getItem("role");
+  // Normalize role to SO-style casing so checks work regardless of
+  // whether localStorage was set before or after syncLocalStorage ran.
+  // e.g. "admin" → "Admin", "globaladmin" → "GlobalAdmin", "superadmin" → "SuperAdmin"
+  const SO_ROLE_MAP = {
+    globaladmin: "GlobalAdmin",
+    superadmin:  "SuperAdmin",
+    admin:       "Admin",
+    Admin:       "Admin",
+    salesperson: "salesperson",
+    others:      "salesperson",
+    Sales:       "salesperson",
+  };
+  const rawRole = localStorage.getItem("role") || "";
+  const userRole = SO_ROLE_MAP[rawRole] || rawRole;
   // TeamBuilder: Logged-in user's ID, passed to TeamBuilder for ownership checks
   const userId = localStorage.getItem("userId");
   const [loading, setLoading] = useState(false);

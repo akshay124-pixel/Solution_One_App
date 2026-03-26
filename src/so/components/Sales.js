@@ -1094,17 +1094,7 @@ const Sales = () => {
   const [trackerFilter, setTrackerFilter] = useState("all");
   // TeamBuilder: Controls open/close state of the TeamBuilder modal
   const [isTeamBuilderOpen, setIsTeamBuilderOpen] = useState(false);
-  // Normalize role: handles both raw JWT casing ("admin") and SO-mapped casing ("Admin")
-  // so the Manage Team visibility check works regardless of when syncLocalStorage ran.
-  const _rawRole = localStorage.getItem("role") || "";
-  const userRole = {
-    globaladmin: "GlobalAdmin", GlobalAdmin: "GlobalAdmin",
-    superadmin:  "SuperAdmin",  SuperAdmin:  "SuperAdmin",
-    admin:       "Admin",       Admin:       "Admin",
-    salesperson: "salesperson",
-    others:      "salesperson",
-    Sales:       "salesperson",
-  }[_rawRole] || _rawRole;
+  const userRole = localStorage.getItem("role");
   // TeamBuilder: Logged-in user's ID, passed to TeamBuilder for ownership checks
   const userId = localStorage.getItem("userId");
   const [loading, setLoading] = useState(false);

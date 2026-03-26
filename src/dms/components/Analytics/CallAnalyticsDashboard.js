@@ -73,9 +73,9 @@ const CallAnalyticsDashboard = () => {
 
       // Using api instance for automatic token handling and refresh
       const [summaryRes, agentRes, trendsRes] = await Promise.all([
-        api.get(`/api/analytics/call-summary${queryString ? `?${queryString}` : ""}`),
-        api.get(`/api/analytics/agent-performance${queryString ? `?${queryString}` : ""}`),
-        api.get(`/api/analytics/call-trends?days=30${queryString ? `&${queryString}` : ""}`),
+        api.get(`/analytics/call-summary${queryString ? `?${queryString}` : ""}`),
+        api.get(`/analytics/agent-performance${queryString ? `?${queryString}` : ""}`),
+        api.get(`/analytics/call-trends?days=30${queryString ? `&${queryString}` : ""}`),
       ]);
 
       if (summaryRes.data.success) setSummary(summaryRes.data.data);
@@ -109,9 +109,9 @@ const CallAnalyticsDashboard = () => {
     try {
       // Using api instance for automatic token handling and refresh
       const [summaryRes, agentRes, trendsRes] = await Promise.all([
-        api.get("/api/analytics/call-summary"),
-        api.get("/api/analytics/agent-performance"),
-        api.get("/api/analytics/call-trends?days=30"),
+        api.get("/analytics/call-summary"),
+        api.get("/analytics/agent-performance"),
+        api.get("/analytics/call-trends?days=30"),
       ]);
 
       if (summaryRes.data.success) setSummary(summaryRes.data.data);

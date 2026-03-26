@@ -46,7 +46,7 @@ const SmartfloUserMapping = () => {
     setLoading(true);
     try {
       // Using api instance for automatic token handling and refresh
-      const response = await api.get("/api/smartflo/users");
+      const response = await api.get("/admin/smartflo/users");
 
       if (response.data.success) {
         setUsers(response.data.data);
@@ -84,7 +84,7 @@ const SmartfloUserMapping = () => {
 
       // Using api instance for automatic token handling and refresh
       const response = await api.put(
-        `/api/smartflo/users/${editDialog.user._id}/map`,
+        `/admin/smartflo/users/${editDialog.user._id}/map`,
         payload
       );
 

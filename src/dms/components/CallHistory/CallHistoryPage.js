@@ -138,7 +138,7 @@ const CallHistoryPage = () => {
         console.log("📞 Fetching call history with params:", params);
       }
       
-      const response = await api.get("/api/calls", {
+      const response = await api.get("/calls", {
         params,
       });
       
@@ -188,7 +188,7 @@ const CallHistoryPage = () => {
         console.log("📊 Fetching call stats with params:", params);
       }
       
-      const response = await api.get("/api/calls/stats", {
+      const response = await api.get("/calls/stats", {
         params,
       });
       
@@ -254,7 +254,7 @@ const CallHistoryPage = () => {
     const fetchAgents = async () => {
       if (userRole === "Admin" || userRole === "Superadmin" || userRole === "Globaladmin") {
         try {
-          const response = await api.get("/api/smartflo/users");
+          const response = await api.get("/admin/smartflo/users");
           if (response.data.success) {
             setAgents(response.data.data);
           }
@@ -342,7 +342,7 @@ const CallHistoryPage = () => {
       setLoading(true);
       
       // Smart cache refresh - only refresh call-related data
-      await api.post("/api/calls/refresh-cache", {
+      await api.post("/calls/refresh-cache", {
         dataType: 'calls',
         userId: null // Refresh for current user
       });
@@ -387,7 +387,7 @@ const CallHistoryPage = () => {
         format: "csv",
       };
       
-      const response = await api.post("/api/calls/export", payload, {
+      const response = await api.post("/calls/export", payload, {
         responseType: "blob",
       });
       

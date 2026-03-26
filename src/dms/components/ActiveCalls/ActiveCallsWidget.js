@@ -28,8 +28,6 @@ const ActiveCallsWidget = () => {
   const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   
-  const API_BASE = process.env.REACT_APP_PORTAL_URL || "http://localhost:5050";
-  
   useEffect(() => {
     fetchActiveCalls();
     
@@ -48,7 +46,7 @@ const ActiveCallsWidget = () => {
   
   const fetchActiveCalls = async () => {
     try {
-      const response = await api.get(`${API_BASE}/api/dms/active-calls/active`);
+      const response = await api.get("/active-calls");
       if (response.data.success) {
         setActiveCalls(response.data.data);
       }
@@ -66,7 +64,7 @@ const ActiveCallsWidget = () => {
     
     try {
       const response = await api.post(
-        `${API_BASE}/api/dms/active-calls/active/${callId}/hangup`,
+        `/active-calls/${callId}/hangup`,
         {}
       );
       if (response.data.success) {

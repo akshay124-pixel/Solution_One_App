@@ -19,19 +19,30 @@ function MailOptionsModal({ isOpen, onClose, entryId, entryData }) {
   const [showQuotationModal, setShowQuotationModal] = useState(false);
   const [sendingGreet, setSendingGreet] = useState(false);
 
-  // Handle Greet Mail - Reuse existing function
+  // Handle Greet Mail
   const handleGreetMail = async () => {
+    if (!entryData?.email?.trim()) {
+      toast.error("No email address found for this entry");
+      return;
+    }
+
     setSendingGreet(true);
     try {
-      const response = await api.post("/api/send-email", { entryId });
+      const customerName = entryData.customerName || entryData.contactName || "Valued Customer";
+      const payload = {
+        to: entryData.email.trim(),
+        subject: `Greetings from Our Team — ${customerName}`,
+        html: `<p>Dear ${customerName},</p><p>Thank you for your interest. We look forward to serving you.</p><p>Best regards,<br/>Our Team</p>`,
+        text: `Dear ${customerName},\n\nThank you for your interest. We look forward to serving you.\n\nBest regards,\nOur Team`,
+      };
+
+      console.log("[GreetMail] Sending payload:", { to: payload.to, subject: payload.subject });
+      const response = await api.post("/api/send-email", payload);
       toast.success(response.data.message || "Greeting email sent successfully!");
       onClose();
     } catch (error) {
-      console.error("Error sending greeting email:", error.message);
-      const errorMessage =
-        error.response?.data?.message ||
-        "Failed to send greeting email. Please try again later.";
-      toast.error(errorMessage);
+      console.error("Error sending greeting email:", error.response?.data || error.message);
+      toast.error(error.response?.data?.message || "Failed to send greeting email. Please try again later.");
     } finally {
       setSendingGreet(false);
     }

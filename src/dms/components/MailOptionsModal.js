@@ -21,8 +21,13 @@ function MailOptionsModal({ isOpen, onClose, entryId, entryData }) {
 
   // Handle Greet Mail - Reuse existing function
   const handleGreetMail = async () => {
+    if (!entryData?.email || !entryData.email.trim()) {
+      toast.error("No email address found for this entry. Please add an email before sending.");
+      return;
+    }
     setSendingGreet(true);
     try {
+      console.log("[MailOptionsModal] Sending greet email for entryId:", entryId);
       const response = await api.post("/api/send-email", { entryId });
       toast.success(response.data.message || "Greeting email sent successfully!");
       onClose();

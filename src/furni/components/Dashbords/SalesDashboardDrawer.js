@@ -340,7 +340,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose, userRole }) => {
               </DatePickerContainer>
             </DatePickerPopup>
             <ResetButton onClick={handleReset}><ArrowRight size={16} />Reset</ResetButton>
-            {(userRole === "SuperAdmin" || userRole === "GlobalAdmin") && (
+            {(userRole === "GlobalAdmin") && (
               <ExportButton onClick={handleExportToExcel}><Download size={18} />Export Excel</ExportButton>
             )}
             <CloseButton onClick={onClose}><X size={18} />Close</CloseButton>

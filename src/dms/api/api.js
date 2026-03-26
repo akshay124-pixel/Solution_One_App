@@ -6,7 +6,7 @@
 import axios from "axios";
 import { getPortalAccessToken, setPortalAccessToken } from "../../portal/PortalAuthContext";
 
-const BASE_URL = process.env.REACT_APP_DMS_URL || "http://localhost:5050/api/dms";
+const BASE_URL = (process.env.REACT_APP_PORTAL_URL || "http://localhost:5050") + "/api/dms";
 
 const api = axios.create({
   baseURL: BASE_URL,

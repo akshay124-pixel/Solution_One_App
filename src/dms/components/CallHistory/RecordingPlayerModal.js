@@ -84,7 +84,7 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
       // Strategy 1: Use enhanced server-side streaming endpoint (preferred)
       if (retryCount === 0) {
         console.log("✅ Strategy 1: Using enhanced server streaming endpoint");
-        const streamUrl = `/recordings/${call._id}/stream`;
+        const streamUrl = `/api/recordings/${call._id}/stream`;
         await fetchAndCreateBlobUrl(streamUrl);
         return;
       }
@@ -117,7 +117,7 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
       
       // Strategy 3: Fetch from recording metadata API
       console.log("🔄 Strategy 3: Fetching from metadata API");
-      const metadataResponse = await api.get(`/recordings/${call._id}`);
+      const metadataResponse = await api.get(`/api/recordings/${call._id}`);
       
       if (metadataResponse.data.success && metadataResponse.data.data?.recordingUrl) {
         console.log("✅ Strategy 3: Got URL from metadata");
@@ -170,7 +170,7 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
       // Build full URL if relative
       let fetchUrl = url;
       if (url.startsWith('/api/')) {
-        fetchUrl = `${process.env.REACT_APP_PORTAL_URL || 'http://localhost:5050'}/api/dms${url}`;
+        fetchUrl = `${process.env.REACT_APP_URL || 'http://localhost:4000'}${url}`;
       }
       
       console.log("🔗 Final fetch URL:", fetchUrl);

@@ -43,7 +43,7 @@ const CallLogModal = ({ open, onClose, leadId, leadName }) => {
     setLoading(true);
     try {
       // Using api instance for automatic token handling and refresh
-      const response = await api.get(`/api/dialer/call-logs/${leadId}`);
+      const response = await api.get(`/dialer/call-logs/${leadId}`);
 
       if (response.data.success) {
         setCallLogs(response.data.data);

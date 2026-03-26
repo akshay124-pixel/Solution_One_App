@@ -21,7 +21,7 @@ const ClickToCallButton = ({ leadId, phoneNumber, onCallInitiated, compact = fal
 
     try {
       // Using api instance for automatic token handling and refresh
-      const response = await api.post("/api/dialer/click-to-call", { leadId });
+      const response = await api.post("/dialer/click-to-call", { leadId });
 
       if (response.data.success) {
         toast.success("Call initiated! Your phone will ring first.");

@@ -28,7 +28,7 @@ function ViewEntry({ isOpen, onClose, entry, isAdmin, onEntryUpdated }) {
 
     try {
       // Using api instance for automatic token handling and refresh
-      const response = await api.get(`/api/dialer/scheduled-calls/${entry._id}`);
+      const response = await api.get(`/dialer/scheduled-calls/${entry._id}`);
 
       if (response.data.success && response.data.data.length > 0) {
         // Get the next pending scheduled call (sorted by time)

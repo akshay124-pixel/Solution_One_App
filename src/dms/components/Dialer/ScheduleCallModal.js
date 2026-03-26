@@ -67,7 +67,7 @@ const ScheduleCallModal = ({
 
     try {
       // Using api instance for automatic token handling and refresh
-      const response = await api.post("/api/dialer/schedule-call", {
+      const response = await api.post("/dialer/schedule-call", {
         leadId,
         scheduledTime,
         priority,

@@ -84,7 +84,7 @@ const ScheduledCallsManager = () => {
   const fetchScheduledCalls = async () => {
     try {
       // Using api instance for automatic token handling and refresh
-      const response = await api.get("/api/dialer/scheduled-calls");
+      const response = await api.get("/dialer/scheduled-calls");
       if (response.data.success) {
         setScheduledCalls(response.data.data);
       }
@@ -205,7 +205,7 @@ const ScheduledCallsManager = () => {
   const handleMarkComplete = async (callId) => {
     try {
       // Using api instance for automatic token handling and refresh
-      await api.patch(`/api/dialer/scheduled-calls/${callId}/complete`, {});
+      await api.patch(`/dialer/scheduled-calls/${callId}/complete`, {});
       toast.success("Call marked as completed!");
       fetchScheduledCalls();
     } catch (error) {
@@ -219,7 +219,7 @@ const ScheduledCallsManager = () => {
 
     try {
       // Using api instance for automatic token handling and refresh
-      await api.delete(`/api/dialer/scheduled-calls/${callToDelete}`);
+      await api.delete(`/dialer/scheduled-calls/${callToDelete}`);
       toast.success("Scheduled call deleted!");
       setDeleteDialogOpen(false);
       setCallToDelete(null);
@@ -233,7 +233,7 @@ const ScheduledCallsManager = () => {
   const handleInitiateCall = async (call) => {
     try {
       // Using api instance for automatic token handling and refresh
-      const response = await api.post("/api/dialer/click-to-call", { leadId: call.leadId._id });
+      const response = await api.post("/dialer/click-to-call", { leadId: call.leadId._id });
 
       if (response.data.success) {
         toast.success("Call initiated! Your phone will ring first.");

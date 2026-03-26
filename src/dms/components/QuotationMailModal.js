@@ -89,30 +89,17 @@ function QuotationMailModal({ isOpen, onClose, entryId, entryData }) {
 
     setLoading(true);
     try {
-      const totalAmount = (parseFloat(formData.price) * parseInt(formData.quantity)).toLocaleString("en-IN");
-      const customerName = entryData.customerName || entryData.contactName || "Valued Customer";
-
-      const payload = {
-        to: entryData.email.trim(),
-        subject: `Quotation for ${formData.productType.trim()} — ${customerName}`,
-        html: `
-          <p>Dear ${customerName},</p>
-          <p>Please find below the quotation details:</p>
-          <table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;max-width:500px;">
-            <tr><th style="background:#f3f4f6;text-align:left;">Product Type</th><td>${formData.productType.trim()}</td></tr>
-            <tr><th style="background:#f3f4f6;text-align:left;">Specification</th><td>${formData.specification.trim()}</td></tr>
-            <tr><th style="background:#f3f4f6;text-align:left;">Quantity</th><td>${parseInt(formData.quantity)}</td></tr>
-            <tr><th style="background:#f3f4f6;text-align:left;">Unit Price</th><td>₹${parseFloat(formData.price).toLocaleString("en-IN")}</td></tr>
-            <tr><th style="background:#f3f4f6;text-align:left;">Total Amount</th><td><strong>₹${totalAmount}</strong></td></tr>
-          </table>
-          <p>Please feel free to reach out for any queries.</p>
-          <p>Best regards,<br/>Our Team</p>
-        `,
-        text: `Dear ${customerName},\n\nQuotation Details:\nProduct Type: ${formData.productType.trim()}\nSpecification: ${formData.specification.trim()}\nQuantity: ${parseInt(formData.quantity)}\nUnit Price: ₹${parseFloat(formData.price).toLocaleString("en-IN")}\nTotal Amount: ₹${totalAmount}\n\nBest regards,\nOur Team`,
+      const quotationData = {
+        entryId,
+        productType: formData.productType.trim(),
+        specification: formData.specification.trim(),
+        quantity: parseInt(formData.quantity),
+        price: parseFloat(formData.price),
+        customerEmail: entryData.email,
+        customerName: entryData.customerName || entryData.contactName || "Valued Customer",
       };
 
-      console.log("[QuotationMail] Sending payload:", { to: payload.to, subject: payload.subject });
-      const response = await api.post("/api/send-quotation", payload);
+      const response = await api.post("/api/send-quotation", quotationData);
 
       toast.success(response.data.message || "Quotation email sent successfully!");
       onClose();

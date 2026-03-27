@@ -178,8 +178,17 @@ const BillGeneration = () => {
     toast.success("Order updated successfully!");
   };
 
-  const handleExportToXLSX = () => {
-    const tableData = filteredOrders.map((order, index) => ({
+ const handleExportToXLSX = () => {
+  // Prepare table data
+  const tableData = filteredOrders.map((order, index) => {
+    const totalUnitPrice = order.products
+      ? order.products.reduce(
+          (sum, p) => sum + (p.unitPrice || 0) * (p.qty || 0),
+          0
+        )
+      : 0;
+
+    return {
       "Seq No": index + 1,
       "Order ID": order.orderId || "-",
       "Customer Name": order.customername || "-",
@@ -187,7 +196,12 @@ const BillGeneration = () => {
       "SO Date": order.soDate
         ? new Date(order.soDate).toLocaleDateString("en-GB")
         : "-",
+
       Total: order.total ? `₹${order.total.toFixed(2)}` : "₹0.00",
+
+      // 🔥 Added field
+      "Total Unit Price": `₹${totalUnitPrice.toFixed(2)}`,
+
       "Bill Number": order.billNumber || "-",
       "PI Number": order.piNumber || "-",
       "Invoice Date": order.invoiceDate
@@ -195,22 +209,57 @@ const BillGeneration = () => {
         : "-",
       "Bill Status": order.billStatus || "-",
       "Remarks by Billing": order.remarksByBilling || "-",
-      "Product Details": order.products
-        ? order.products.map((p) => `${p.productType} (${p.qty})`).join(", ")
-        : "-",
-    }));
 
-    const ws = XLSX.utils.json_to_sheet(tableData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Bill Orders");
-    XLSX.writeFile(wb, "Bill_Orders.xlsx");
-  };
+      "Product Details": order.products
+        ? order.products
+            .map((p) => `${p.productType} (${p.qty})`)
+            .join(", ")
+        : "-",
+    };
+  });
+
+  // 🔥 Grand Total calculation
+  const grandTotal = filteredOrders.reduce((acc, order) => {
+    const total = order.products
+      ? order.products.reduce(
+          (sum, p) => sum + (p.unitPrice || 0) * (p.qty || 0),
+          0
+        )
+      : 0;
+
+    return acc + total;
+  }, 0);
+
+  // 🔥 Add final total row
+  tableData.push({
+    "Seq No": "",
+    "Order ID": "TOTAL",
+    "Customer Name": "",
+    "Contact No": "",
+    "SO Date": "",
+    Total: "",
+    "Total Unit Price": `₹${grandTotal.toFixed(2)}`,
+    "Bill Number": "",
+    "PI Number": "",
+    "Invoice Date": "",
+    "Bill Status": "",
+    "Remarks by Billing": "",
+    "Product Details": "",
+  });
+
+  // Create Excel sheet
+  const ws = XLSX.utils.json_to_sheet(tableData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Bill Orders");
+
+  // Download file
+  XLSX.writeFile(wb, "Bill_Orders.xlsx");
+};
 
   // Calculate total pending orders (billStatus === "Pending")
   const totalPending = filteredOrders.filter(
     (order) => order.billStatus === "Pending",
   ).length;
-
   return (
     <>
       <style>

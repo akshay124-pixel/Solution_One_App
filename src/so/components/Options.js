@@ -49,6 +49,14 @@ export const productOptions = {
       "i5 8th Gen, 16GB RAM, 512GB ROM",
       "i5 8th Gen, 16GB RAM, 1TB ROM",
 
+      // i5 10th Gen
+      "i5 10th Gen, 8GB RAM, 256GB ROM",
+      "i5 10th Gen, 8GB RAM, 512GB ROM",
+      "i5 10th Gen, 8GB RAM, 1TB ROM",
+      "i5 10th Gen, 16GB RAM, 256GB ROM",
+      "i5 10th Gen, 16GB RAM, 512GB ROM",
+      "i5 10th Gen, 16GB RAM, 1TB ROM",
+
       // i5 11th Gen
       "i5 11th Gen, 8GB RAM, 256GB ROM",
       "i5 11th Gen, 8GB RAM, 512GB ROM",
@@ -406,6 +414,10 @@ export const productOptions = {
   "Almirah Type Shutter": {
     sizes: ["65 inch", "75 inch", "86 inch", "98  inch"],
     specs: ["Plain", "White Boards", "Green Boards"],
+  },
+   "K-12 Content": {
+    sizes: ["Standard"],
+    specs: ["Standard"],
   },
   Aicharya: {
     sizes: ["N/A"],
@@ -963,6 +975,7 @@ export const statesAndCities = {
     "Amritsar",
     "Bathinda",
     "Barnala",
+    "Derabassi",
     "Faridkot",
     "Fatehgarh Sahib",
     "Fazilka",
@@ -1432,6 +1445,7 @@ export const salesPersonlist = [
   { label: "Manjit Singh Chowhan", value: "Manjit Singh Chowhan" },
   { label: "Mayank Goutam", value: "Mayank Goutam" },
   { label: "Mayank Prasad", value: "Mayank Prasad" },
+  { label: "Mukul Kubba", value: "Mukul Kubba" },
   { label: "Monika", value: "Monika" },
   { label: "Muskan", value: "Muskan" },
   { label: "Nikhil Sharma", value: "Nikhil Sharma" },
@@ -1458,6 +1472,7 @@ export const salesPersonlist = [
   { label: "Ramkumar Singh", value: "Ramkumar Singh" },
   { label: "Ranbeer Kaur", value: "Ranbeer Kaur" },
   { label: "Rachit Arya", value: "Rachit Arya" },
+  { label: "Rahul", value: "Rahul" },
   { label: "Rohit Kumar Tiwari", value: "Rohit Kumar Tiwari" },
   { label: "Ritik Poddar", value: "Ritik Poddar" },
   { label: "Shadab Khan", value: "Shadab Khan" },
@@ -1519,6 +1534,7 @@ export const Reportinglist = [
   { label: "Rajeev Kumar Singh", value: "Rajeev Kumar Singh" },
   { label: "Rajeev Pal Singh", value: "Rajeev Pal Singh" },
   { label: "Sahil Gupta", value: "Sahil Gupta" },
+  { label: "Susheel Kumar", value: "Susheel Kumar" },
   { label: "Sahil Kapoor", value: "Sahil Kapoor" },
   { label: "Sukhvir Singh", value: "Sukhvir Singh" },
   { label: "Savir Khan", value: "Savir Khan" },

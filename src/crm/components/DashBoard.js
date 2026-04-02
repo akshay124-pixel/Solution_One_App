@@ -909,15 +909,6 @@ function DashBoard() {
     [usernames, fetchAnalyticsEntries, applyStatsDelta, matchesContext],
   );
 
-  // Keep latest handlers in refs so socket listeners always use fresh values
-  // without needing to reconnect when filters change
-  const matchesContextRef = useRef(matchesContext);
-  const matchesRoleAccessRef = useRef(matchesRoleAccess);
-  const applyStatsDeltaRef = useRef(applyStatsDelta);
-  useEffect(() => { matchesContextRef.current = matchesContext; }, [matchesContext]);
-  useEffect(() => { matchesRoleAccessRef.current = matchesRoleAccess; }, [matchesRoleAccess]);
-  useEffect(() => { applyStatsDeltaRef.current = applyStatsDelta; }, [applyStatsDelta]);
-
   useEffect(() => {
     if (!isAuthenticated) return;
     const token = getAccessToken();
@@ -934,7 +925,6 @@ function DashBoard() {
       socket = io(baseOrigin, {
         auth: { token: `Bearer ${token}` },
         path: process.env.REACT_APP_CRM_SOCKET_PATH || "/crm/socket.io",
-        transports: ["websocket", "polling"],
         withCredentials: true,
         reconnection: true,
         reconnectionAttempts: 5,
@@ -942,52 +932,70 @@ function DashBoard() {
         reconnectionDelayMax: 5000,
       });
 
-      socket.on("connect", () => {
-        console.log("[CRM] Dashboard socket connected:", socket.id);
-      });
-      socket.on("connect_error", (err) => {
-        console.error("[CRM] Dashboard socket error:", err.message);
-      });
-
       const handleCreated = (entry) => {
         const idStr = getId(entry);
+
+        // DEDUPLICATION: Check if this entry was already processed (by local handleEntryAdded)
         if (wasRecent(idStr, "created")) return;
-        if (!matchesRoleAccessRef.current(entry)) return;
-        if (!matchesContextRef.current(entry)) return;
+
+        if (!matchesRoleAccess(entry)) return;
+        if (!matchesContext(entry)) return; // Strict Context Check
+
+        // Mark as processed immediately
         recordOp(idStr, "created");
+
         let existed = false;
         setEntries((prev) => {
           existed = prev.some((e) => getId(e) === idStr);
           const filtered = prev.filter((e) => getId(e) !== idStr);
-          return [entry, ...filtered].sort((a, b) => {
+          const next = [entry, ...filtered].sort((a, b) => {
+            // Force latest first
             const aU = new Date(a.updatedAt || a.createdAt || 0).getTime();
             const bU = new Date(b.updatedAt || b.createdAt || 0).getTime();
             if (bU !== aU) return bU - aU;
-            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+            const aC = new Date(a.createdAt || 0).getTime();
+            const bC = new Date(b.createdAt || 0).getTime();
+            return bC - aC;
           });
+          return next;
         });
+
         if (!existed) {
-          applyStatsDeltaRef.current(null, entry);
+          applyStatsDelta(null, entry);
           setPagination((prev) => ({ ...prev, total: prev.total + 1 }));
         }
       };
 
       const handleUpdated = (entry) => {
+        const passesRole = matchesRoleAccess(entry);
+        const isVisible = passesRole && matchesContext(entry); // Strict Visibility Check
         const idStr = getId(entry);
-        const isVisible = matchesRoleAccessRef.current(entry) && matchesContextRef.current(entry);
+
         setEntries((prev) => {
           const prevEntry = prev.find((e) => getId(e) === getId(entry));
-          let arr = isVisible
-            ? [entry, ...prev.filter((e) => getId(e) !== getId(entry))]
-            : prev.filter((e) => getId(e) !== getId(entry));
-          if (!wasRecent(idStr, "updated")) {
-            applyStatsDeltaRef.current(prevEntry, entry);
+          let arr = prev;
+
+          if (isVisible) {
+            // Update or Add (if newly matching filter)
+            const filtered = prev.filter((e) => getId(e) !== getId(entry));
+            arr = [entry, ...filtered];
+          } else {
+            // Remove (if no longer matching filter or role)
+            arr = prev.filter((e) => getId(e) !== getId(entry));
           }
+
+          if (!wasRecent(idStr, "updated")) {
+            applyStatsDelta(prevEntry, entry);
+          }
+
           return arr.sort((a, b) => {
+            // Force latest first
             const aU = new Date(a.updatedAt || a.createdAt || 0).getTime();
             const bU = new Date(b.updatedAt || b.createdAt || 0).getTime();
             if (bU !== aU) return bU - aU;
-            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+            const aC = new Date(a.createdAt || 0).getTime();
+            const bC = new Date(b.createdAt || 0).getTime();
+            return bC - aC;
           });
         });
       };
@@ -997,30 +1005,44 @@ function DashBoard() {
       socket.on("entryDeleted", ({ _id }) => {
         const idStr = getId({ _id });
         let existed = false;
+        let deletedEntry = null;
+
         setEntries((prev) => {
           const prevEntry = prev.find((e) => getId(e) === idStr);
           existed = Boolean(prevEntry);
+          deletedEntry = prevEntry;
+
+          // FIXED: Apply stats delta for socket delete (if not already processed locally)
           if (prevEntry && !wasRecent(idStr, "deleted")) {
-            applyStatsDeltaRef.current(prevEntry, null);
+            applyStatsDelta(prevEntry, null);
           }
+
           return prev
             .filter((e) => getId(e) !== idStr)
             .sort((a, b) => {
               const aU = new Date(a.updatedAt || a.createdAt || 0).getTime();
               const bU = new Date(b.updatedAt || b.createdAt || 0).getTime();
               if (bU !== aU) return bU - aU;
-              return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+              const aC = new Date(a.createdAt || 0).getTime();
+              const bC = new Date(b.createdAt || 0).getTime();
+              return bC - aC;
             });
         });
+
         if (existed) {
-          setPagination((prev) => ({ ...prev, total: Math.max(0, prev.total - 1) }));
+          setPagination((prev) => ({
+            ...prev,
+            total: Math.max(0, prev.total - 1),
+          }));
         }
       });
     } catch (err) { }
     return () => {
-      try { socket && socket.disconnect(); } catch { }
+      try {
+        socket && socket.disconnect();
+      } catch { }
     };
-  }, [isAuthenticated, userId]);
+  }, [matchesContext, matchesRoleAccess, applyStatsDelta]);
 
   const handleDelete = useCallback(
     (deletedIds) => {

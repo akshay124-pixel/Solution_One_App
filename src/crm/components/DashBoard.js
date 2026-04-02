@@ -909,6 +909,21 @@ function DashBoard() {
     [usernames, fetchAnalyticsEntries, applyStatsDelta, matchesContext],
   );
 
+  // Keep stable refs to the latest callbacks so the socket effect never needs to re-run
+  const matchesContextRef = useRef(matchesContext);
+  const matchesRoleAccessRef = useRef(matchesRoleAccess);
+  const applyStatsDeltaRef = useRef(applyStatsDelta);
+  const wasRecentRef = useRef(wasRecent);
+  const recordOpRef = useRef(recordOp);
+  const getIdRef = useRef(getId);
+
+  useEffect(() => { matchesContextRef.current = matchesContext; }, [matchesContext]);
+  useEffect(() => { matchesRoleAccessRef.current = matchesRoleAccess; }, [matchesRoleAccess]);
+  useEffect(() => { applyStatsDeltaRef.current = applyStatsDelta; }, [applyStatsDelta]);
+  useEffect(() => { wasRecentRef.current = wasRecent; }, [wasRecent]);
+  useEffect(() => { recordOpRef.current = recordOp; }, [recordOp]);
+  useEffect(() => { getIdRef.current = getId; }, [getId]);
+
   useEffect(() => {
     if (!isAuthenticated) return;
     const token = getAccessToken();
@@ -928,28 +943,34 @@ function DashBoard() {
         withCredentials: true,
         reconnection: true,
         reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
+        reconnectionDelay: 2000,
+        reconnectionDelayMax: 10000,
+      });
+
+      // Stop reconnecting if the server rejects auth (expired/invalid token)
+      socket.on("connect_error", (err) => {
+        if (err.message && err.message.toLowerCase().includes("authentication")) {
+          socket.io.reconnection(false);
+        }
       });
 
       const handleCreated = (entry) => {
-        const idStr = getId(entry);
+        const idStr = getIdRef.current(entry);
 
         // DEDUPLICATION: Check if this entry was already processed (by local handleEntryAdded)
-        if (wasRecent(idStr, "created")) return;
+        if (wasRecentRef.current(idStr, "created")) return;
 
-        if (!matchesRoleAccess(entry)) return;
-        if (!matchesContext(entry)) return; // Strict Context Check
+        if (!matchesRoleAccessRef.current(entry)) return;
+        if (!matchesContextRef.current(entry)) return; // Strict Context Check
 
         // Mark as processed immediately
-        recordOp(idStr, "created");
+        recordOpRef.current(idStr, "created");
 
         let existed = false;
         setEntries((prev) => {
-          existed = prev.some((e) => getId(e) === idStr);
-          const filtered = prev.filter((e) => getId(e) !== idStr);
+          existed = prev.some((e) => getIdRef.current(e) === idStr);
+          const filtered = prev.filter((e) => getIdRef.current(e) !== idStr);
           const next = [entry, ...filtered].sort((a, b) => {
-            // Force latest first
             const aU = new Date(a.updatedAt || a.createdAt || 0).getTime();
             const bU = new Date(b.updatedAt || b.createdAt || 0).getTime();
             if (bU !== aU) return bU - aU;
@@ -961,35 +982,32 @@ function DashBoard() {
         });
 
         if (!existed) {
-          applyStatsDelta(null, entry);
+          applyStatsDeltaRef.current(null, entry);
           setPagination((prev) => ({ ...prev, total: prev.total + 1 }));
         }
       };
 
       const handleUpdated = (entry) => {
-        const passesRole = matchesRoleAccess(entry);
-        const isVisible = passesRole && matchesContext(entry); // Strict Visibility Check
-        const idStr = getId(entry);
+        const passesRole = matchesRoleAccessRef.current(entry);
+        const isVisible = passesRole && matchesContextRef.current(entry);
+        const idStr = getIdRef.current(entry);
 
         setEntries((prev) => {
-          const prevEntry = prev.find((e) => getId(e) === getId(entry));
+          const prevEntry = prev.find((e) => getIdRef.current(e) === getIdRef.current(entry));
           let arr = prev;
 
           if (isVisible) {
-            // Update or Add (if newly matching filter)
-            const filtered = prev.filter((e) => getId(e) !== getId(entry));
+            const filtered = prev.filter((e) => getIdRef.current(e) !== getIdRef.current(entry));
             arr = [entry, ...filtered];
           } else {
-            // Remove (if no longer matching filter or role)
-            arr = prev.filter((e) => getId(e) !== getId(entry));
+            arr = prev.filter((e) => getIdRef.current(e) !== getIdRef.current(entry));
           }
 
-          if (!wasRecent(idStr, "updated")) {
-            applyStatsDelta(prevEntry, entry);
+          if (!wasRecentRef.current(idStr, "updated")) {
+            applyStatsDeltaRef.current(prevEntry, entry);
           }
 
           return arr.sort((a, b) => {
-            // Force latest first
             const aU = new Date(a.updatedAt || a.createdAt || 0).getTime();
             const bU = new Date(b.updatedAt || b.createdAt || 0).getTime();
             if (bU !== aU) return bU - aU;
@@ -1003,22 +1021,19 @@ function DashBoard() {
       socket.on("entryCreated", handleCreated);
       socket.on("entryUpdated", handleUpdated);
       socket.on("entryDeleted", ({ _id }) => {
-        const idStr = getId({ _id });
+        const idStr = getIdRef.current({ _id });
         let existed = false;
-        let deletedEntry = null;
 
         setEntries((prev) => {
-          const prevEntry = prev.find((e) => getId(e) === idStr);
+          const prevEntry = prev.find((e) => getIdRef.current(e) === idStr);
           existed = Boolean(prevEntry);
-          deletedEntry = prevEntry;
 
-          // FIXED: Apply stats delta for socket delete (if not already processed locally)
-          if (prevEntry && !wasRecent(idStr, "deleted")) {
-            applyStatsDelta(prevEntry, null);
+          if (prevEntry && !wasRecentRef.current(idStr, "deleted")) {
+            applyStatsDeltaRef.current(prevEntry, null);
           }
 
           return prev
-            .filter((e) => getId(e) !== idStr)
+            .filter((e) => getIdRef.current(e) !== idStr)
             .sort((a, b) => {
               const aU = new Date(a.updatedAt || a.createdAt || 0).getTime();
               const bU = new Date(b.updatedAt || b.createdAt || 0).getTime();
@@ -1042,7 +1057,8 @@ function DashBoard() {
         socket && socket.disconnect();
       } catch { }
     };
-  }, [matchesContext, matchesRoleAccess, applyStatsDelta]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]); // Only re-create socket when auth state changes, not on every filter change
 
   const handleDelete = useCallback(
     (deletedIds) => {

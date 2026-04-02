@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import api from "../../api/api";
 import {
   Paper,
@@ -27,35 +27,43 @@ const ActiveCallsWidget = () => {
   const [activeCalls, setActiveCalls] = useState([]);
   const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  
-  useEffect(() => {
-    fetchActiveCalls();
-    
-    // Auto-refresh every 5 seconds
-    let interval;
-    if (autoRefresh) {
-      interval = setInterval(() => {
-        fetchActiveCalls();
-      }, 5000);
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [autoRefresh]);
-  
-  const fetchActiveCalls = async () => {
+  const [authError, setAuthError] = useState(false);
+
+  const fetchActiveCalls = useCallback(async () => {
     try {
       const response = await api.get("/active-calls");
       if (response.data.success) {
         setActiveCalls(response.data.data);
+        setAuthError(false);
       }
     } catch (error) {
-      console.error("Fetch active calls error:", error);
+      // Stop polling if auth fails — token is expired/invalid
+      if (error.response?.status === 401) {
+        setAuthError(true);
+        setAutoRefresh(false);
+      } else {
+        console.error("Fetch active calls error:", error);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchActiveCalls();
+
+    // Auto-refresh every 15 seconds (reduced from 5s to lower server load)
+    let interval;
+    if (autoRefresh && !authError) {
+      interval = setInterval(() => {
+        fetchActiveCalls();
+      }, 15000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [autoRefresh, authError, fetchActiveCalls]);
   
   const handleHangup = async (callId) => {
     if (!window.confirm("Are you sure you want to hangup this call?")) {

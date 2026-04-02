@@ -1,7 +1,7 @@
 import api from "../../api/api";
 import DOMPurify from "dompurify";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../../utils/excelHelper";
 
 const normalizeRole = (role) => {
   if (!role) return "Others";
@@ -94,27 +94,18 @@ const filterEntriesByDateRange = (entries, dateRange) => {
     const endDate = new Date(dateRange[0].endDate);
     return createdAt >= startDate && createdAt <= endDate;
   });
-  console.log("Entries after date range filter:", filtered.length);
   return filtered;
 };
 
-const exportAnalytics = (data, sheetName, filePrefix, dateRange) => {
+const exportAnalytics = async (data, sheetName, filePrefix, dateRange) => {
   try {
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-    worksheet["!cols"] = Object.keys(data[0]).map((key) => ({
-      wch: Math.min(Math.max(key.length, 15) + 2, 50),
-    }));
-
+    const colWidths = Object.fromEntries(
+      Object.keys(data[0]).map((key) => [key, Math.min(Math.max(key.length, 15) + 2, 50)])
+    );
     const dateStr = dateRange?.[0]?.startDate
-      ? `${new Date(dateRange[0].startDate)
-          .toISOString()
-          .slice(0, 10)}_to_${new Date(dateRange[0].endDate)
-          .toISOString()
-          .slice(0, 10)}`
+      ? `${new Date(dateRange[0].startDate).toISOString().slice(0, 10)}_to_${new Date(dateRange[0].endDate).toISOString().slice(0, 10)}`
       : new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(workbook, `${filePrefix}_${dateStr}.xlsx`);
+    await exportToExcel(data, sheetName, `${filePrefix}_${dateStr}.xlsx`, colWidths);
     toast.success(`${sheetName} exported successfully!`);
   } catch (error) {
     console.error(`Error exporting ${sheetName}:`, error);

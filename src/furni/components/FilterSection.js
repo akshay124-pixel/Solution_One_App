@@ -427,6 +427,9 @@ const FilterSection = ({
   setAccountsStatusFilter,
   dispatchFilter,
   setDispatchFilter,
+  financialYearFilter,
+  setFinancialYearFilter,
+  financialYearOptions = [],
   handleReset,
   tableId = "orders-table",
 }) => {
@@ -481,6 +484,16 @@ const FilterSection = ({
             aria-label="Select order end date"
           />
         </DatePickerWrapper>
+        {(userRole === "SuperAdmin" || userRole === "GlobalAdmin") && (
+          <FilterDropdown
+            id="financial-year-filter"
+            label="Financial Year"
+            value={financialYearFilter}
+            onChange={setFinancialYearFilter}
+            options={["All", ...financialYearOptions]}
+            tableId={tableId}
+          />
+        )}
         <FilterDropdown
           id="production-status-filter"
           label="Production Status"

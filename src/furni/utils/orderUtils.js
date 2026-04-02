@@ -81,22 +81,8 @@ export const isOrderComplete = (order) => {
         isInstallationValid
     );
 
-    // Debug logging for incomplete orders
     if (!isComplete) {
-        console.log(`[isOrderComplete] Order ${order.orderId} validation:`, {
-            isCoreValid,
-            isProductsValid,
-            isAccountsValid,
-            isProductionValid,
-            isDispatchValid,
-            isInstallationValid,
-            installationRequired: installReq && installReq !== "No" && installReq !== "N/A" && installReq.trim() !== "",
-            installationStatus: order.installationStatus,
-            paymentReceived: order.paymentReceived,
-            fulfillingStatus: order.fulfillingStatus,
-            dispatchStatus: order.dispatchStatus,
-            stamp: order.stamp,
-        });
+        // validation failed — isComplete stays false
     }
 
     return isComplete;

@@ -21,14 +21,7 @@ const AdminDrawer = ({ entries, isOpen, onClose, role, userId, dateRange }) => {
   const normalizedRole = useMemo(() => normalizeRole(role), [role]);
 
   useEffect(() => {
-    if (isOpen && entries && entries.length > 0) {
-      console.log("AdminDrawer opened with props:", {
-        entriesCount: entries?.length,
-        role,
-        userId,
-        dateRange,
-      });
-    }
+    // drawer opened
   }, [isOpen, entries?.length, role, userId, dateRange]);
 
   const calculateStats = useCallback(async () => {
@@ -59,17 +52,8 @@ const AdminDrawer = ({ entries, isOpen, onClose, role, userId, dateRange }) => {
       if (normalizedRole === "Others" || normalizedRole === "Salesperson") {
         filteredEntries = filteredEntries.filter((e) => {
           const creatorId = normalizeId(e.createdBy);
-          const matches = creatorId === userId;
-          if (!matches && creatorId) {
-            console.warn("Unmatched entry creator:", {
-              entryId: e._id,
-              creatorId,
-              userId,
-            });
-          }
-          return matches;
+          return creatorId === userId;
         });
-        console.log("Entries after salesperson filter:", filteredEntries.length);
         if (
           filteredEntries.length === 0 &&
           entries.some((e) => normalizeId(e.createdBy) === userId)
@@ -78,7 +62,6 @@ const AdminDrawer = ({ entries, isOpen, onClose, role, userId, dateRange }) => {
           filteredEntries = entries.filter(
             (e) => normalizeId(e.createdBy) === userId
           );
-          console.log("Fallback entries for salesperson:", filteredEntries.length);
         }
       }
 
@@ -198,7 +181,6 @@ const AdminDrawer = ({ entries, isOpen, onClose, role, userId, dateRange }) => {
       });
 
       const result = Object.values(statsMap);
-      console.log("Calculated stats count:", result.length, result);
       setUserStats(result);
 
       if (result.length === 0) {

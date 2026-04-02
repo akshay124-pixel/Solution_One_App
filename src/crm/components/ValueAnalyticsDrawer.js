@@ -11,7 +11,7 @@ import {
 import { FaTimes, FaSearch } from "react-icons/fa";
 import api from "../utils/api";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../utils/excelHelper";
 
 const ValueAnalyticsDrawer = ({
   entries,
@@ -188,7 +188,7 @@ const ValueAnalyticsDrawer = ({
     );
   }, [valueStats, searchTerm, role]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     try {
       const exportData = [
         {
@@ -207,13 +207,7 @@ const ValueAnalyticsDrawer = ({
         })),
       ];
 
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Value Analytics");
-      XLSX.writeFile(
-        workbook,
-        `value_analytics_${new Date().toISOString().slice(0, 10)}.xlsx`
-      );
+      await exportToExcel(exportData, "Value Analytics", `value_analytics_${new Date().toISOString().slice(0, 10)}.xlsx`);
       toast.success("Value analytics exported successfully!");
     } catch (error) {
       console.error("Export error:", error);

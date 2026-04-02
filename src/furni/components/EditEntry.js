@@ -8,6 +8,7 @@ import debounce from "lodash/debounce";
 import { statesAndCities } from "./Options";
 import { FaEdit, FaSyncAlt, FaCog, FaDownload } from "react-icons/fa";
 import { salesPersonlist, Reportinglist } from "./Options";
+import { getFinancialYear } from "../../shared/financialYear";
 
 const FURNI_ORIGIN = (() => {
   try { return new URL(process.env.REACT_APP_FURNI_URL || "http://localhost:5050/api/furni").origin; }
@@ -57,6 +58,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   const selectedState = watch("state");
   const products = watch("products") || [];
   const paymentMethod = watch("paymentMethod");
+  const currentFinancialYear = getFinancialYear(watch("soDate"));
 
   useEffect(() => {
     if (isOpen && entryToEdit) {
@@ -239,7 +241,8 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
     <Form onSubmit={handleSubmit(onEditSubmit)}>
       <FormSection>
         <Form.Group controlId="createdBy"><Form.Label>\ud83d\udc64 Created By</Form.Label><Form.Control {...register("createdBy")} readOnly disabled /></Form.Group>
-        <Form.Group controlId="soDate"><Form.Label>\ud83d\udcc5 SO Date *</Form.Label><Form.Control type="date" {...register("soDate", { required: "SO Date is required" })} onChange={(e) => debouncedHandleInputChange("soDate", e.target.value)} isInvalid={!!errors.soDate} /><Form.Control.Feedback type="invalid">{errors.soDate?.message}</Form.Control.Feedback></Form.Group>
+        <Form.Group controlId="soDate"><Form.Label>\ud83d\udcc5 SO Date *</Form.Label><Form.Control type="date" {...register("soDate", { required: "SO Date is required" })} onChange={(e) => { setValue("soDate", e.target.value, { shouldDirty: true, shouldValidate: true }); debouncedHandleInputChange("soDate", e.target.value); }} isInvalid={!!errors.soDate} /><Form.Control.Feedback type="invalid">{errors.soDate?.message}</Form.Control.Feedback></Form.Group>
+        <Form.Group controlId="financialYear"><Form.Label>Financial Year</Form.Label><Form.Control value={currentFinancialYear || ""} readOnly disabled /></Form.Group>
         <Form.Group controlId="dispatchFrom"><Form.Label>\ud83d\udccd Dispatch From</Form.Label><Form.Select {...register("dispatchFrom")} onChange={(e) => debouncedHandleInputChange("dispatchFrom", e.target.value)} isInvalid={!!errors.dispatchFrom} aria-label="Dispatch From"><option value="" disabled>-- Select Dispatch Location --</option><option value="Patna">Patna</option><option value="Bareilly">Bareilly</option><option value="Morinda">Morinda</option><option value="Ranchi">Ranchi</option><option value="Lucknow">Lucknow</option><option value="Delhi">Delhi</option><option value="Jaipur">Jaipur</option><option value="Rajasthan">Rajasthan</option></Form.Select></Form.Group>
         <Form.Group controlId="dispatchDate"><Form.Label>\ud83d\udcc5 Dispatch Date</Form.Label><Form.Control type="date" {...register("dispatchDate")} onChange={(e) => debouncedHandleInputChange("dispatchDate", e.target.value)} /></Form.Group>
         <Form.Group controlId="deliveryDate"><Form.Label>\ud83d\udcc5 Delivery Date</Form.Label><Form.Control type="date" {...register("deliveryDate")} onChange={(e) => debouncedHandleInputChange("deliveryDate", e.target.value)} /></Form.Group>

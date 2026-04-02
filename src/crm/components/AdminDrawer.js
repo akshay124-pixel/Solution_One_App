@@ -5,7 +5,7 @@ import { Drawer, Box, Typography, IconButton, TextField } from "@mui/material";
 import { FaTimes, FaSearch } from "react-icons/fa";
 import api from "../utils/api";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel, readExcelFile } from "../../utils/excelHelper";
 import DOMPurify from "dompurify";
 
 const AdminDrawer = ({
@@ -345,7 +345,7 @@ const AdminDrawer = ({
   }, [userStats]);
 
   // Export to Excel
-  const handleExport = useCallback(() => {
+  const handleExport = useCallback(async () => {
     try {
       const exportData = [
         {
@@ -383,22 +383,13 @@ const AdminDrawer = ({
         })),
       ];
 
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Team Analytics");
-
-      worksheet["!cols"] = Object.keys(exportData[0]).map((key) => ({
-        wch: Math.min(Math.max(key.length, 15) + 2, 50),
-      }));
-
       const dateStr = dateRange?.[0]?.startDate
-        ? `${new Date(dateRange[0].startDate)
-          .toISOString()
-          .slice(0, 10)}_to_${new Date(dateRange[0].endDate)
-            .toISOString()
-            .slice(0, 10)}`
+        ? `${new Date(dateRange[0].startDate).toISOString().slice(0, 10)}_to_${new Date(dateRange[0].endDate).toISOString().slice(0, 10)}`
         : new Date().toISOString().slice(0, 10);
-      XLSX.writeFile(workbook, `team_analytics_${dateStr}.xlsx`);
+      const colWidths = Object.fromEntries(
+        Object.keys(exportData[0]).map((key) => [key, Math.min(Math.max(key.length, 15) + 2, 50)])
+      );
+      await exportToExcel(exportData, "Team Analytics", `team_analytics_${dateStr}.xlsx`, colWidths);
       toast.success("Analytics exported successfully!");
     } catch (error) {
       console.error("Error exporting analytics:", error);

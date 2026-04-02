@@ -3,7 +3,7 @@ import axios from "../../so/axiosSetup";
 import { Button, Badge, Form, Spinner } from "react-bootstrap";
 import { FaEye, FaTimes } from "react-icons/fa";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../utils/excelHelper";
 import ViewEntry from "./ViewEntry";
 import EditAccountForm from "./EditAccountForm";
 import io from "socket.io-client";
@@ -277,7 +277,7 @@ function Accounts() {
 
 
 
-  const exportToExcel = useCallback(() => {
+  const handleExportExcel = useCallback(async () => {
     const exportData = filteredOrders.map((order) => {
       const productDetails = Array.isArray(order.products)
         ? order.products
@@ -304,13 +304,7 @@ function Accounts() {
         Products: productDetails,
       };
     });
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Accounts Orders");
-    XLSX.writeFile(
-      workbook,
-      `Accounts_Orders_${new Date().toISOString().split("T")[0]}.xlsx`
-    );
+    await exportToExcel(exportData, "Accounts Orders", `Accounts_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
   }, [filteredOrders]);
 
   const handleClearFilters = () => {
@@ -990,7 +984,7 @@ function Accounts() {
               Clear Filters
             </Button>
             <Button
-              onClick={exportToExcel}
+              onClick={handleExportExcel}
               style={{
                 background: "linear-gradient(135deg, #28a745, #4cd964)",
                 border: "none",
@@ -1011,6 +1005,7 @@ function Accounts() {
             </Button>
           </div>{" "}
           <div className="total-results my-3">
+            <span>Total Orders: {filteredOrders.length}</span>
             <span>Total Pending: {totalPending}</span>
           </div>
           {tableContent}

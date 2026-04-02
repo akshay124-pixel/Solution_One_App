@@ -59,8 +59,8 @@ const modules = [
   },  {
     key: "dms",
     route: "/dms/dashboard",
-    label: "DMS",
-    sub: "Dialer & Lead Management",
+    label: "Inside Sales",
+    sub: "Inside Sales Customer Relationship",
     icon: (
       <svg width="38" height="38" viewBox="0 0 24 24" fill="none">
         <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" stroke="url(#dg)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -78,8 +78,8 @@ const modules = [
   {
     key: "so",
     route: "/so/sales",
-    label: "Sales IT",
-    sub: "Order Management & Fulfillment",
+    label: "Order AV & EdTech",
+    sub: "AV & EdTech Sales Order",
     icon: (
       <svg width="38" height="38" viewBox="0 0 24 24" fill="none">
         <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" stroke="url(#sg)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -99,8 +99,8 @@ const modules = [
   {
     key: "furni",
     route: "/furni/sales",
-    label: "Sales Furni",
-    sub: "Furniture Sales Order Management",
+    label: "Order Furniture",
+    sub: "Furniture Sales Order",
     icon: (
       <svg width="38" height="38" viewBox="0 0 24 24" fill="none">
         <path d="M20 9V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v2" stroke="url(#fg)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -198,6 +198,26 @@ const ModuleSelector = () => {
               {user?.username}
             </span>
           </div>
+
+          {/* Admin button — only for globaladmin */}
+          {user?.role === "globaladmin" && (
+            <button
+              onClick={() => navigate("/admin")}
+              style={{
+                padding: "5px 12px",
+                background: "rgba(255,255,255,0.15)",
+                border: "1px solid rgba(255,255,255,0.3)",
+                borderRadius: "8px", color: "#fff",
+                cursor: "pointer", fontSize: "11px", fontWeight: 500,
+                transition: "all 0.2s", whiteSpace: "nowrap", flexShrink: 0,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.28)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}
+              aria-label="Admin Panel"
+            >
+              ⚙ Admin
+            </button>
+          )}
 
           <button
             onClick={handleLogout}

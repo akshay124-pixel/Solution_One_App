@@ -7,7 +7,7 @@ import FilterSection from "./FilterSection";
 import "react-datepicker/dist/react-datepicker.css";
 import furniApi from "../axiosSetup";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel, readExcelFile } from "../../utils/excelHelper";
 import { ArrowRight } from "lucide-react";
 import io from "socket.io-client";
 import styled from "styled-components";
@@ -18,6 +18,7 @@ import Pagination from "@mui/material/Pagination";
 import debounce from "lodash/debounce";
 import SalesDashboardDrawer from "./Dashbords/SalesDashboardDrawer";
 import { isOrderComplete } from "../utils/orderUtils";
+import { FINANCIAL_YEAR_OPTIONS } from "../../shared/financialYear";
 const ViewEntry = React.lazy(() => import("./ViewEntry"));
 const DeleteModal = React.lazy(() => import("./Delete"));
 const EditEntry = React.lazy(() => import("./EditEntry"));
@@ -47,8 +48,10 @@ const NotificationActions = styled.div`
 const ClearButton = styled(Button)`background: #dc3545; border: none; padding: 6px 12px; font-size: 0.85rem; border-radius: 8px; &:hover { background: #b02a37; }`;
 const MarkReadButton = styled(Button)`background: #28a745; border: none; padding: 6px 12px; font-size: 0.85rem; border-radius: 8px; &:hover { background: #218838; }`;
 
-const columnWidths = [60,120,160,180,180,140,200,140,150,120,120,120,100,140,250,250,250,150,100,100,80,120,100,120,140,140,140,140,140,120,120,120,140,200,140,140,140,120,120,120,140,120,120,140,140,140,200];
+const columnWidths = [60,120,160,140,180,180,140,200,140,150,120,120,120,100,140,250,250,250,150,100,100,80,120,100,120,140,140,140,140,140,120,120,120,140,200,140,140,140,120,120,120,140,120,120,140,140,140,200];
 const totalTableWidth = columnWidths.reduce((sum, width) => sum + width, 0);
+const normalizeTableText = (value) =>
+  typeof value === "string" ? value.replace(/^\s*[•·]\s*/, "").trim() : value;
 
 const tableStyles = `
 body { overflow-x: hidden; }
@@ -61,7 +64,8 @@ body { overflow-x: hidden; }
 .sales-table tbody tr:hover { background-color: #f0f7ff; }
 .sales-table td { padding: 10px 15px; height: 50px; line-height: 30px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-sizing: border-box; text-align: center; cursor: pointer; }
 .sales-table td.contact-person-name { font-weight: normal; text-align: center; list-style-type: none; padding-left: 15px; position: relative; }
-.sales-table td.contact-person-name::before, .sales-table td.contact-person-name::after { content: none !important; }
+.sales-table td.customer-name-cell { font-weight: normal; text-align: center; list-style-type: none; padding-left: 15px; position: relative; }
+.sales-table td.contact-person-name::before, .sales-table td.contact-person-name::after, .sales-table td.customer-name-cell::before, .sales-table td.customer-name-cell::after { content: none !important; }
 .sales-table .badge { padding: 6px 12px; font-size: 0.9rem; display: inline-block; width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sales-table .actions-cell { display: flex; justify-content: center; align-items: center; gap: 10px; padding: 5px; height: 50px; overflow: visible; flex-wrap: nowrap; cursor: default; }
 .sales-table .actions-cell button { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; z-index: 1; }
@@ -113,12 +117,13 @@ const Row = React.memo(({ index, style, data }) => {
         { width: columnWidths[0], content: (currentPage - 1) * 20 + index + 1, title: `${(currentPage - 1) * 20 + index + 1}` },
         { width: columnWidths[1], content: order.orderId || "-", title: order.orderId || "-" },
         { width: columnWidths[2], content: order.soDate ? new Date(order.soDate).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true }) : "-", title: order.soDate ? new Date(order.soDate).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true }) : "-" },
-        { width: columnWidths[3], content: order.customername || "-", title: order.customername || "-" },
-        { width: columnWidths[4], content: order.name || "-", title: order.name || "-", className: "contact-person-name" },
-        { width: columnWidths[5], content: order.contactNo || "-", title: order.contactNo || "-" },
-        { width: columnWidths[6], content: order.customerEmail || "-", title: order.customerEmail || "-" },
-        { width: columnWidths[7], content: (<Badge bg={order.sostatus === "Pending for Approval" ? "warning" : order.sostatus === "Accounts Approved" ? "info" : order.sostatus === "Approved" ? "success" : order.sostatus === "Order Cancelled" ? "danger" : order.sostatus === "Hold By Production" ? "dark" : "secondary"}>{order.sostatus || "-"}</Badge>), title: order.sostatus || "-" },
-        { width: columnWidths[8], content: (
+        { width: columnWidths[3], content: order.financialYear || "-", title: order.financialYear || "-" },
+        { width: columnWidths[4], content: normalizeTableText(order.customername) || "-", title: normalizeTableText(order.customername) || "-", className: "customer-name-cell" },
+        { width: columnWidths[5], content: order.name || "-", title: order.name || "-", className: "contact-person-name" },
+        { width: columnWidths[6], content: order.contactNo || "-", title: order.contactNo || "-" },
+        { width: columnWidths[7], content: order.customerEmail || "-", title: order.customerEmail || "-" },
+        { width: columnWidths[8], content: (<Badge bg={order.sostatus === "Pending for Approval" ? "warning" : order.sostatus === "Accounts Approved" ? "info" : order.sostatus === "Approved" ? "success" : order.sostatus === "Order Cancelled" ? "danger" : order.sostatus === "Hold By Production" ? "dark" : "secondary"}>{order.sostatus || "-"}</Badge>), title: order.sostatus || "-" },
+        { width: columnWidths[9], content: (
           <div className="actions-cell">
             <Button variant="primary" onClick={() => handleViewClick(order)} style={{ width: "40px", height: "40px", borderRadius: "50%", padding: "0", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "50px" }}><FaEye /></Button>
             {(userRole === "SuperAdmin" || userRole === "GlobalAdmin") && (<>
@@ -131,44 +136,44 @@ const Row = React.memo(({ index, style, data }) => {
               </button>
             </>)}
           </div>), title: "" },
-        { width: columnWidths[9], content: order.alterno || "-", title: order.alterno || "-" },
-        { width: columnWidths[10], content: order.city || "-", title: order.city || "-" },
-        { width: columnWidths[11], content: order.state || "-", title: order.state || "-" },
-        { width: columnWidths[12], content: order.pinCode || "-", title: order.pinCode || "-" },
-        { width: columnWidths[13], content: order.gstno || "-", title: order.gstno || "-" },
-        { width: columnWidths[14], content: order.shippingAddress || "-", title: order.shippingAddress || "-" },
-        { width: columnWidths[15], content: order.billingAddress || "-", title: order.billingAddress || "-" },
-        { width: columnWidths[16], content: productDetails, title: productDetails },
-        { width: columnWidths[17], content: firstProduct.productType || "-", title: firstProduct.productType || "-" },
-        { width: columnWidths[18], content: firstProduct.size || "-", title: firstProduct.size || "-" },
-        { width: columnWidths[19], content: firstProduct.spec || "-", title: firstProduct.spec || "-" },
-        { width: columnWidths[20], content: totalQty || "-", title: totalQty || "-" },
-        { width: columnWidths[21], content: `\u20b9${totalUnitPrice.toFixed(2) || "0.00"}`, title: `\u20b9${totalUnitPrice.toFixed(2) || "0.00"}` },
-        { width: columnWidths[22], content: `${gstValues}%`, title: gstValues },
-        { width: columnWidths[23], content: `\u20b9${order.total?.toFixed(2) || "0.00"}`, title: `\u20b9${order.total?.toFixed(2) || "0.00"}` },
-        { width: columnWidths[24], content: order.paymentCollected ? `\u20b9${order.paymentCollected}` : "-", title: order.paymentCollected ? `\u20b9${order.paymentCollected}` : "-" },
-        { width: columnWidths[25], content: order.paymentMethod || "-", title: order.paymentMethod || "-" },
-        { width: columnWidths[26], content: order.paymentDue ? `\u20b9${order.paymentDue}` : "-", title: order.paymentDue ? `\u20b9${order.paymentDue}` : "-" },
-        { width: columnWidths[27], content: order.paymentTerms || "-", title: order.paymentTerms || "-" },
-        { width: columnWidths[28], content: (<Badge bg={order.paymentReceived === "Received" ? "success" : "warning"}>{order.paymentReceived || "-"}</Badge>), title: order.paymentReceived || "-" },
-        { width: columnWidths[29], content: order.freightcs ? `\u20b9${order.freightcs}` : "-", title: order.freightcs ? `\u20b9${order.freightcs}` : "-" },
-        { width: columnWidths[30], content: order.actualFreight ? `\u20b9${order.actualFreight.toFixed(2)}` : "-", title: order.actualFreight ? `\u20b9${order.actualFreight.toFixed(2)}` : "-" },
-        { width: columnWidths[31], content: (<Badge bg={order.installationStatus === "Pending" ? "warning" : order.installationStatus === "In Progress" ? "info" : order.installationStatus === "Completed" ? "success" : "secondary"}>{order.installationStatus || "-"}</Badge>), title: order.installationStatus || "-" },
-        { width: columnWidths[32], content: (<Badge bg={order.installationReport === "Yes" ? "success" : "warning"}>{order.installationReport || "-"}</Badge>), title: order.installationReport || "-" },
-        { width: columnWidths[33], content: order.transporterDetails || "-", title: order.transporterDetails || "-" },
-        { width: columnWidths[34], content: order.dispatchFrom || "-", title: order.dispatchFrom || "-" },
-        { width: columnWidths[35], content: (<Badge bg={order.dispatchStatus === "Not Dispatched" ? "warning" : order.dispatchStatus === "Docket Awaited Dispatched" ? "info" : order.dispatchStatus === "Dispatched" ? "primary" : order.dispatchStatus === "Delivered" ? "success" : order.dispatchStatus === "Hold by Salesperson" ? "dark" : order.dispatchStatus === "Hold by Customer" ? "light" : order.dispatchStatus === "Order Cancelled" ? "danger" : "secondary"}>{order.dispatchStatus || "-"}</Badge>), title: order.dispatchStatus || "-" },
-        { width: columnWidths[36], content: (<Badge bg={order.stamp === "Received" ? "success" : "warning"}>{order.stamp || "-"}</Badge>), title: order.stamp || "-" },
-        { width: columnWidths[37], content: order.orderType || "-", title: order.orderType || "-" },
-        { width: columnWidths[38], content: order.report || "-", title: order.report || "-" },
-        { width: columnWidths[39], content: (<Badge bg={order.billStatus === "Pending" ? "warning" : order.billStatus === "Under Billing" ? "info" : order.billStatus === "Billing Complete" ? "success" : "secondary"}>{order.billStatus || "-"}</Badge>), title: order.billStatus || "-" },
-        { width: columnWidths[40], content: (<Badge style={{ background: order.fulfillingStatus === "Under Process" ? "linear-gradient(135deg, #f39c12, #f7c200)" : order.fulfillingStatus === "Pending" ? "linear-gradient(135deg, #ff6b6b, #ff8787)" : order.fulfillingStatus === "Partial Dispatch" ? "linear-gradient(135deg, #00c6ff, #0072ff)" : order.fulfillingStatus === "Fulfilled" ? "linear-gradient(135deg, #28a745, #4cd964)" : order.fulfillingStatus === "Order Cancel" ? "linear-gradient(135deg, #8e0e00, #e52d27)" : order.fulfillingStatus === "Hold" ? "linear-gradient(135deg, #6a11cb, #2575fc)" : "linear-gradient(135deg, #6c757d, #a9a9a9)" }}>{order.fulfillingStatus || "Pending"}</Badge>), title: order.fulfillingStatus || "Pending" },
-        { width: columnWidths[41], content: order.billNumber || "-", title: order.billNumber || "-" },
-        { width: columnWidths[42], content: order.piNumber || "-", title: order.piNumber || "-" },
-        { width: columnWidths[43], content: order.salesPerson || "-", title: order.salesPerson || "-" },
-        { width: columnWidths[44], content: order.company || "-", title: order.company || "-" },
-        { width: columnWidths[45], content: order.createdBy && typeof order.createdBy === "object" ? order.createdBy.username || "Unknown" : typeof order.createdBy === "string" ? order.createdBy : "-", title: order.createdBy && typeof order.createdBy === "object" ? order.createdBy.username || "Unknown" : typeof order.createdBy === "string" ? order.createdBy : "-" },
-        { width: columnWidths[46], content: order.remarks || "-", title: order.remarks || "-" },
+        { width: columnWidths[10], content: order.alterno || "-", title: order.alterno || "-" },
+        { width: columnWidths[11], content: order.city || "-", title: order.city || "-" },
+        { width: columnWidths[12], content: order.state || "-", title: order.state || "-" },
+        { width: columnWidths[13], content: order.pinCode || "-", title: order.pinCode || "-" },
+        { width: columnWidths[14], content: order.gstno || "-", title: order.gstno || "-" },
+        { width: columnWidths[15], content: order.shippingAddress || "-", title: order.shippingAddress || "-" },
+        { width: columnWidths[16], content: order.billingAddress || "-", title: order.billingAddress || "-" },
+        { width: columnWidths[17], content: productDetails, title: productDetails },
+        { width: columnWidths[18], content: firstProduct.productType || "-", title: firstProduct.productType || "-" },
+        { width: columnWidths[19], content: firstProduct.size || "-", title: firstProduct.size || "-" },
+        { width: columnWidths[20], content: firstProduct.spec || "-", title: firstProduct.spec || "-" },
+        { width: columnWidths[21], content: totalQty || "-", title: totalQty || "-" },
+        { width: columnWidths[22], content: `\u20b9${totalUnitPrice.toFixed(2) || "0.00"}`, title: `\u20b9${totalUnitPrice.toFixed(2) || "0.00"}` },
+        { width: columnWidths[23], content: `${gstValues}%`, title: gstValues },
+        { width: columnWidths[24], content: `\u20b9${order.total?.toFixed(2) || "0.00"}`, title: `\u20b9${order.total?.toFixed(2) || "0.00"}` },
+        { width: columnWidths[25], content: order.paymentCollected ? `\u20b9${order.paymentCollected}` : "-", title: order.paymentCollected ? `\u20b9${order.paymentCollected}` : "-" },
+        { width: columnWidths[26], content: order.paymentMethod || "-", title: order.paymentMethod || "-" },
+        { width: columnWidths[27], content: order.paymentDue ? `\u20b9${order.paymentDue}` : "-", title: order.paymentDue ? `\u20b9${order.paymentDue}` : "-" },
+        { width: columnWidths[28], content: order.paymentTerms || "-", title: order.paymentTerms || "-" },
+        { width: columnWidths[29], content: (<Badge bg={order.paymentReceived === "Received" ? "success" : "warning"}>{order.paymentReceived || "-"}</Badge>), title: order.paymentReceived || "-" },
+        { width: columnWidths[30], content: order.freightcs ? `\u20b9${order.freightcs}` : "-", title: order.freightcs ? `\u20b9${order.freightcs}` : "-" },
+        { width: columnWidths[31], content: order.actualFreight ? `\u20b9${order.actualFreight.toFixed(2)}` : "-", title: order.actualFreight ? `\u20b9${order.actualFreight.toFixed(2)}` : "-" },
+        { width: columnWidths[32], content: (<Badge bg={order.installationStatus === "Pending" ? "warning" : order.installationStatus === "In Progress" ? "info" : order.installationStatus === "Completed" ? "success" : "secondary"}>{order.installationStatus || "-"}</Badge>), title: order.installationStatus || "-" },
+        { width: columnWidths[33], content: (<Badge bg={order.installationReport === "Yes" ? "success" : "warning"}>{order.installationReport || "-"}</Badge>), title: order.installationReport || "-" },
+        { width: columnWidths[34], content: order.transporterDetails || "-", title: order.transporterDetails || "-" },
+        { width: columnWidths[35], content: order.dispatchFrom || "-", title: order.dispatchFrom || "-" },
+        { width: columnWidths[36], content: (<Badge bg={order.dispatchStatus === "Not Dispatched" ? "warning" : order.dispatchStatus === "Docket Awaited Dispatched" ? "info" : order.dispatchStatus === "Dispatched" ? "primary" : order.dispatchStatus === "Delivered" ? "success" : order.dispatchStatus === "Hold by Salesperson" ? "dark" : order.dispatchStatus === "Hold by Customer" ? "light" : order.dispatchStatus === "Order Cancelled" ? "danger" : "secondary"}>{order.dispatchStatus || "-"}</Badge>), title: order.dispatchStatus || "-" },
+        { width: columnWidths[37], content: (<Badge bg={order.stamp === "Received" ? "success" : "warning"}>{order.stamp || "-"}</Badge>), title: order.stamp || "-" },
+        { width: columnWidths[38], content: order.orderType || "-", title: order.orderType || "-" },
+        { width: columnWidths[39], content: order.report || "-", title: order.report || "-" },
+        { width: columnWidths[40], content: (<Badge bg={order.billStatus === "Pending" ? "warning" : order.billStatus === "Under Billing" ? "info" : order.billStatus === "Billing Complete" ? "success" : "secondary"}>{order.billStatus || "-"}</Badge>), title: order.billStatus || "-" },
+        { width: columnWidths[41], content: (<Badge style={{ background: order.fulfillingStatus === "Under Process" ? "linear-gradient(135deg, #f39c12, #f7c200)" : order.fulfillingStatus === "Pending" ? "linear-gradient(135deg, #ff6b6b, #ff8787)" : order.fulfillingStatus === "Partial Dispatch" ? "linear-gradient(135deg, #00c6ff, #0072ff)" : order.fulfillingStatus === "Fulfilled" ? "linear-gradient(135deg, #28a745, #4cd964)" : order.fulfillingStatus === "Order Cancel" ? "linear-gradient(135deg, #8e0e00, #e52d27)" : order.fulfillingStatus === "Hold" ? "linear-gradient(135deg, #6a11cb, #2575fc)" : "linear-gradient(135deg, #6c757d, #a9a9a9)" }}>{order.fulfillingStatus || "Pending"}</Badge>), title: order.fulfillingStatus || "Pending" },
+        { width: columnWidths[42], content: order.billNumber || "-", title: order.billNumber || "-" },
+        { width: columnWidths[43], content: order.piNumber || "-", title: order.piNumber || "-" },
+        { width: columnWidths[44], content: order.salesPerson || "-", title: order.salesPerson || "-" },
+        { width: columnWidths[45], content: order.company || "-", title: order.company || "-" },
+        { width: columnWidths[46], content: order.createdBy && typeof order.createdBy === "object" ? order.createdBy.username || "Unknown" : typeof order.createdBy === "string" ? order.createdBy : "-", title: order.createdBy && typeof order.createdBy === "object" ? order.createdBy.username || "Unknown" : typeof order.createdBy === "string" ? order.createdBy : "-" },
+        { width: columnWidths[47], content: order.remarks || "-", title: order.remarks || "-" },
       ].map((cell, idx) => (
         <OverlayTrigger key={idx} trigger="click" placement="top"
           show={openTooltipId === `cell-${index}-${idx}`}
@@ -250,6 +255,7 @@ const Sales = () => {
   const [productStatus, setProductStatusFilter] = useState("All");
   const [accountsStatusFilter, setAccountsStatusFilter] = useState("All");
   const [dispatchFilter, setDispatchFilter] = useState("All");
+  const [financialYearFilter, setFinancialYearFilter] = useState("All");
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [notifications, setNotifications] = useState([]);
@@ -304,8 +310,8 @@ const Sales = () => {
   const fetchPaginatedOrders = useCallback(async (params = {}) => {
     try {
       setLoading(true);
-      const { page = 1, search = "", approval = "All", orderType = "All", dispatch = "All", salesPerson = "All", dispatchFrom = "All", startDate = null, endDate = null, dashboardFilter = "all", accountsStatus = "All", installationStatus = "All" } = params;
-      const queryParams = { page, limit: 20, search, approval, orderType, dispatch, salesPerson, dispatchFrom, dashboardFilter, accountsStatus, installationStatus };
+      const { page = 1, search = "", approval = "All", orderType = "All", dispatch = "All", salesPerson = "All", dispatchFrom = "All", financialYear = "All", startDate = null, endDate = null, dashboardFilter = "all", accountsStatus = "All", installationStatus = "All" } = params;
+      const queryParams = { page, limit: 20, search, approval, orderType, dispatch, salesPerson, dispatchFrom, financialYear, dashboardFilter, accountsStatus, installationStatus };
       if (startDate) queryParams.startDate = startDate.toISOString();
       if (endDate) queryParams.endDate = endDate.toISOString();
       const response = await furniApi.get("/api/get-orders-paginated", { params: queryParams });
@@ -378,14 +384,14 @@ const Sales = () => {
   const calculateTotalResults = useMemo(() => totalProductQty, [totalProductQty]);
 
   useEffect(() => {
-    fetchPaginatedOrders({ page: currentPage, search: searchTerm, approval: productionStatusFilter, orderType: productStatus, dispatch: dispatchFilter, salesPerson: "All", dispatchFrom: "All", startDate, endDate, dashboardFilter: trackerFilter, accountsStatus: accountsStatusFilter, installationStatus: installStatusFilter });
-  }, [currentPage, searchTerm, productionStatusFilter, productStatus, dispatchFilter, startDate, endDate, trackerFilter, accountsStatusFilter, installStatusFilter, fetchPaginatedOrders]);
+    fetchPaginatedOrders({ page: currentPage, search: searchTerm, approval: productionStatusFilter, orderType: productStatus, dispatch: dispatchFilter, salesPerson: "All", dispatchFrom: "All", financialYear: financialYearFilter, startDate, endDate, dashboardFilter: trackerFilter, accountsStatus: accountsStatusFilter, installationStatus: installStatusFilter });
+  }, [currentPage, searchTerm, productionStatusFilter, productStatus, dispatchFilter, financialYearFilter, startDate, endDate, trackerFilter, accountsStatusFilter, installStatusFilter, fetchPaginatedOrders]);
 
   const handleReset = useCallback(() => {
     setProductionStatusFilter("All"); setInstallStatusFilter("All"); setProductStatusFilter("All");
-    setAccountsStatusFilter("All"); setDispatchFilter("All"); setTrackerFilter("all");
+    setAccountsStatusFilter("All"); setDispatchFilter("All"); setFinancialYearFilter("All"); setTrackerFilter("all");
     setSearchTerm(""); setStartDate(null); setEndDate(null); setCurrentPage(1);
-    fetchPaginatedOrders({ page: 1, search: "", approval: "All", orderType: "All", dispatch: "All", salesPerson: "All", dispatchFrom: "All", startDate: null, endDate: null, dashboardFilter: "all" });
+    fetchPaginatedOrders({ page: 1, search: "", approval: "All", orderType: "All", dispatch: "All", salesPerson: "All", dispatchFrom: "All", financialYear: "All", startDate: null, endDate: null, dashboardFilter: "all" });
     toast.info("Filters reset!");
   }, [fetchPaginatedOrders]);
 
@@ -417,79 +423,72 @@ const Sales = () => {
   const handleFileUpload = useCallback(async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const data = new Uint8Array(event.target.result);
-        const workbook = XLSX.read(data, { type: "array", raw: false, dateNF: "yyyy-mm-dd" });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const parsedData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, blankrows: false });
-        const headers = parsedData[0].map((h) => h ? h.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "") : "");
-        const rows = parsedData.slice(1).filter((row) => row.some((cell) => cell !== undefined && cell !== ""));
-        const newEntries = rows.map((row) => {
-          const entry = {};
-          headers.forEach((header, index) => { entry[header] = row[index] !== undefined ? row[index] : ""; });
-          let products = [];
-          if (entry.products) {
-            try {
-              products = JSON.parse(entry.products);
-              if (!Array.isArray(products)) products = [products];
-            } catch {
-              products = [{ productType: String(entry.producttype || "Unknown").trim(), size: String(entry.size || "N/A").trim(), spec: String(entry.spec || "N/A").trim(), qty: Number(entry.qty) || 1, unitPrice: Number(entry.unitprice) || 0, serialNos: entry.serialnos ? String(entry.serialnos).split(",").map((s) => s.trim()).filter(Boolean) : [], modelNos: entry.modelnos ? String(entry.modelnos).split(",").map((m) => m.trim()).filter(Boolean) : [], gst: String(entry.gst || "18").trim() }];
-            }
-          } else {
+    try {
+      const rawRows = await readExcelFile(file);
+      const newEntries = rawRows.map((row) => {
+        const entry = {};
+        Object.entries(row).forEach(([k, v]) => {
+          const normKey = k ? k.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "") : "";
+          entry[normKey] = v !== null && v !== undefined ? String(v) : "";
+        });
+        let products = [];
+        if (entry.products) {
+          try {
+            products = JSON.parse(entry.products);
+            if (!Array.isArray(products)) products = [products];
+          } catch {
             products = [{ productType: String(entry.producttype || "Unknown").trim(), size: String(entry.size || "N/A").trim(), spec: String(entry.spec || "N/A").trim(), qty: Number(entry.qty) || 1, unitPrice: Number(entry.unitprice) || 0, serialNos: entry.serialnos ? String(entry.serialnos).split(",").map((s) => s.trim()).filter(Boolean) : [], modelNos: entry.modelnos ? String(entry.modelnos).split(",").map((m) => m.trim()).filter(Boolean) : [], gst: String(entry.gst || "18").trim() }];
           }
-          return {
-            soDate: parseExcelDate(entry.sodate) || new Date().toISOString().slice(0, 10),
-            dispatchFrom: String(entry.dispatchfrom || "").trim(), dispatchDate: parseExcelDate(entry.dispatchdate) || "",
-            name: String(entry.name || "").trim(), city: String(entry.city || "").trim(), state: String(entry.state || "").trim(),
-            pinCode: String(entry.pincode || "").trim(), contactNo: String(entry.contactno || "").trim(),
-            customerEmail: String(entry.customeremail || "").trim(), customername: String(entry.customername || "").trim(),
-            products, total: Number(entry.total) || 0, paymentCollected: String(entry.paymentcollected || "").trim(),
-            paymentMethod: String(entry.paymentmethod || "").trim(), paymentDue: String(entry.paymentdue || "").trim(),
-            paymentTerms: String(entry.paymentterms || "").trim(), neftTransactionId: String(entry.nefttransactionid || "").trim(),
-            chequeId: String(entry.chequeid || "").trim(), freightcs: String(entry.freightcs || "").trim(),
-            freightstatus: String(entry.freightstatus || "Extra").trim(), installchargesstatus: String(entry.installchargesstatus || "Extra").trim(),
-            orderType: String(entry.ordertype || "B2C").trim(), gemOrderNumber: String(entry.gemordernumber || "").trim(),
-            deliveryDate: parseExcelDate(entry.deliverydate) || "", installation: String(entry.installation || "N/A").trim(),
-            installationStatus: String(entry.installationstatus || "Pending").trim(), remarksByInstallation: String(entry.remarksbyinstallation || "").trim(),
-            dispatchStatus: String(entry.dispatchstatus || "Not Dispatched").trim(), salesPerson: String(entry.salesperson || "").trim(),
-            report: String(entry.report || "").trim(), company: String(entry.company || "Promark").trim(),
-            transporter: String(entry.transporter || "").trim(), transporterDetails: String(entry.transporterdetails || "").trim(),
-            receiptDate: parseExcelDate(entry.receiptdate) || "", shippingAddress: String(entry.shippingaddress || "").trim(),
-            billingAddress: String(entry.billingaddress || "").trim(), invoiceNo: String(entry.invoiceno || "").trim(),
-            invoiceDate: parseExcelDate(entry.invoicedate) || "", fulfillingStatus: String(entry.fulfillingstatus || "Pending").trim(),
-            remarksByProduction: String(entry.remarksbyproduction || "").trim(), remarksByAccounts: String(entry.remarksbyaccounts || "").trim(),
-            paymentReceived: String(entry.paymentreceived || "Not Received").trim(), billNumber: String(entry.billnumber || "").trim(),
-            piNumber: String(entry.pinumber || "").trim(), remarksByBilling: String(entry.remarksbybilling || "").trim(),
-            verificationRemarks: String(entry.verificationremarks || "").trim(), billStatus: String(entry.billstatus || "Pending").trim(),
-            completionStatus: String(entry.completionstatus || "In Progress").trim(), fulfillmentDate: parseExcelDate(entry.fulfillmentdate) || "",
-            remarks: String(entry.remarks || "").trim(), sostatus: String(entry.sostatus || "Pending for Approval").trim(),
-            gstno: String(entry.gstno || "").trim(),
-          };
-        });
-        await furniApi.post("/api/bulk-orders", newEntries, { headers: { "Content-Type": "application/json" } });
-        await fetchPaginatedOrders();
-        fetchDashboardCounts();
-      } catch (error) {
-        console.error("Error uploading entries:", error);
-        let userFriendlyMessage = "Something went wrong while uploading your file.";
-        if (error.response) {
-          if (error.response.status === 400) userFriendlyMessage = "The file format seems incorrect. Please check your Excel template.";
-          else if (error.response.status === 413) userFriendlyMessage = "The file is too large. Please upload a smaller file.";
-          else userFriendlyMessage = error.response.data?.details?.join(", ") || error.response.data?.message || userFriendlyMessage;
-        } else if (error.request) { userFriendlyMessage = "Could not connect to the server. Please check your internet connection."; }
-        toast.error(userFriendlyMessage, { position: "top-right", autoClose: 5000 });
-      }
-    };
-    reader.readAsArrayBuffer(file);
+        } else {
+          products = [{ productType: String(entry.producttype || "Unknown").trim(), size: String(entry.size || "N/A").trim(), spec: String(entry.spec || "N/A").trim(), qty: Number(entry.qty) || 1, unitPrice: Number(entry.unitprice) || 0, serialNos: entry.serialnos ? String(entry.serialnos).split(",").map((s) => s.trim()).filter(Boolean) : [], modelNos: entry.modelnos ? String(entry.modelnos).split(",").map((m) => m.trim()).filter(Boolean) : [], gst: String(entry.gst || "18").trim() }];
+        }
+        return {
+          soDate: parseExcelDate(entry.sodate) || new Date().toISOString().slice(0, 10),
+          dispatchFrom: String(entry.dispatchfrom || "").trim(), dispatchDate: parseExcelDate(entry.dispatchdate) || "",
+          name: String(entry.name || "").trim(), city: String(entry.city || "").trim(), state: String(entry.state || "").trim(),
+          pinCode: String(entry.pincode || "").trim(), contactNo: String(entry.contactno || "").trim(),
+          customerEmail: String(entry.customeremail || "").trim(), customername: String(entry.customername || "").trim(),
+          products, total: Number(entry.total) || 0, paymentCollected: String(entry.paymentcollected || "").trim(),
+          paymentMethod: String(entry.paymentmethod || "").trim(), paymentDue: String(entry.paymentdue || "").trim(),
+          paymentTerms: String(entry.paymentterms || "").trim(), neftTransactionId: String(entry.nefttransactionid || "").trim(),
+          chequeId: String(entry.chequeid || "").trim(), freightcs: String(entry.freightcs || "").trim(),
+          freightstatus: String(entry.freightstatus || "Extra").trim(), installchargesstatus: String(entry.installchargesstatus || "Extra").trim(),
+          orderType: String(entry.ordertype || "B2C").trim(), gemOrderNumber: String(entry.gemordernumber || "").trim(),
+          deliveryDate: parseExcelDate(entry.deliverydate) || "", installation: String(entry.installation || "N/A").trim(),
+          installationStatus: String(entry.installationstatus || "Pending").trim(), remarksByInstallation: String(entry.remarksbyinstallation || "").trim(),
+          dispatchStatus: String(entry.dispatchstatus || "Not Dispatched").trim(), salesPerson: String(entry.salesperson || "").trim(),
+          report: String(entry.report || "").trim(), company: String(entry.company || "Promark").trim(),
+          transporter: String(entry.transporter || "").trim(), transporterDetails: String(entry.transporterdetails || "").trim(),
+          receiptDate: parseExcelDate(entry.receiptdate) || "", shippingAddress: String(entry.shippingaddress || "").trim(),
+          billingAddress: String(entry.billingaddress || "").trim(), invoiceNo: String(entry.invoiceno || "").trim(),
+          invoiceDate: parseExcelDate(entry.invoicedate) || "", fulfillingStatus: String(entry.fulfillingstatus || "Pending").trim(),
+          remarksByProduction: String(entry.remarksbyproduction || "").trim(), remarksByAccounts: String(entry.remarksbyaccounts || "").trim(),
+          paymentReceived: String(entry.paymentreceived || "Not Received").trim(), billNumber: String(entry.billnumber || "").trim(),
+          piNumber: String(entry.pinumber || "").trim(), remarksByBilling: String(entry.remarksbybilling || "").trim(),
+          verificationRemarks: String(entry.verificationremarks || "").trim(), billStatus: String(entry.billstatus || "Pending").trim(),
+          completionStatus: String(entry.completionstatus || "In Progress").trim(), fulfillmentDate: parseExcelDate(entry.fulfillmentdate) || "",
+          remarks: String(entry.remarks || "").trim(), sostatus: String(entry.sostatus || "Pending for Approval").trim(),
+          gstno: String(entry.gstno || "").trim(),
+        };
+      });
+      await furniApi.post("/api/bulk-orders", newEntries, { headers: { "Content-Type": "application/json" } });
+      await fetchPaginatedOrders();
+      fetchDashboardCounts();
+    } catch (error) {
+      console.error("Error uploading entries:", error);
+      let userFriendlyMessage = "Something went wrong while uploading your file.";
+      if (error.response) {
+        if (error.response.status === 400) userFriendlyMessage = "The file format seems incorrect. Please check your Excel template.";
+        else if (error.response.status === 413) userFriendlyMessage = "The file is too large. Please upload a smaller file.";
+        else userFriendlyMessage = error.response.data?.details?.join(", ") || error.response.data?.message || userFriendlyMessage;
+      } else if (error.request) { userFriendlyMessage = "Could not connect to the server. Please check your internet connection."; }
+      toast.error(userFriendlyMessage, { position: "top-right", autoClose: 5000 });
+    }
   }, [parseExcelDate, fetchPaginatedOrders, fetchDashboardCounts]);
 
   const handleExport = useCallback(async () => {
     try {
-      const response = await furniApi.get("/api/export", { params: { search: searchTerm, approval: productionStatusFilter, orderType: productStatus, dispatch: dispatchFilter, salesPerson: "All", dispatchFrom: "All", startDate: startDate ? startDate.toISOString() : null, endDate: endDate ? endDate.toISOString() : null, dashboardFilter: trackerFilter }, responseType: "blob" });
+      const response = await furniApi.get("/api/export", { params: { search: searchTerm, approval: productionStatusFilter, orderType: productStatus, dispatch: dispatchFilter, salesPerson: "All", dispatchFrom: "All", financialYear: financialYearFilter, startDate: startDate ? startDate.toISOString() : null, endDate: endDate ? endDate.toISOString() : null, dashboardFilter: trackerFilter }, responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -502,7 +501,7 @@ const Sales = () => {
       console.error("Error exporting orders:", error);
       toast.error("Failed to export orders!");
     }
-  }, [searchTerm, productionStatusFilter, productStatus, dispatchFilter, startDate, endDate, trackerFilter]);
+  }, [searchTerm, productionStatusFilter, productStatus, dispatchFilter, financialYearFilter, startDate, endDate, trackerFilter]);
 
   const formatTimestamp = useCallback((timestamp) => {
     const date = new Date(timestamp);
@@ -538,7 +537,7 @@ const Sales = () => {
     </NotificationPopover>
   );
 
-  const tableHeaders = ["Seq No","Order ID","SO Date","Customer Name","Contact Person Name","Contact No","Customer Email","SO Status","Actions","Alternate No","City","State","Pin Code","GST No","Shipping Address","Billing Address","Description of Goods","Product Category","Size","Spec","Qty","Unit Price","GST","Total","Payment Collected","Payment Method","Payment Due","Payment Terms","Payment Received","Freight Charges","Actual Freight","Installation Status","Installation Report","Transporter Details","Dispatch From","Dispatch Status","Signed Stamp Receiving","Order Type","Report","Bill Status","Production Status","Bill Number","PI Number","Sales Person","Company","Created By","Remarks"];
+  const tableHeaders = ["Seq No","Order ID","SO Date","Financial Year","Customer Name","Contact Person Name","Contact No","Customer Email","SO Status","Actions","Alternate No","City","State","Pin Code","GST No","Shipping Address","Billing Address","Description of Goods","Product Category","Size","Spec","Qty","Unit Price","GST","Total","Payment Collected","Payment Method","Payment Due","Payment Terms","Payment Received","Freight Charges","Actual Freight","Installation Status","Installation Report","Transporter Details","Dispatch From","Dispatch Status","Signed Stamp Receiving","Order Type","Report","Bill Status","Production Status","Bill Number","PI Number","Sales Person","Company","Created By","Remarks"];
 
   return (
     <>
@@ -553,6 +552,8 @@ const Sales = () => {
           productStatus={productStatus} setProductStatusFilter={setProductStatusFilter}
           accountsStatusFilter={accountsStatusFilter} setAccountsStatusFilter={setAccountsStatusFilter}
           dispatchFilter={dispatchFilter} setDispatchFilter={setDispatchFilter}
+          financialYearFilter={financialYearFilter} setFinancialYearFilter={setFinancialYearFilter}
+          financialYearOptions={FINANCIAL_YEAR_OPTIONS}
           handleReset={handleReset}
         />
       </div>

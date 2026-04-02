@@ -31,12 +31,7 @@ const ValueAnalyticsDrawer = ({
 
   useEffect(() => {
     if (isOpen && entries && entries.length > 0) {
-      console.log("ValueAnalyticsDrawer opened with props:", {
-        entriesCount: entries?.length,
-        role,
-        userId,
-        dateRange,
-      });
+      // drawer opened
     }
   }, [isOpen, entries?.length, role, userId, dateRange]);
 
@@ -54,17 +49,8 @@ const ValueAnalyticsDrawer = ({
       if (normalizedRole === "Others" || normalizedRole === "Salesperson") {
         filteredEntries = filteredEntries.filter((e) => {
           const creatorId = normalizeId(e.createdBy);
-          const matches = creatorId === userId;
-          if (!matches && creatorId) {
-            console.warn("Unmatched entry creator:", {
-              entryId: e._id,
-              creatorId,
-              userId,
-            });
-          }
-          return matches;
+          return creatorId === userId;
         });
-        console.log("Entries after salesperson filter:", filteredEntries.length);
         if (
           filteredEntries.length === 0 &&
           entries.some((e) => normalizeId(e.createdBy) === userId)
@@ -73,7 +59,6 @@ const ValueAnalyticsDrawer = ({
           filteredEntries = entries.filter(
             (e) => normalizeId(e.createdBy) === userId
           );
-          console.log("Fallback entries for salesperson:", filteredEntries.length);
         }
       }
 
@@ -152,7 +137,6 @@ const ValueAnalyticsDrawer = ({
       });
 
       const result = Object.values(statsMap);
-      console.log("Calculated value stats count:", result.length, result);
       setValueStats(result);
       setTotalClosingAmount(totals.totalClose);
       setMonthClosingAmount(totals.monthClose);

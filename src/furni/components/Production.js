@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import { Button, Modal, Form, Spinner, Badge } from "react-bootstrap";
 import { FaEye } from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../utils/excelHelper";
 import "../../App.css";
 import styled from "styled-components";
 import DatePicker from "react-datepicker";
@@ -208,7 +208,7 @@ const Production = () => {
       .catch((err) => { toast.error("Failed to copy details!", { toastId: "copy-error" }); console.error("Copy error:", err); });
   }, [viewOrder]);
 
-  const exportToExcel = useCallback(() => {
+  const handleExportExcel = useCallback(async () => {
     const exportData = filteredOrders.map((order) => {
       const firstProduct = Array.isArray(order.products) && order.products.length > 0 ? order.products[0] : {};
       const productDetails = Array.isArray(order.products) ? order.products.map((p) => `${p.productType || "N/A"} (${p.qty || "N/A"})`).join(", ") : "N/A";
@@ -229,10 +229,7 @@ const Production = () => {
         Quantity: totalQty,
       };
     });
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Production Orders");
-    XLSX.writeFile(workbook, `Production_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
+    await exportToExcel(exportData, "Production Orders", `Production_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
   }, [filteredOrders]);
 
   const isValidPoFilePath = (filePath) => filePath && typeof filePath === "string" && filePath.trim() !== "" && filePath !== "N/A" && filePath !== "/";
@@ -307,7 +304,7 @@ const Production = () => {
               {uniqueOrderTypes.map((orderType) => (<option key={orderType} value={orderType}>{orderType}</option>))}
             </Form.Select>
           </Form.Group>
-          <Button onClick={exportToExcel} style={{ background: "linear-gradient(135deg, #28a745, #4cd964)", border: "none", padding: "10px 20px", borderRadius: "20px", color: "#fff", fontWeight: "600", marginBottom: "-45px", fontSize: "1rem", alignSelf: "center" }}
+          <Button onClick={handleExportExcel} style={{ background: "linear-gradient(135deg, #28a745, #4cd964)", border: "none", padding: "10px 20px", borderRadius: "20px", color: "#fff", fontWeight: "600", marginBottom: "-45px", fontSize: "1rem", alignSelf: "center" }}
             onMouseEnter={(e) => (e.target.style.transform = "translateY(-2px)")} onMouseLeave={(e) => (e.target.style.transform = "translateY(0)")}>Export to Excel</Button>
           <Button onClick={clearFilters} style={{ background: "linear-gradient(135deg,rgb(167,110,40),rgb(217,159,41))", border: "none", padding: "10px 20px", borderRadius: "20px", color: "#fff", fontWeight: "600", marginBottom: "-45px", fontSize: "1rem", alignSelf: "center" }}
             onMouseEnter={(e) => (e.target.style.transform = "translateY(-2px)")} onMouseLeave={(e) => (e.target.style.transform = "translateY(0)")}>Clear Filters</Button>

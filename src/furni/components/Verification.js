@@ -5,7 +5,7 @@ import ViewEntry from "./ViewEntry";
 import EditVerification from "./EditVerification";
 import furniApi from "../axiosSetup";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../utils/excelHelper";
 
 const Verification = () => {
   const [orders, setOrders] = useState([]);
@@ -94,7 +94,7 @@ const Verification = () => {
     toast.success("Order verification updated successfully!");
   };
 
-  const handleExportToXLSX = () => {
+  const handleExportToXLSX = async () => {
     const tableData = filteredOrders.map((order, index) => ({
       "Seq No": index + 1,
       "Order ID": order.orderId || "-",
@@ -110,10 +110,7 @@ const Verification = () => {
       "Product Details": order.products ? order.products.map((p) => `${p.productType} (${p.qty})`).join(", ") : "-",
     }));
 
-    const ws = XLSX.utils.json_to_sheet(tableData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Verification Orders");
-    XLSX.writeFile(wb, "Verification_Orders.xlsx");
+    await exportToExcel(tableData, "Verification Orders", "Verification_Orders.xlsx");
   };
 
   return (

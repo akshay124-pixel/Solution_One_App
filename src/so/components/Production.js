@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import { Button, Modal, Form, Spinner, Badge } from "react-bootstrap";
 import { FaEye, FaTimes } from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../utils/excelHelper";
 import "../App.css";
 import styled from "styled-components";
 import DatePicker from "react-datepicker";
@@ -675,7 +675,11 @@ const Production = () => {
     }
   };
 
-  const exportToExcel = () => {
+  const totalPending = filteredOrders.filter(
+    (order) => order.fulfillingStatus === "Pending"
+  ).length;
+
+  const handleExportExcel = useCallback(async () => {
     const exportData = filteredOrders.map((order) => {
       const firstProduct =
         Array.isArray(order.products) && order.products.length > 0
@@ -714,17 +718,8 @@ const Production = () => {
         "Total Quantity": totalQty,
       };
     });
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Production Orders");
-    XLSX.writeFile(
-      workbook,
-      `Production_Orders_${new Date().toISOString().split("T")[0]}.xlsx`
-    );
-  };
-  const totalPending = filteredOrders.filter(
-    (order) => order.fulfillingStatus === "Pending"
-  ).length;
+    await exportToExcel(exportData, "Production Orders", `Production_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
+  }, [filteredOrders]);
 
   return (
     <>
@@ -1044,7 +1039,7 @@ const Production = () => {
             </Form.Select>
           </Form.Group>
           <Button
-            onClick={exportToExcel}
+            onClick={handleExportExcel}
             style={{
               background: "linear-gradient(135deg, #28a745, #4cd964)",
               border: "none",

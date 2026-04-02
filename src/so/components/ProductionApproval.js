@@ -6,7 +6,7 @@ import ViewEntry from "./ViewEntry";
 import EditProductionApproval from "./EditProductionApproval";
 import axios from "../../so/axiosSetup";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../utils/excelHelper";
 import { getPortalAccessToken } from "../../portal/PortalAuthContext";
 
 const ProductionApproval = () => {
@@ -54,8 +54,6 @@ const ProductionApproval = () => {
     });
 
     socket.on("connect", () => {
-      console.log("Socket.IO is connected!");
-      // Hinglish: Server per-user/role rooms use object payload so relevant updates hi milein
       const userId = localStorage.getItem("userId");
       const role = localStorage.getItem("role");
       socket.emit("join", { userId, role });
@@ -98,7 +96,6 @@ const ProductionApproval = () => {
     });
 
     socket.on("disconnect", () => {
-      console.log("Socket.IO is disconnected!");
     });
 
     return () => {
@@ -239,7 +236,7 @@ const ProductionApproval = () => {
     // Hinglish: Local success toast hata diya; realtime toast socket 'notification' se aayega (no duplicates)
   };
 
-  const handleExportToXLSX = () => {
+  const handleExportToXLSX = async () => {
     const tableData = filteredOrders.map((order) => ({
       "Order ID": order.orderId || "-",
       "Customer Name": order.customername || "-",
@@ -256,10 +253,7 @@ const ProductionApproval = () => {
       "Stock Status": order.stockStatus || "-", // Added stockStatus to export
     }));
 
-    const ws = XLSX.utils.json_to_sheet(tableData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Production Approval Orders");
-    XLSX.writeFile(wb, "Production_Approval_Orders.xlsx");
+    await exportToExcel(tableData, "Production Approval Orders", "Production_Approval_Orders.xlsx");
   };
 
   return (

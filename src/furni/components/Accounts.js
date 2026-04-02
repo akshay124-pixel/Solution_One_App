@@ -3,7 +3,7 @@ import furniApi from "../axiosSetup";
 import { Button, Modal, Badge, Form, Spinner } from "react-bootstrap";
 import { FaEye, FaTimes } from "react-icons/fa";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../utils/excelHelper";
 import ViewEntry from "./ViewEntry";
 
 function Accounts() {
@@ -228,7 +228,7 @@ function Accounts() {
     }
   };
 
-  const exportToExcel = useCallback(() => {
+  const handleExportExcel = useCallback(async () => {
     const exportData = filteredOrders.map((order) => {
       const productDetails = Array.isArray(order.products)
         ? order.products.map((p) => `${p.productType || "N/A"} (${p.qty || "N/A"})`).join(", ")
@@ -248,10 +248,7 @@ function Accounts() {
         Products: productDetails,
       };
     });
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Accounts Orders");
-    XLSX.writeFile(workbook, `Accounts_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
+    await exportToExcel(exportData, "Accounts Orders", `Accounts_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
   }, [filteredOrders]);
 
   const handleClearFilters = () => {
@@ -303,7 +300,12 @@ function Accounts() {
               {uniqueStatuses.map((status) => (<option key={status} value={status}>{status}</option>))}
             </Form.Select>
             <Button onClick={handleClearFilters} style={{ background: "linear-gradient(135deg, #6c757d, #5a6268)", border: "none", padding: "10px 20px", borderRadius: "20px", color: "#fff", fontWeight: "600" }}>Clear Filters</Button>
-            <Button onClick={exportToExcel} style={{ background: "linear-gradient(135deg, #28a745, #4cd964)", border: "none", padding: "10px 20px", borderRadius: "20px", color: "#fff", fontWeight: "600" }}>Export to Excel</Button>
+            <Button onClick={handleExportExcel} style={{ background: "linear-gradient(135deg, #28a745, #4cd964)", border: "none", padding: "10px 20px", borderRadius: "20px", color: "#fff", fontWeight: "600" }}>Export to Excel</Button>
+          </div>
+
+          <div className="total-results" style={{ marginBottom: "20px" }}>
+            <span>Total Orders: {filteredOrders.length}</span>
+            <span>Total Pending: {filteredOrders.filter((o) => (o.paymentReceived || "Not Received") === "Not Received").length}</span>
           </div>
 
           <div style={{ overflowX: "auto", maxHeight: "550px", border: "1px solid rgba(0, 0, 0, 0.1)", borderRadius: "8px", backgroundColor: "rgba(255, 255, 255, 0.8)", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)" }}>

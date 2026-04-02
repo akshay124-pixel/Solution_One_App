@@ -6,7 +6,7 @@ import ViewEntry from "./ViewEntry";
 import EditProductionApproval from "./EditProductionApproval";
 import furniApi from "../axiosSetup";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../utils/excelHelper";
 
 const FURNI_BASE = process.env.REACT_APP_FURNI_URL || "http://localhost:5050/api/furni";
 const socketOrigin = (() => {
@@ -169,7 +169,7 @@ const ProductionApproval = () => {
     fetchOrders();
   };
 
-  const handleExportToXLSX = () => {
+  const handleExportToXLSX = async () => {
     const tableData = filteredOrders.map((order) => ({
       "Order ID": order.orderId || "-",
       "Customer Name": order.customername || "-",
@@ -179,10 +179,7 @@ const ProductionApproval = () => {
       "Delivery Date": order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString("en-GB") : "-",
       Remarks: order.remarksByProduction || "-",
     }));
-    const ws = XLSX.utils.json_to_sheet(tableData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Production Approval Orders");
-    XLSX.writeFile(wb, "Production_Approval_Orders.xlsx");
+    await exportToExcel(tableData, "Production Approval Orders", "Production_Approval_Orders.xlsx");
   };
 
   return (

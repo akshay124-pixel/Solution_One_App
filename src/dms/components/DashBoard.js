@@ -23,7 +23,7 @@ import { enUS } from "date-fns/locale";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import { Popover } from "@mui/material";
-import * as XLSX from "xlsx";
+import { exportToExcel, readExcelFile } from "../../utils/excelHelper";
 import { toast } from "react-toastify";
 import DisableCopy from "./DisableCopy";
 import AddEntry from "./AddEntry";
@@ -1064,14 +1064,8 @@ function DashBoard() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const data = new Uint8Array(event.target.result);
-        const workbook = XLSX.read(data, { type: "array", cellDates: true }); // Parse dates as objects
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const parsedData = XLSX.utils.sheet_to_json(worksheet);
+    try {
+      const parsedData = await readExcelFile(file);
 
         const newEntries = parsedData
           .map((item) => ({
@@ -1163,8 +1157,6 @@ function DashBoard() {
         console.error("Error processing Excel file:", error.message);
         toast.error(`Invalid Excel file: ${error.message}`);
       }
-    };
-    reader.readAsArrayBuffer(file);
   };
   // Mail Start
   const handleSendEmail = async (entry) => {
@@ -1256,12 +1248,6 @@ function DashBoard() {
         "Created At": entry.createdAt ? new Date(entry.createdAt) : "", // Pass Date object
       }));
 
-      // Create Excel file
-      // Create Excel file with strict date formatting
-      const worksheet = XLSX.utils.json_to_sheet(exportData, { dateNF: "dd-mm-yyyy" });
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Entries");
-
       // Generate filename based on filters
       let filename = "Data";
       if (selectedStateA) filename += `_${selectedStateA}`;
@@ -1276,7 +1262,7 @@ function DashBoard() {
       }
       filename += ".xlsx";
 
-      XLSX.writeFile(workbook, filename);
+      await exportToExcel(exportData, "Entries", filename);
 
       toast.dismiss(loadingToast);
       toast.success(`Export complete! ${allFilteredEntries.length} entries exported to ${filename}`);

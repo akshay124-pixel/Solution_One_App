@@ -3,7 +3,7 @@ import furniApi from "../axiosSetup";
 import { Button, Modal, Badge, Form, Spinner } from "react-bootstrap";
 import { FaEye, FaTimes, FaEnvelope, FaDownload } from "react-icons/fa";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../utils/excelHelper";
 import "../../App.css";
 import { salesPersonlist } from "./Options";
 
@@ -186,7 +186,7 @@ function Installation() {
 
   const handleClearFilters = () => { setSearchQuery(""); setStatusFilter("All"); setSalesPersonFilter("All"); setStartDate(""); setEndDate(""); };
 
-  const exportToExcel = () => {
+  const handleExportExcel = async () => {
     const exportData = filteredOrders.map((order) => ({
       "Order ID": order.orderId || "N/A",
       "Product Details": Array.isArray(order.products) ? order.products.map((p) => `${p.productType || "N/A"} (${p.qty || "N/A"})`).join(", ") : "N/A",
@@ -194,10 +194,7 @@ function Installation() {
       "Shipping Address": order.shippingAddress || "N/A", "Installation Details": order.installation || "N/A",
       "Installation Status": order.installationStatus || "Pending",
     }));
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Installation Orders");
-    XLSX.writeFile(workbook, `Installation_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
+    await exportToExcel(exportData, "Installation Orders", `Installation_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
   };
 
   if (initialLoading) {
@@ -228,7 +225,7 @@ function Installation() {
           <option value="All">All Sales Persons</option>
           {salesPersonlist.map((sp) => <option key={sp} value={sp}>{sp}</option>)}
         </Form.Select>
-        <Button onClick={exportToExcel} style={{ background: "linear-gradient(135deg, #28a745, #4cd964)", border: "none", padding: "10px 20px", borderRadius: "20px", color: "#fff", fontWeight: "600", fontSize: "1rem", boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)", transition: "all 0.3s ease" }} onMouseEnter={(e) => (e.target.style.transform = "translateY(-2px)")} onMouseLeave={(e) => (e.target.style.transform = "translateY(0)")}>Export to Excel</Button>
+        <Button onClick={handleExportExcel} style={{ background: "linear-gradient(135deg, #28a745, #4cd964)", border: "none", padding: "10px 20px", borderRadius: "20px", color: "#fff", fontWeight: "600", fontSize: "1rem", boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)", transition: "all 0.3s ease" }} onMouseEnter={(e) => (e.target.style.transform = "translateY(-2px)")} onMouseLeave={(e) => (e.target.style.transform = "translateY(0)")}>Export to Excel</Button>
         <Button onClick={handleClearFilters} style={{ background: "linear-gradient(135deg, #28a745, #4cd964)", border: "none", padding: "10px 20px", borderRadius: "20px", color: "#fff", fontWeight: "600", fontSize: "1rem", boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)", transition: "all 0.3s ease" }} onMouseEnter={(e) => (e.target.style.transform = "translateY(-2px)")} onMouseLeave={(e) => (e.target.style.transform = "translateY(0)")}>Clear Filters</Button>
       </div>
       <div className="total-results my-3">

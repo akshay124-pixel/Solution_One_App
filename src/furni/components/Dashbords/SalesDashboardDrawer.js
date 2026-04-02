@@ -5,7 +5,7 @@ import { X, Download, Calendar, ArrowRight } from "lucide-react";
 import furniApi from "../../axiosSetup";
 import { io } from "socket.io-client";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../../utils/excelHelper";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -261,7 +261,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose, userRole }) => {
     if (isOpen) fetchOrders();
   }, [productionStatusFilter, productStatus, installStatusFilter, accountsStatusFilter, dispatchFilter, startDate, endDate, isOpen, fetchOrders]);
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     try {
       const exportData = [
         {
@@ -284,20 +284,8 @@ const SalesDashboardDrawer = ({ isOpen, onClose, userRole }) => {
           "Total Unit Price (₹)": data.totalUnitPrice.toFixed(2),
         })),
       ];
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      worksheet["!cols"] = [{ wch: 20 }, { wch: 12 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Sales Analytics");
-      const fileBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-      const blob = new Blob([fileBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `Sales_Analytics_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      const colWidths = { "Sales Person": 20, "Total Orders": 12, "Total Value (₹)": 16, "Payment Collected (₹)": 16, "Payment Due (₹)": 16, "Due Over 30 Days (₹)": 16, "Total Unit Price (₹)": 16 };
+      await exportToExcel(exportData, "Sales Analytics", `Sales_Analytics_${new Date().toISOString().slice(0, 10)}.xlsx`, colWidths);
       toast.success("Exported sales analytics to Excel!");
     } catch (error) {
       console.error("Error exporting to Excel:", error);

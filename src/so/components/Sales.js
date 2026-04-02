@@ -8,7 +8,7 @@ import FilterSection from "./FilterSection";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from "../../so/axiosSetup";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel, readExcelFile } from "../../utils/excelHelper";
 import { ArrowRight } from "lucide-react";
 import io from "socket.io-client";
 import styled from "styled-components";
@@ -17,6 +17,7 @@ import AutoSizer from "react-virtualized-auto-sizer";
 import debounce from "lodash/debounce";
 import SalesDashboardDrawer from "./Dashbords/SalesDashboardDrawer";
 import { AnimatePresence, motion } from "framer-motion";
+import { FINANCIAL_YEAR_OPTIONS } from "../../shared/financialYear";
 // Lazy load modals
 const ViewEntry = React.lazy(() => import("./ViewEntry"));
 const DeleteModal = React.lazy(() => import("./Delete"));
@@ -172,6 +173,8 @@ const columnWidths = [
 ];
 
 const totalTableWidth = columnWidths.reduce((sum, width) => sum + width, 0);
+const normalizeTableText = (value) =>
+  typeof value === "string" ? value.replace(/^\s*[•·]\s*/, "").trim() : value;
 
 // Updated CSS for perfect table alignment
 const tableStyles = `
@@ -269,6 +272,15 @@ body {
   padding-left: 15px;
   position: relative;
 }
+.sales-table td.customer-name-cell {
+  font-weight: normal;
+  text-align: center;
+  list-style-type: none;
+  padding-left: 15px;
+  position: relative;
+}
+.sales-table td.customer-name-cell::before,
+.sales-table td.customer-name-cell::after,
 .sales-table td.contact-person-name::before,
 .sales-table td.contact-person-name::after {
   content: none !important;
@@ -507,28 +519,34 @@ const Row = React.memo(({ index, style, data }) => {
         },
         {
           width: columnWidths[3],
-          content: order.customername || "-",
-          title: order.customername || "-",
+          content: order.financialYear || "-",
+          title: order.financialYear || "-",
         },
         {
           width: columnWidths[4],
+          content: normalizeTableText(order.customername) || "-",
+          title: normalizeTableText(order.customername) || "-",
+          className: "customer-name-cell",
+        },
+        {
+          width: columnWidths[5],
           content: order.name || "-",
           title: order.name || "-",
           className: "contact-person-name",
         },
         {
-          width: columnWidths[5],
+          width: columnWidths[6],
           content: order.contactNo || "-",
           title: order.contactNo || "-",
         },
 
         {
-          width: columnWidths[9],
+          width: columnWidths[10],
           content: order.customerEmail || "-",
           title: order.customerEmail || "-",
         },
         {
-          width: columnWidths[7],
+          width: columnWidths[8],
           content: (
             <Badge
               bg={
@@ -552,7 +570,7 @@ const Row = React.memo(({ index, style, data }) => {
           title: order.sostatus || "-",
         },
         {
-          width: columnWidths[8],
+          width: columnWidths[9],
           content: (
             <div className="actions-cell">
               <Button
@@ -668,118 +686,118 @@ const Row = React.memo(({ index, style, data }) => {
           title: "",
         },
         {
-          width: columnWidths[6],
+          width: columnWidths[7],
           content: order.alterno || "-",
           title: order.alterno || "-",
         },
 
         {
-          width: columnWidths[10],
+          width: columnWidths[11],
           content: order.city || "-",
           title: order.city || "-",
         },
         {
-          width: columnWidths[11],
+          width: columnWidths[12],
           content: order.state || "-",
           title: order.state || "-",
         },
         {
-          width: columnWidths[12],
+          width: columnWidths[13],
           content: order.pinCode || "-",
           title: order.pinCode || "-",
         },
         {
-          width: columnWidths[13],
+          width: columnWidths[14],
           content: order.gstno || "-",
           title: order.gstno || "-",
         },
         {
-          width: columnWidths[14],
+          width: columnWidths[15],
           content: order.shippingAddress || "-",
           title: order.shippingAddress || "-",
         },
         {
-          width: columnWidths[15],
+          width: columnWidths[16],
           content: order.billingAddress || "-",
           title: order.billingAddress || "-",
         },
         {
-          width: columnWidths[16],
+          width: columnWidths[17],
           content: productDetails,
           title: productDetails,
         },
         {
-          width: columnWidths[17],
+          width: columnWidths[18],
           content: firstProduct.productType || "-",
           title: firstProduct.productType || "-",
         },
         {
-          width: columnWidths[18],
+          width: columnWidths[19],
           content: firstProduct.size || "-",
           title: firstProduct.size || "-",
         },
         {
-          width: columnWidths[19],
+          width: columnWidths[20],
           content: firstProduct.spec || "-",
           title: firstProduct.spec || "-",
         },
         {
-          width: columnWidths[20],
+          width: columnWidths[21],
           content: totalQty || "-",
           title: totalQty || "-",
         },
         {
-          width: columnWidths[21],
+          width: columnWidths[22],
           content: `₹${totalUnitPrice.toFixed(2) || "0.00"}`,
           title: `₹${totalUnitPrice.toFixed(2) || "0.00"}`,
         },
         {
-          width: columnWidths[22],
+          width: columnWidths[23],
           content: `${gstValues}%`,
           title: gstValues,
         },
         {
-          width: columnWidths[23],
+          width: columnWidths[24],
           content: firstProduct.brand || "-",
           title: firstProduct.brand || "-",
         },
         {
-          width: columnWidths[24],
+          width: columnWidths[25],
           content: firstProduct.warranty || "-",
           title: firstProduct.warranty || "-",
         },
         {
-          width: columnWidths[25],
+          width: columnWidths[26],
           content: `₹${order.total?.toFixed(2) || "0.00"}`,
           title: `₹${order.total?.toFixed(2) || "0.00"}`,
         },
         {
-          width: columnWidths[26],
+          width: columnWidths[27],
           content: order.paymentCollected ? `₹${order.paymentCollected}` : "-",
           title: order.paymentCollected ? `₹${order.paymentCollected}` : "-",
         },
         {
-          width: columnWidths[27],
+          width: columnWidths[28],
           content: order.paymentMethod || "-",
           title: order.paymentMethod || "-",
         },
         {
-          width: columnWidths[28],
+          width: columnWidths[29],
           content: order.paymentDue ? `₹${order.paymentDue}` : "-",
           title: order.paymentDue ? `₹${order.paymentDue}` : "-",
         },
         {
-          width: columnWidths[29],
+          width: columnWidths[30],
           content: order.paymentTerms || "-",
           title: order.paymentTerms || "-",
         },
         {
-          width: columnWidths[30],
+          width: columnWidths[31],
           content: order.creditDays || "-",
           title: order.creditDays || "-",
         },
         {
-          width: columnWidths[31],
+          width: columnWidths[32],
           content: (
             <Badge
               bg={order.paymentReceived === "Received" ? "success" : "warning"}
@@ -790,17 +808,17 @@ const Row = React.memo(({ index, style, data }) => {
           title: order.paymentReceived || "-",
         },
         {
-          width: columnWidths[32],
+          width: columnWidths[33],
           content: order.freightcs ? `₹${order.freightcs}` : "-",
           title: order.freightcs ? `₹${order.freightcs}` : "-",
         },
         {
-          width: columnWidths[33],
+          width: columnWidths[34],
           content: order.freightstatus || "-",
           title: order.freightstatus || "-",
         },
         {
-          width: columnWidths[34],
+          width: columnWidths[35],
           content: order.actualFreight
             ? `₹${order.actualFreight}`
             : "-",
@@ -809,17 +827,17 @@ const Row = React.memo(({ index, style, data }) => {
             : "-",
         },
         {
-          width: columnWidths[35],
+          width: columnWidths[36],
           content: order.installchargesstatus || "-",
           title: order.installchargesstatus || "-",
         },
         {
-          width: columnWidths[36],
+          width: columnWidths[37],
           content: order.installation ? `₹${order.installation}` : "-",
           title: order.installation ? `₹${order.installation}` : "-",
         },
         {
-          width: columnWidths[37],
+          width: columnWidths[38],
           content: (
             <Badge
               bg={
@@ -846,22 +864,22 @@ const Row = React.memo(({ index, style, data }) => {
           title: order.installationStatus || "-",
         },
         {
-          width: columnWidths[38],
+          width: columnWidths[39],
           content: order.transporter || "-",
           title: order.transporter || "-",
         },
         {
-          width: columnWidths[39],
+          width: columnWidths[40],
           content: order.transporterDetails || "-",
           title: order.transporterDetails || "-",
         },
         {
-          width: columnWidths[40],
+          width: columnWidths[41],
           content: order.dispatchFrom || "-",
           title: order.dispatchFrom || "-",
         },
         {
-          width: columnWidths[41],
+          width: columnWidths[42],
           content: order.dispatchDate
             ? new Date(order.dispatchDate).toLocaleDateString("en-GB")
             : "-",
@@ -870,7 +888,7 @@ const Row = React.memo(({ index, style, data }) => {
             : "-",
         },
         {
-          width: columnWidths[42],
+          width: columnWidths[43],
           content: (
             <Badge
               bg={
@@ -897,17 +915,17 @@ const Row = React.memo(({ index, style, data }) => {
           title: order.dispatchStatus || "-",
         },
         {
-          width: columnWidths[43],
+          width: columnWidths[44],
           content: order.orderType || "-",
           title: order.orderType || "-",
         },
         {
-          width: columnWidths[44],
+          width: columnWidths[45],
           content: order.report || "-",
           title: order.report || "-",
         },
         {
-          width: columnWidths[45],
+          width: columnWidths[46],
           content: (
             <Badge
               bg={
@@ -924,7 +942,7 @@ const Row = React.memo(({ index, style, data }) => {
           title: order.stockStatus || "-",
         },
         {
-          width: columnWidths[46],
+          width: columnWidths[47],
           content: (
             <Badge
               bg={
@@ -943,7 +961,7 @@ const Row = React.memo(({ index, style, data }) => {
           title: order.billStatus || "-",
         },
         {
-          width: columnWidths[47],
+          width: columnWidths[48],
           content: (
             <Badge
               style={{
@@ -965,7 +983,7 @@ const Row = React.memo(({ index, style, data }) => {
           title: order.fulfillingStatus || "Pending",
         },
         {
-          width: columnWidths[48],
+          width: columnWidths[49],
           content: (
             <Badge
               bg={
@@ -984,7 +1002,7 @@ const Row = React.memo(({ index, style, data }) => {
           title: order.installationReport || "No",
         },
         {
-          width: columnWidths[49],
+          width: columnWidths[50],
           content: (
             <Badge
               bg={
@@ -1001,27 +1019,27 @@ const Row = React.memo(({ index, style, data }) => {
           title: order.stamp || "Not Received",
         },
         {
-          width: columnWidths[50],
+          width: columnWidths[51],
           content: order.billNumber || "-",
           title: order.billNumber || "-",
         },
         {
-          width: columnWidths[51],
+          width: columnWidths[52],
           content: order.piNumber || "-",
           title: order.piNumber || "-",
         },
         {
-          width: columnWidths[52],
+          width: columnWidths[53],
           content: order.salesPerson || "-",
           title: order.salesPerson || "-",
         },
         {
-          width: columnWidths[53],
+          width: columnWidths[54],
           content: order.company || "-",
           title: order.company || "-",
         },
         {
-          width: columnWidths[54],
+          width: columnWidths[55],
           content:
             order.createdBy && typeof order.createdBy === "object"
               ? order.createdBy.username || "Unknown"
@@ -1036,12 +1054,12 @@ const Row = React.memo(({ index, style, data }) => {
                 : "-",
         },
         {
-          width: columnWidths[55],
+          width: columnWidths[56],
           content: order.poFilePath ? "Attached" : "Not Attached",
           title: order.poFilePath ? "Attached" : "Not Attached",
         },
         {
-          width: columnWidths[56],
+          width: columnWidths[57],
           content: order.remarks || "-",
           title: order.remarks || "-",
         },
@@ -1082,6 +1100,7 @@ const Sales = () => {
   const [dispatchFromFilter, setDispatchFromFilter] = useState("All");
   const [orderTypeFilter, setOrderTypeFilter] = useState("All");
   const [dispatchFilter, setDispatchFilter] = useState("All");
+  const [financialYearFilter, setFinancialYearFilter] = useState("All");
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [notifications, setNotifications] = useState([]);
@@ -1173,6 +1192,7 @@ const Sales = () => {
         dispatch = "All",
         salesPerson = "All",
         dispatchFrom = "All",
+        financialYear = "All",
         startDate = null,
         endDate = null,
         dashboardFilter = "all",
@@ -1187,6 +1207,7 @@ const Sales = () => {
         dispatch,
         salesPerson,
         dispatchFrom,
+        financialYear,
         dashboardFilter,
       };
 
@@ -1305,7 +1326,6 @@ const Sales = () => {
     });
 
     socket.on("connect", () => {
-      console.log("Socket.IO connected:", socket.id);
       socket.emit("join", { userId, role: userRole });
     });
 
@@ -1391,7 +1411,6 @@ const Sales = () => {
       socket.off("orderUpdate");
       socket.off("deleteOrder");
       socket.disconnect();
-      console.log("Socket.IO disconnected and listeners cleaned up");
     };
   }, [fetchOrders, fetchNotifications, userRole, userId, fetchDashboardCounts]);
 
@@ -1409,6 +1428,7 @@ const Sales = () => {
         dispatch: dispatchFilter,
         salesPerson: salesPersonFilter,
         dispatchFrom: dispatchFromFilter,
+        financialYear: financialYearFilter,
         startDate,
         endDate,
         dashboardFilter: trackerFilter,
@@ -1421,6 +1441,7 @@ const Sales = () => {
     dispatchFilter,
     salesPersonFilter,
     dispatchFromFilter,
+    financialYearFilter,
     startDate,
     endDate,
     trackerFilter,
@@ -1436,6 +1457,7 @@ const Sales = () => {
       dispatch: dispatchFilter,
       salesPerson: salesPersonFilter,
       dispatchFrom: dispatchFromFilter,
+      financialYear: financialYearFilter,
       startDate,
       endDate,
       dashboardFilter: trackerFilter,
@@ -1486,6 +1508,7 @@ const Sales = () => {
     setApprovalFilter("All");
     setOrderTypeFilter("All");
     setDispatchFilter("All");
+    setFinancialYearFilter("All");
     setTrackerFilter("all");
 
     toast.info("Filters reset!");
@@ -1576,42 +1599,23 @@ const Sales = () => {
       const file = e.target.files[0];
       if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        try {
-          const data = new Uint8Array(event.target.result);
-          const workbook = XLSX.read(data, {
-            type: "array",
-            raw: false,
-            dateNF: "yyyy-mm-dd",
-          });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const parsedData = XLSX.utils.sheet_to_json(worksheet, {
-            header: 1,
-            raw: false,
-            blankrows: false,
-          });
+      try {
+        // readExcelFile returns array of objects keyed by header row
+        const rawRows = await readExcelFile(file);
 
-          const headers = parsedData[0].map((h) =>
-            h
-              ? h
-                .toLowerCase()
-                .replace(/\s+/g, "")
-                .replace(/[^a-z0-9]/g, "")
-              : ""
-          );
-          const rows = parsedData
-            .slice(1)
-            .filter((row) =>
-              row.some((cell) => cell !== undefined && cell !== "")
-            );
+        // Normalise keys to match the original header-mapping logic
+        const parsedData = rawRows.map((row) => {
+          const entry = {};
+          Object.entries(row).forEach(([k, v]) => {
+            const normKey = k
+              ? k.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "")
+              : "";
+            entry[normKey] = v !== null && v !== undefined ? String(v) : "";
+          });
+          return entry;
+        });
 
-          const newEntries = rows.map((row) => {
-            const entry = {};
-            headers.forEach((header, index) => {
-              entry[header] = row[index] !== undefined ? row[index] : "";
-            });
+        const newEntries = parsedData.map((entry) => {
 
             let products = [];
             if (entry.products) {
@@ -1770,7 +1774,6 @@ const Sales = () => {
         } catch (error) {
           console.error("Error uploading entries:", error);
 
-          // Friendly, non-technical error messages:
           let friendlyMessage =
             "Sorry, we couldn't upload your data. Please check your file and try again.";
 
@@ -1787,8 +1790,6 @@ const Sales = () => {
             autoClose: 7000,
           });
         }
-      };
-      reader.readAsArrayBuffer(file);
     },
     [
       parseExcelDate,
@@ -1809,10 +1810,11 @@ const Sales = () => {
               orderType: orderTypeFilter,
               dispatch: dispatchFilter,
               salesPerson: salesPersonFilter,
-              dispatchFrom: dispatchFromFilter,
-              startDate: startDate ? startDate.toISOString() : undefined,
-              endDate: endDate ? endDate.toISOString() : undefined,
-              dashboardFilter: trackerFilter,
+      dispatchFrom: dispatchFromFilter,
+      financialYear: financialYearFilter,
+      startDate: startDate ? startDate.toISOString() : undefined,
+      endDate: endDate ? endDate.toISOString() : undefined,
+      dashboardFilter: trackerFilter,
             },
             responseType: "blob",
           }
@@ -1843,6 +1845,7 @@ const Sales = () => {
     dispatchFilter,
     salesPersonFilter,
     dispatchFromFilter,
+    financialYearFilter,
     startDate,
     endDate,
     trackerFilter,
@@ -2040,6 +2043,7 @@ const Sales = () => {
     "Seq No",
     "Order ID",
     "SO Date",
+    "Financial Year",
     "Customer Name",
     "Contact Person Name",
     "Contact No",
@@ -2125,6 +2129,9 @@ const Sales = () => {
           setOrderTypeFilter={setOrderTypeFilter}
           dispatchFilter={dispatchFilter}
           setDispatchFilter={setDispatchFilter}
+          financialYearFilter={financialYearFilter}
+          setFinancialYearFilter={setFinancialYearFilter}
+          financialYearOptions={FINANCIAL_YEAR_OPTIONS}
           dispatchFromFilter={dispatchFromFilter}
           setDispatchFromFilter={setDispatchFromFilter}
           salesPersonFilter={salesPersonFilter}

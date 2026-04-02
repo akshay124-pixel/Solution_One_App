@@ -5,7 +5,7 @@ import { X, Download, Calendar } from "lucide-react";
 import axios from "../../../so/axiosSetup";
 import { io } from "socket.io-client";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../../utils/excelHelper";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -545,7 +545,6 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
         { params }
       );
 
-      console.log("Fetched analytics summary:", response.data);
       setOrders(response.data || []);
     } catch (error) {
       console.error("Error fetching analytics:", error);
@@ -613,19 +612,15 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
       });
 
       socket.on("connect", () => {
-        console.log("Connected to Socket.IO server, ID:", socket.id);
-        // Hinglish: Server per-user/role rooms use object payload -> 'global' ki zarurat nahi
         socket.emit("join", { userId, role: userRole });
         toast.success("Connected to real-time updates!");
       });
 
       socket.on("orderUpdate", (data) => {
-        console.log("Order update received in analytics:", data);
         fetchOrdersRef.current();
       });
 
       socket.on("deleteOrder", (data) => {
-        console.log("Order deleted in analytics:", data);
         fetchOrdersRef.current();
       });
 
@@ -635,27 +630,23 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
       });
 
       socket.on("disconnect", (reason) => {
-        console.log("Socket.IO disconnected:", reason);
         if (reason !== "io client disconnect") {
           toast.warn(`Disconnected from server: ${reason}. Reconnecting...`);
         }
       });
 
       socket.on("reconnect", (attempt) => {
-        console.log("Socket.IO reconnected after attempt:", attempt);
         toast.success("Reconnected to server!");
         fetchOrders();
       });
 
       return () => {
-        // Hinglish: Cleanup listeners to avoid duplicate bindings / memory leaks
         socket.off("connect");
         socket.off("orderUpdate");
         socket.off("connect_error");
         socket.off("disconnect");
         socket.off("reconnect");
         socket.disconnect();
-        console.log("Socket.IO disconnected and listeners cleaned up");
       };
     }
   }, [isOpen]);
@@ -763,7 +754,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
     return sections;
   }, [analyticsData, userRole, groupByTeam]);
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     try {
       const exportData = [
         {
@@ -801,38 +792,8 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
         ),
       ];
 
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      worksheet["!cols"] = [
-        { wch: 20 },
-        { wch: 12 },
-        { wch: 16 },
-        { wch: 16 },
-        { wch: 16 },
-        { wch: 16 },
-        { wch: 16 },
-      ];
-
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Sales Analytics");
-
-      const fileBuffer = XLSX.write(workbook, {
-        bookType: "xlsx",
-        type: "array",
-      });
-
-      const blob = new Blob([fileBuffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `Sales_Analytics_${new Date()
-        .toISOString()
-        .slice(0, 10)}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      const colWidths = { "Sales Person": 20, "Total Orders": 12, "Total Value": 16, "Avg Order Value": 16, "Pending Orders": 16, "Completed Orders": 16, "Cancelled Orders": 16 };
+      await exportToExcel(exportData, "Sales Analytics", `Sales_Analytics_${new Date().toISOString().slice(0, 10)}.xlsx`, colWidths);
 
       toast.success("Exported sales analytics to Excel!");
     } catch (error) {

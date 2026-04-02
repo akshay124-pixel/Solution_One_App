@@ -6,7 +6,7 @@ import { FaMapMarkerAlt, FaAngleDown, FaAngleUp, FaEllipsisV } from "react-icons
 import api from "../utils/api";
 import { Box, Typography, Collapse, Chip } from "@mui/material";
 import styled from "styled-components";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../utils/excelHelper";
 import DisableCopy from "./DisableCopy";
 
 // Styled Components (unchanged)
@@ -520,7 +520,7 @@ function ViewEntry({ isOpen, onClose, entry, role }) {
       });
   }, [entry, role, formatAssignedTo]);
 
-  const handleExportEntry = useCallback(() => {
+  const handleExportEntry = useCallback(async () => {
     try {
       if (!entry) {
         toast.error("No entry data to export.");
@@ -595,42 +595,14 @@ function ViewEntry({ isOpen, onClose, entry, role }) {
         Attachment: log.attachmentpath ? "Yes" : "No",
       }));
 
-      const worksheet = XLSX.utils.json_to_sheet([
-        ...exportData,
-        ...historyData,
-      ]);
-      const colWidths = Object.keys(exportData[0]).map((key) => {
-        const maxLength = Math.max(
-          key.length,
-          ...[...exportData, ...historyData].map(
-            (row) => String(row[key] || "").length
-          )
-        );
-        return { wch: Math.min(maxLength + 2, 50) };
-      });
-      worksheet["!cols"] = colWidths;
-
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Client Entry");
-
-      const excelBuffer = XLSX.write(workbook, {
-        bookType: "xlsx",
-        type: "array",
-      });
-      const blob = new Blob([excelBuffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `client_entry_${entry.customerName || "entry"
-        }_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      const allRows = [...exportData, ...historyData];
+      const colWidths = Object.fromEntries(
+        Object.keys(exportData[0]).map((key) => [
+          key,
+          Math.min(Math.max(key.length, ...allRows.map((r) => String(r[key] || "").length)) + 2, 50),
+        ])
+      );
+      await exportToExcel(allRows, "Client Entry", `client_entry_${entry.customerName || "entry"}_${new Date().toISOString().slice(0, 10)}.xlsx`, colWidths);
 
       toast.success("Entry exported successfully!");
     } catch (error) {

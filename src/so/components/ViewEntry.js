@@ -887,8 +887,6 @@ function ViewEntry({ isOpen, onClose, entry }) {
     );
   });
 
-  console.log("Entry:", entry);
-
   return (
     <Modal
       show={isOpen}

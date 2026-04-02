@@ -33,7 +33,7 @@ import {
   FaCheckCircle,
 } from "react-icons/fa";
 import api, { getAccessToken } from "../utils/api";
-import * as XLSX from "xlsx";
+import { exportToExcel, readExcelFile } from "../../utils/excelHelper";
 import { toast } from "react-toastify";
 import { AutoSizer, List } from "react-virtualized";
 import debounce from "lodash/debounce";
@@ -1239,26 +1239,14 @@ function DashBoard() {
       return;
     }
 
-    // Token check removed as api interceptor handles auth
+    try {
+      // readExcelFile returns array of objects keyed by header row
+      const parsedData = await readExcelFile(file);
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        console.log("Parsing file...");
-        const data = new Uint8Array(event.target.result);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const parsedData = XLSX.utils.sheet_to_json(worksheet, {
-          defval: "",
-          blankrows: false,
-        });
-        console.log("Parsed data:", JSON.stringify(parsedData, null, 2));
-
-        if (!parsedData.length) {
-          toast.error("No data found in file!");
-          return;
-        }
+      if (!parsedData.length) {
+        toast.error("No data found in file!");
+        return;
+      }
 
         // Parse Products string into structured object
         const parseProducts = (productsStr) => {
@@ -1426,8 +1414,6 @@ function DashBoard() {
           };
         });
 
-        console.log("Mapped entries:", JSON.stringify(newEntries, null, 2));
-
         // CHANGE: Prevent user from entering their own mobile number
         // Validate all phone numbers before sending to API
         const invalidEntries = [];
@@ -1457,10 +1443,8 @@ function DashBoard() {
           return;
         }
 
-        console.log(`Sending ${newEntries.length} entries to API`);
         const response = await api.post("/api/entries", newEntries);
 
-        console.log("API response:", response.data);
         toast.success(`Uploaded ${response.data.count} entries!`);
         setEntries((prev) => {
           const next = [...newEntries, ...prev];
@@ -1474,29 +1458,18 @@ function DashBoard() {
           });
         });
         fetchEntries();
-      } catch (error) {
-        console.error("Upload error:", error.message, error.response?.data);
-        if (error.response?.status === 401) {
-          toast.error("Authentication failed. Please log in again.");
-        } else if (error.response?.data?.message) {
-          toast.error(`Upload failed: ${error.response.data.message}`);
-        } else if (error.message === "Network Error") {
-          toast.error(
-            "Network issue detected. Please check your internet connection and try again.",
-          );
-        } else {
-          toast.error(`Upload failed: ${error.message}`);
-        }
+    } catch (error) {
+      console.error("Upload error:", error.message, error.response?.data);
+      if (error.response?.status === 401) {
+        toast.error("Authentication failed. Please log in again.");
+      } else if (error.response?.data?.message) {
+        toast.error(`Upload failed: ${error.response.data.message}`);
+      } else if (error.message === "Network Error") {
+        toast.error("Network issue detected. Please check your internet connection and try again.");
+      } else {
+        toast.error(`Upload failed: ${error.message}`);
       }
-    };
-    reader.onerror = () => {
-      console.error("File read error");
-      toast.error(
-        "Error reading the file. Please try again with a valid file.",
-      );
-    };
-
-    reader.readAsArrayBuffer(file);
+    }
   };
 
   // Helper to fetch all users with pagination

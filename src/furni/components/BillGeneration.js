@@ -5,7 +5,7 @@ import ViewEntry from "./ViewEntry";
 import EditBill from "./EditBill";
 import furniApi from "../axiosSetup";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../utils/excelHelper";
 import PreviewModal from "./PreviewModal";
 
 const BillGeneration = () => {
@@ -89,7 +89,7 @@ const BillGeneration = () => {
     setIsEditModalOpen(false);
   };
 
-  const handleExportToXLSX = () => {
+  const handleExportToXLSX = async () => {
     const tableData = filteredOrders.map((order, index) => ({
       "Seq No": index + 1,
       "Order ID": order.orderId || "-",
@@ -105,10 +105,7 @@ const BillGeneration = () => {
       "Product Details": order.products ? order.products.map((p) => `${p.productType} (${p.qty})`).join(", ") : "-",
     }));
 
-    const ws = XLSX.utils.json_to_sheet(tableData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Bill Orders");
-    XLSX.writeFile(wb, "Bill_Orders.xlsx");
+    await exportToExcel(tableData, "Bill Orders", "Bill_Orders.xlsx");
   };
 
   const totalPending = filteredOrders.filter((order) => order.billStatus === "Pending").length;

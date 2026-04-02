@@ -18,6 +18,7 @@ import {
   dispatchFromOptions,
 } from "./Options";
 import ConfirmModal from "./ConfirmModal";
+import { getFinancialYear } from "../../shared/financialYear";
 function AddEntry({ onSubmit, onClose }) {
   const [selectedState, setSelectedState] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
@@ -85,24 +86,19 @@ function AddEntry({ onSubmit, onClose }) {
   const clearDraft = () => {
     try {
       localStorage.removeItem(AUTO_SAVE_KEY);
-      console.log("Draft cleared from localStorage");
     } catch (error) {
       console.error("Error clearing draft:", error);
       toast.error("Failed to clear draft.");
     }
   };
 
-  // Load draft from localStorage on mount
   useEffect(() => {
     try {
       const savedDraft = localStorage.getItem(AUTO_SAVE_KEY);
-      console.log("Retrieved draft:", savedDraft);
       if (savedDraft) {
         const parsedDraft = JSON.parse(savedDraft);
-        console.log("Parsed draft:", parsedDraft);
         setFormData((prev) => {
           const updatedFormData = { ...prev, ...parsedDraft.formData };
-          console.log("Restored formData:", updatedFormData);
           return updatedFormData;
         });
         setProducts(parsedDraft.products || []);
@@ -143,12 +139,7 @@ function AddEntry({ onSubmit, onClose }) {
           selectedCity,
           isCustomMode,
         };
-        console.log("Auto-saving:", draft);
         localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(draft));
-        console.log(
-          "Saved to localStorage:",
-          localStorage.getItem(AUTO_SAVE_KEY)
-        );
       } catch (error) {
         console.error("Error saving draft:", error);
         toast.error("Failed to save draft. Please try again.");
@@ -193,6 +184,7 @@ function AddEntry({ onSubmit, onClose }) {
   // Auto Save Ends
   const gstOptions =
     formData.orderType === "B2G" ? ["18", "28", "including"] : ["18", "28"];
+  const financialYear = getFinancialYear(formData.soDate);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -716,7 +708,14 @@ function AddEntry({ onSubmit, onClose }) {
                   type: "date",
                   required: true,
                   disabled: true,
-                  value: new Date().toISOString().split("T")[0],
+                  value: formData.soDate,
+                },
+                {
+                  label: "Financial Year",
+                  name: "financialYear",
+                  type: "text",
+                  disabled: true,
+                  value: financialYear,
                 },
                 {
                   label: "Order Type *",
@@ -838,7 +837,7 @@ function AddEntry({ onSubmit, onClose }) {
                       type={field.type}
                       name={field.name}
                       value={
-                        field.name === "soDate" && field.value
+                        field.value !== undefined
                           ? field.value
                           : formData[field.name] || ""
                       }

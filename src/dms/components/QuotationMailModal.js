@@ -99,12 +99,6 @@ function QuotationMailModal({ isOpen, onClose, entryId, entryData }) {
         customerName: entryData.customerName || entryData.contactName || "Valued Customer",
       };
 
-      console.log("[QuotationMailModal] Sending quotation payload:", {
-        entryId,
-        productType: quotationData.productType,
-        customerEmail: quotationData.customerEmail,
-      });
-
       const response = await api.post("/api/send-quotation", quotationData);
 
       toast.success(response.data.message || "Quotation email sent successfully!");

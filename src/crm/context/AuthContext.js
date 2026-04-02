@@ -73,13 +73,10 @@ export const AuthProvider = ({ children }) => {
             } catch (error) {
                 // Differentiate between error types
                 if (error.response?.status === 401 || error.response?.status === 403) {
-                    // Expired or invalid token - this is expected
-                    console.log("No active session found");
+                    // Expected — no active session
                 } else if (error.message === "Network Error") {
-                    // Network error - don't log out, just log
                     console.warn("Network error during session check");
                 } else {
-                    // Other errors
                     console.error("Session check error:", error);
                 }
             } finally {

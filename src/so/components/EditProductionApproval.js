@@ -106,8 +106,7 @@ const EditProductionApproval = ({
         `${process.env.REACT_APP_SO_URL}/api/edit/${entryToEdit._id}`,
         dirtyValues
       );
-      console.log("Updated order:", response.data.data);
-      onEntryUpdated(response.data.data); // Pass updated order to parent
+      onEntryUpdated(response.data.data);
       toast.success("Order Approved successfully.");
       onClose();
     } catch (error) {

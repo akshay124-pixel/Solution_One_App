@@ -27,7 +27,6 @@ function MailOptionsModal({ isOpen, onClose, entryId, entryData }) {
     }
     setSendingGreet(true);
     try {
-      console.log("[MailOptionsModal] Sending greet email for entryId:", entryId);
       const response = await api.post("/api/send-email", { entryId });
       toast.success(response.data.message || "Greeting email sent successfully!");
       onClose();

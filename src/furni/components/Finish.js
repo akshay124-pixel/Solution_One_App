@@ -3,7 +3,7 @@ import furniApi from "../axiosSetup";
 import { Button, Modal, Badge } from "react-bootstrap";
 import { FaEye } from "react-icons/fa";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../utils/excelHelper";
 import OutFinishedGoodModal from "./OutFinishedGoodModal";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -206,7 +206,7 @@ function Finish() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleExportToXLSX = () => {
+  const handleExportToXLSX = async () => {
     const tableData = filteredOrders.map((order) => ({
       "Order ID": order.orderId || "N/A", "Customer Name": order.customername || "N/A", "Contact No": order.contactNo || "N/A",
       "Delivery Address": order.shippingAddress || "N/A",
@@ -223,10 +223,7 @@ function Finish() {
       "Freight Status": order.freightstatus || "To Pay", "Product Status": order.fulfillingStatus || "N/A",
       "Dispatch Status": order.dispatchStatus || "Not Dispatched", "Dispatch Remarks": order.remarksBydispatch || "N/A",
     }));
-    const ws = XLSX.utils.json_to_sheet(tableData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Dispatch Data");
-    XLSX.writeFile(wb, "Dispatch_Dashboard.xlsx");
+    await exportToExcel(tableData, "Dispatch Data", "Dispatch_Dashboard.xlsx");
   };
 
   if (loading) {

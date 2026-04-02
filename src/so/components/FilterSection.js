@@ -329,6 +329,9 @@ const FilterSection = ({
   setOrderTypeFilter,
   dispatchFilter,
   setDispatchFilter,
+  financialYearFilter,
+  setFinancialYearFilter,
+  financialYearOptions = [],
   dispatchFromFilter,
   setDispatchFromFilter,
   salesPersonFilter,
@@ -402,6 +405,20 @@ const FilterSection = ({
             aria-label="Select order end date"
           />
         </DatePickerWrapper>
+        {(userRole === "GlobalAdmin" || userRole === "SuperAdmin") && (
+          <StyledFormSelect
+            value={financialYearFilter}
+            onChange={(e) => setFinancialYearFilter(e.target.value)}
+            aria-label="Select financial year"
+          >
+            <option value="All">All Financial Years</option>
+            {financialYearOptions.map((financialYear) => (
+              <option key={financialYear} value={financialYear}>
+                {financialYear}
+              </option>
+            ))}
+          </StyledFormSelect>
+        )}
         <StyledFormSelect
           value={salesPersonFilter}
           onChange={(e) => setSalesPersonFilter(e.target.value)}

@@ -83,61 +83,42 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
     try {
       // Strategy 1: Use enhanced server-side streaming endpoint (preferred)
       if (retryCount === 0) {
-        console.log("✅ Strategy 1: Using enhanced server streaming endpoint");
         const streamUrl = `/recordings/${call._id}/stream`;
         await fetchAndCreateBlobUrl(streamUrl);
         return;
       }
-      
+
       // Strategy 2: Use direct recording URL from call if available
       if (call.recordingUrl && call.recordingUrl.trim()) {
-        console.log("✅ Strategy 2: Using direct recording URL");
-        
-        // For Smartflo URLs, try both direct and blob approaches
         if (call.recordingUrl.startsWith('http') && call.recordingUrl.includes('cloudphone')) {
-          
-          // On second attempt, try blob conversion for better compatibility
           if (retryCount === 1) {
-            console.log("🔄 Second attempt: Using blob conversion for Smartflo URL");
             await fetchAndCreateBlobUrl(call.recordingUrl);
             return;
           } else {
-            // On final retry, try direct URL
-            console.log("🔄 Final retry: Using direct Smartflo URL");
             setRecordingUrl(call.recordingUrl);
             setLoading(false);
             return;
           }
         }
-        
-        // For other URLs, try blob approach
         await fetchAndCreateBlobUrl(call.recordingUrl);
         return;
       }
-      
+
       // Strategy 3: Fetch from recording metadata API
-      console.log("🔄 Strategy 3: Fetching from metadata API");
       const metadataResponse = await api.get(`/recordings/${call._id}`);
-      
+
       if (metadataResponse.data.success && metadataResponse.data.data?.recordingUrl) {
-        console.log("✅ Strategy 3: Got URL from metadata");
-        
-        // Use the stream URL if available
         if (metadataResponse.data.data.streamUrl) {
           await fetchAndCreateBlobUrl(metadataResponse.data.data.streamUrl);
           return;
         }
-        
-        // Check if it's a Smartflo URL
-        if (metadataResponse.data.data.recordingUrl.startsWith('http') && 
+
+        if (metadataResponse.data.data.recordingUrl.startsWith('http') &&
             metadataResponse.data.data.recordingUrl.includes('cloudphone')) {
-          
           if (retryCount === 0) {
-            console.log("🔄 Using blob conversion for Smartflo URL from metadata");
             await fetchAndCreateBlobUrl(metadataResponse.data.data.recordingUrl);
             return;
           } else {
-            console.log("🔄 Using direct Smartflo URL from metadata");
             setRecordingUrl(metadataResponse.data.data.recordingUrl);
             setLoading(false);
             return;
@@ -164,18 +145,12 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
   };
   
   const fetchAndCreateBlobUrl = async (url) => {
-    console.log("🎵 Fetching audio data with authentication:", url);
-    
     try {
-      // Build full URL if relative — use portal URL since all DMS routes live there
       let fetchUrl = url;
       if (url.startsWith('/')) {
         fetchUrl = `${process.env.REACT_APP_PORTAL_URL || 'http://localhost:5050'}/api/dms${url}`;
       }
-      
-      console.log("🔗 Final fetch URL:", fetchUrl);
-      
-      // Fetch audio data with authentication and enhanced headers
+
       const response = await fetch(fetchUrl, {
         method: 'GET',
         headers: {
@@ -185,12 +160,11 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
           'Pragma': 'no-cache',
         },
       });
-      
-      // Response details logged only in development
+
       if (process.env.NODE_ENV === 'development') {
         console.log("📡 Response status:", response.status);
       }
-      
+
       if (!response.ok) {
         let errorText = "Unknown error";
         try {
@@ -202,57 +176,28 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
         console.error("❌ Response error:", errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
       }
-      
-      // Check content type
+
       const contentType = response.headers.get('content-type');
-      console.log("🎵 Content-Type:", contentType);
-      
-      // Validate that we received audio content
-      if (contentType && !contentType.includes('audio') && !contentType.includes('application/octet-stream')) {
-        console.warn("⚠️ Unexpected content type:", contentType);
-        // Continue anyway, might still be audio
-      }
-      
-      // Get the audio blob
       const audioBlob = await response.blob();
-      console.log("✅ Audio blob created:", {
-        size: audioBlob.size,
-        type: audioBlob.type
-      });
-      
-      // Validate blob size
+
       if (audioBlob.size === 0) {
         throw new Error("Received empty audio file");
       }
-      
-      // Create blob with proper MIME type for better compatibility
-      let finalBlob = audioBlob;
-      if (!audioBlob.type || audioBlob.type === '') {
-        // Try multiple MIME types for better compatibility
-        finalBlob = new Blob([audioBlob], { type: 'audio/mpeg' });
-        console.log("🔧 Fixed blob MIME type to audio/mpeg");
-      } else if (audioBlob.type.includes('audio/mp3') || audioBlob.type.includes('audio/x-mpeg')) {
-        // Normalize MP3 MIME types to standard audio/mpeg
-        finalBlob = new Blob([audioBlob], { type: 'audio/mpeg' });
-        console.log("🔧 Normalized MIME type to audio/mpeg from:", audioBlob.type);
-      } else if (audioBlob.type === 'application/octet-stream') {
-        // Generic binary type - assume MP3
-        finalBlob = new Blob([audioBlob], { type: 'audio/mpeg' });
-        console.log("🔧 Converted octet-stream to audio/mpeg");
-      }
-      
-      // Additional validation for audio content
       if (audioBlob.size < 100) {
         throw new Error("Audio file too small - likely corrupted or empty");
       }
-      
-      // Create blob URL
+
+      let finalBlob = audioBlob;
+      if (!audioBlob.type || audioBlob.type === '' || audioBlob.type === 'application/octet-stream') {
+        finalBlob = new Blob([audioBlob], { type: 'audio/mpeg' });
+      } else if (audioBlob.type.includes('audio/mp3') || audioBlob.type.includes('audio/x-mpeg')) {
+        finalBlob = new Blob([audioBlob], { type: 'audio/mpeg' });
+      }
+
       const blobUrl = URL.createObjectURL(finalBlob);
-      console.log("✅ Blob URL created:", blobUrl);
-      
       setRecordingUrl(blobUrl);
       setLoading(false);
-      
+
     } catch (error) {
       console.error("❌ Failed to fetch audio data:", error);
       throw error;
@@ -264,36 +209,21 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
       console.error("🎵 Audio ref not available");
       return;
     }
-    
+
     try {
       if (playing) {
-        console.log("🎵 Pausing audio");
         audioRef.current.pause();
         setPlaying(false);
       } else {
-        console.log("🎵 Playing audio");
-        console.log("🎵 Audio element state:", {
-          src: audioRef.current.src,
-          readyState: audioRef.current.readyState,
-          networkState: audioRef.current.networkState,
-          paused: audioRef.current.paused,
-          currentTime: audioRef.current.currentTime,
-          duration: audioRef.current.duration
-        });
-        
         const playPromise = audioRef.current.play();
-        
         if (playPromise !== undefined) {
           await playPromise;
           setPlaying(true);
-          console.log("✅ Audio started playing");
         }
       }
     } catch (error) {
       console.error("🎵 Play/Pause error:", error);
       setPlaying(false);
-      
-      // Provide user feedback for common play errors
       if (error.name === 'NotAllowedError') {
         toast.error("Audio playback blocked by browser. Please click play again.");
       } else if (error.name === 'NotSupportedError') {
@@ -306,38 +236,30 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
   
   const handleTimeUpdate = () => {
     if (audioRef.current) {
-      const currentTime = audioRef.current.currentTime;
-      setCurrentTime(currentTime);
-      console.log("🎵 Time update:", currentTime, "/", audioRef.current.duration);
+      setCurrentTime(audioRef.current.currentTime);
     }
   };
-  
+
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      const duration = audioRef.current.duration;
-      setDuration(duration);
+      setDuration(audioRef.current.duration);
       setLoading(false);
-      console.log("✅ Audio metadata loaded - Duration:", duration);
     }
   };
-  
+
   const handleCanPlay = () => {
-    console.log("✅ Audio can start playing");
     setLoading(false);
   };
-  
+
   const handlePlay = () => {
-    console.log("✅ Audio play event fired");
     setPlaying(true);
   };
-  
+
   const handlePause = () => {
-    console.log("⏸️ Audio pause event fired");
     setPlaying(false);
   };
-  
+
   const handleEnded = () => {
-    console.log("🏁 Audio ended");
     setPlaying(false);
     setCurrentTime(0);
   };
@@ -542,10 +464,8 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
   if (!call) return null;
   
   // Determine the audio source URL
-  let audioSrc = recordingUrl; // Now recordingUrl is already a blob URL or direct URL
-  
-  console.log("Audio source URL:", audioSrc);
-  
+  let audioSrc = recordingUrl;
+
   const getStatusColor = (status) => {
     const colors = {
       completed: "success",

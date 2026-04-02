@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
 import { usePortalAuth } from "./PortalAuthContext";
+import { ROLES } from "../constants/roles";
 
 /**
  * ProtectedRoute
@@ -9,7 +10,10 @@ import { usePortalAuth } from "./PortalAuthContext";
  *   requireMultiAccess — true: user must have 2+ entries in app_access (Module Selector)
  *   requireBothAccess  — legacy alias for requireMultiAccess
  *   appAccess          — "crm" | "so" | "dms": user must have this entry in app_access
- *   roles              — string[]: user role must be in this list
+ *   roles              — string[]: user role must be in this list (use ROLES constants)
+ *
+ * Example:
+ *   <ProtectedRoute roles={[ROLES.GLOBAL_ADMIN, ROLES.SUPER_ADMIN]}>
  */
 const ProtectedRoute = ({ requireMultiAccess, requireBothAccess, appAccess, roles, children }) => {
   const { isAuthenticated, loading, user } = usePortalAuth();
@@ -43,7 +47,7 @@ const ProtectedRoute = ({ requireMultiAccess, requireBothAccess, appAccess, role
   }
 
   // Must be one of the listed roles
-  if (roles && !roles.includes(user?.role)) {
+  if (roles && !roles.map(r => r.toLowerCase()).includes(user?.role?.toLowerCase())) {
     return <Navigate to="/unauthorized" replace />;
   }
 

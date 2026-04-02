@@ -9,6 +9,8 @@ import CRMApp from "./CRMApp";
 import SOApp from "./SOApp";
 import DMSApp from "./DMSApp";
 import FurniApp from "./FurniApp";
+import IdentityManager from "./admin/IdentityManager";
+import AdminPanel from "./admin/AdminPanel";
 
 const Unauthorized = () => (
   <div style={{
@@ -77,6 +79,26 @@ const AppRouter = () => (
       element={
         <ProtectedRoute appAccess="furni">
           <FurniApp />
+        </ProtectedRoute>
+      }
+    />
+
+    {/* Admin — Identity Manager (must be BEFORE catch-all) */}
+    <Route
+      path="/admin/identity"
+      element={
+        <ProtectedRoute roles={["globaladmin"]}>
+          <IdentityManager />
+        </ProtectedRoute>
+      }
+    />
+
+    {/* Admin Panel — full user management */}
+    <Route
+      path="/admin/*"
+      element={
+        <ProtectedRoute roles={["globaladmin"]}>
+          <AdminPanel />
         </ProtectedRoute>
       }
     />

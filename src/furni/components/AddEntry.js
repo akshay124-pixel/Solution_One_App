@@ -6,6 +6,7 @@ import {
   productOptions, statesAndCities, orderTypeOptions, companyOptions,
   paymentMethodOptions, paymentTermsOptions, salesPersonlist, Reportinglist, dispatchFromOptions,
 } from "./Options";
+import { getFinancialYear } from "../../shared/financialYear";
 
 function AddEntry({ onSubmit, onClose }) {
   const [selectedState, setSelectedState] = useState("");
@@ -21,6 +22,7 @@ function AddEntry({ onSubmit, onClose }) {
   });
 
   const gstOptions = useMemo(() => (formData.orderType === "B2G" ? ["18", "including"] : ["18"]), [formData.orderType]);
+  const financialYear = useMemo(() => getFinancialYear(formData.soDate), [formData.soDate]);
 
   const calculateTotal = useCallback(() => {
     const subtotalWithGST = products.reduce((sum, product) => {
@@ -136,7 +138,8 @@ function AddEntry({ onSubmit, onClose }) {
   };
 
   const orderDetailsFields = [
-    { label: "SO Date *", name: "soDate", type: "date", required: true, disabled: true, value: new Date().toISOString().split("T")[0], placeholder: "Select SO Date", ariaLabel: "Sales Order Date" },
+    { label: "SO Date *", name: "soDate", type: "date", required: true, disabled: true, value: formData.soDate, placeholder: "Select SO Date", ariaLabel: "Sales Order Date" },
+    { label: "Financial Year", name: "financialYear", type: "text", disabled: true, value: financialYear, placeholder: "Financial Year", ariaLabel: "Financial Year" },
     { label: "Order Type *", name: "orderType", type: "select", options: orderTypeOptions, required: true, placeholder: "Select Order Type", ariaLabel: "Order Type" },
     { label: "Sales Person", name: "salesPerson", type: "select", options: salesPersonlist, placeholder: "Select Sales Person", ariaLabel: "Sales Person" },
     { label: "Reporting Manager", name: "report", type: "select", options: Reportinglist, placeholder: "Select Reporting Manager", ariaLabel: "Reporting Manager" },

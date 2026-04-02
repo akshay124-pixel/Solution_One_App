@@ -9,7 +9,7 @@ import axios from "../../so/axiosSetup";
 import { Button, Modal, Badge, Form, Spinner } from "react-bootstrap";
 import { FaEye, FaTimes, FaDownload } from "react-icons/fa";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../utils/excelHelper";
 import "../App.css";
 import io from "socket.io-client";
 import InstallationEditModal from "./InstallationEditModal";
@@ -573,7 +573,7 @@ function Installation() {
     setEndDate("");
   };
 
-  const exportToExcel = () => {
+  const handleExportExcel = async () => {
     const exportData = filteredOrders.map((order) => {
       const productDetails = Array.isArray(order.products)
         ? order.products
@@ -606,13 +606,7 @@ function Installation() {
       };
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Installation Orders");
-    XLSX.writeFile(
-      workbook,
-      `Installation_Orders_${new Date().toISOString().split("T")[0]}.xlsx`,
-    );
+    await exportToExcel(exportData, "Installation Orders", `Installation_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
   };
 
   // Optimization: Memoize the table to prevent re-renders on typing
@@ -1055,7 +1049,7 @@ function Installation() {
               </Button>
 
               <Button
-                onClick={exportToExcel}
+                onClick={handleExportExcel}
                 style={{
                   background: "linear-gradient(135deg, #28a745, #20c997)",
                   border: "none",

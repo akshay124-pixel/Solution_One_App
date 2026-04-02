@@ -463,9 +463,7 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
   // GET /api/current-user -> used to gate team mgmt if user is already assigned to a leader
   const fetchCurrentUser = useCallback(async () => {
     try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_SO_URL}/api/current-user`
-      );
+      const response = await axios.get(`/api/current-user`);
       setCurrentUser(response.data?.data || null);
       setError(null);
     } catch (err) {
@@ -478,9 +476,7 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
   const fetchAvailableUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `${process.env.REACT_APP_SO_URL}/api/fetch-available-users`
-      );
+      const response = await axios.get(`/api/fetch-available-users`);
 
       setAvailableUsers(response.data.data || []);
       setError(null);
@@ -499,9 +495,7 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
   const fetchTeamMembers = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `${process.env.REACT_APP_SO_URL}/api/fetch-my-team`
-      );
+      const response = await axios.get(`/api/fetch-my-team`);
 
       setTeamMembers(response.data.data || []);
       setError(null);
@@ -522,10 +516,7 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
     async (targetUserId) => {
       try {
         setActionLoading(targetUserId);
-        await axios.post(
-          `${process.env.REACT_APP_SO_URL}/api/assign-user`,
-          { userId: targetUserId }
-        );
+        await axios.post(`/api/assign-user`, { userId: targetUserId });
 
         toast.success("User assigned successfully");
         await Promise.all([fetchAvailableUsers(), fetchTeamMembers()]);
@@ -546,10 +537,7 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
     async (targetUserId) => {
       try {
         setActionLoading(targetUserId);
-        await axios.post(
-          `${process.env.REACT_APP_SO_URL}/api/unassign-user`,
-          { userId: targetUserId }
-        );
+        await axios.post(`/api/unassign-user`, { userId: targetUserId });
 
         toast.success("User unassigned successfully");
         await Promise.all([fetchAvailableUsers(), fetchTeamMembers()]);
@@ -587,9 +575,9 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
 
     const baseOrigin = (() => {
       try {
-        return new URL(process.env.REACT_APP_SO_URL).origin;
+        return new URL(process.env.REACT_APP_SO_URL || "http://localhost:5050").origin;
       } catch {
-        return process.env.REACT_APP_SO_URL;
+        return "http://localhost:5050";
       }
     })();
 
@@ -603,16 +591,10 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
     });
 
     socket.on("connect", () => {
-      console.log("Socket.IO connected for TeamBuilder:", socket.id);
       socket.emit("join", { userId, role: "salesperson" });
     });
 
     socket.on("teamUpdate", ({ userId: updatedUserId, leaderId, action }) => {
-      console.log("Received teamUpdate:", {
-        updatedUserId,
-        leaderId,
-        action,
-      });
       if (leaderId === userId) {
         handleRefresh();
       }

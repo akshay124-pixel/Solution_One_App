@@ -5,7 +5,7 @@ import ViewEntry from "./ViewEntry";
 import EditBill from "./EditBill";
 import axios from "../../so/axiosSetup";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../utils/excelHelper";
 import PreviewModal from "./PreviewModal";
 import styled from "styled-components";
 import { AnimatePresence, motion } from "framer-motion";
@@ -178,7 +178,7 @@ const BillGeneration = () => {
     toast.success("Order updated successfully!");
   };
 
- const handleExportToXLSX = () => {
+ const handleExportToXLSX = async () => {
   // Prepare table data
   const tableData = filteredOrders.map((order, index) => {
     const totalUnitPrice = order.products
@@ -248,12 +248,7 @@ const BillGeneration = () => {
   });
 
   // Create Excel sheet
-  const ws = XLSX.utils.json_to_sheet(tableData);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Bill Orders");
-
-  // Download file
-  XLSX.writeFile(wb, "Bill_Orders.xlsx");
+  await exportToExcel(tableData, "Bill Orders", "Bill_Orders.xlsx");
 };
 
   // Calculate total pending orders (billStatus === "Pending")

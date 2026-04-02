@@ -3,7 +3,7 @@ import axios from "../../so/axiosSetup";
 import { Button, Modal, Badge, Form, Spinner } from "react-bootstrap";
 import { FaEye, FaTimes } from "react-icons/fa";
 import { toast } from "react-toastify";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "../../utils/excelHelper";
 import OutFinishedGoodModal from "./OutFinishedGoodModal";
 import OrderRow from "./OrderRow"; // Memoized row component for performance
 import DatePicker from "react-datepicker";
@@ -369,8 +369,6 @@ function Finish() {
 
   // PERFORMANCE: Stable callback references prevent unnecessary re-renders
   const handleEditClick = useCallback((order) => {
-    console.log("handleEditClick order:", JSON.stringify(order, null, 2));
-    console.log("order.billStatus:", order.billStatus);
     setEditData({
       dispatchFrom: order.dispatchFrom || "",
       transporter: order.transporter || "",
@@ -573,7 +571,7 @@ function Finish() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleExportToXLSX = () => {
+  const handleExportToXLSX = async () => {
     const tableData = filteredOrders.map((order) => ({
       "Order ID": order.orderId || "N/A",
       "Customer Name": order.customername || "N/A",
@@ -626,10 +624,7 @@ function Finish() {
       "Dispatch Status": order.dispatchStatus || "Not Dispatched",
     }));
 
-    const ws = XLSX.utils.json_to_sheet(tableData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Dispatch Data");
-    XLSX.writeFile(wb, "Dispatch_Dashboard.xlsx");
+    await exportToExcel(tableData, "Dispatch Data", "Dispatch_Dashboard.xlsx");
   };
 
   if (loading) {

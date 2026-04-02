@@ -109,11 +109,7 @@ const CallHistoryPage = () => {
 
   // Stable toggle function for auto-refresh
   const toggleAutoRefresh = useCallback(() => {
-    setAutoRefresh(prev => {
-      const newValue = !prev;
-      console.log(`🔄 Auto-refresh ${newValue ? 'ENABLED' : 'DISABLED'}`);
-      return newValue;
-    });
+    setAutoRefresh(prev => !prev);
   }, []);
   
   // Define fetch functions first

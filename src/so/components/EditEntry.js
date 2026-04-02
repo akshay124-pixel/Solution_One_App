@@ -13,6 +13,7 @@ import { printerOptions } from "./Options";
 import { productCode } from "./Options";
 import { getDirtyValues } from "../utils/formUtils"; // Import the Diff Utility
 import { statesAndCities } from "./Options";
+import { getFinancialYear } from "../../shared/financialYear";
 
 const StyledModal = styled(Modal)`
   .modal-content {
@@ -256,6 +257,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   const paymentMethod = watch("paymentMethod");
   const dispatchFrom = watch("dispatchFrom");
   const fulfillingStatus = watch("fulfillingStatus");
+  const currentFinancialYear = getFinancialYear(watch("soDate") || entryToEdit?.soDate);
 
   useEffect(() => {
     if (isOpen && entryToEdit) {
@@ -898,7 +900,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
       <StyledButton variant="primary" onClick={() => setView("edit")}>
         Edit Full Details
       </StyledButton>
-      {(userRole === "Admin" || userRole === "SuperAdmin") && (
+      {(userRole === "Admin" || userRole === "SuperAdmin" || userRole === "GlobalAdmin") && (
         <StyledButton variant="info" onClick={() => setView("update")}>
           Update Approvals
         </StyledButton>
@@ -924,14 +926,22 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
           <Form.Control
             type="date"
             {...register("soDate", { required: "SO Date is required" })}
-            onChange={(e) =>
-              debouncedHandleInputChange("soDate", e.target.value)
-            }
+            onChange={(e) => {
+              setValue("soDate", e.target.value, {
+                shouldDirty: true,
+                shouldValidate: true,
+              });
+              debouncedHandleInputChange("soDate", e.target.value);
+            }}
             isInvalid={!!errors.soDate}
           />
           <Form.Control.Feedback type="invalid">
             {errors.soDate?.message}
           </Form.Control.Feedback>
+        </Form.Group>
+        <Form.Group controlId="financialYear">
+          <Form.Label>Financial Year</Form.Label>
+          <Form.Control value={currentFinancialYear || ""} readOnly disabled />
         </Form.Group>
         <Form.Group controlId="dispatchFrom">
           <Form.Label>📍 Dispatch From</Form.Label>
@@ -3322,7 +3332,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
             <option value="Order Cancelled">Order Cancelled</option>
           </Form.Select>
         </Form.Group>
-        {(userRole === "Admin" || userRole === "SuperAdmin") && (
+        {(userRole === "Admin" || userRole === "SuperAdmin" || userRole === "GlobalAdmin") && (
           <Form.Group controlId="productno">
             <Form.Label>📦 Product Code</Form.Label>
             <Form.Control

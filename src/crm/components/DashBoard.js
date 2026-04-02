@@ -914,7 +914,6 @@ function DashBoard() {
     const token = getAccessToken();
     if (!token) return;
     let socket;
-    let handleTokenRefreshed;
     try {
       const baseOrigin = (() => {
         try {
@@ -928,24 +927,10 @@ function DashBoard() {
         path: process.env.REACT_APP_CRM_SOCKET_PATH || "/crm/socket.io",
         withCredentials: true,
         reconnection: true,
-        reconnectionAttempts: 3,
-        reconnectionDelay: 2000,
-        reconnectionDelayMax: 10000,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
       });
-
-      socket.on("connect_error", (err) => {
-        if (err.message.includes("Authentication error")) {
-          // Token expired — stop reconnecting to prevent log spam.
-          socket.disconnect();
-        }
-      });
-
-      // Reconnect with fresh token after silent refresh
-      handleTokenRefreshed = (e) => {
-        socket.auth.token = `Bearer ${e.detail.accessToken}`;
-        socket.connect();
-      };
-      window.addEventListener("auth:tokenRefreshed", handleTokenRefreshed);
 
       const handleCreated = (entry) => {
         const idStr = getId(entry);
@@ -1054,7 +1039,6 @@ function DashBoard() {
     } catch (err) { }
     return () => {
       try {
-        window.removeEventListener("auth:tokenRefreshed", handleTokenRefreshed);
         socket && socket.disconnect();
       } catch { }
     };

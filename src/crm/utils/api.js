@@ -32,10 +32,6 @@ export const refreshAccessToken = async () => {
     .then(response => {
         if (response.data.success && response.data.accessToken) {
             setAccessToken(response.data.accessToken);
-            // Notify sockets to reconnect with the new token
-            window.dispatchEvent(new CustomEvent("auth:tokenRefreshed", {
-                detail: { accessToken: response.data.accessToken }
-            }));
             return {
                 success: true,
                 accessToken: response.data.accessToken,

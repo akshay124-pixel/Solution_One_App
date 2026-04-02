@@ -363,7 +363,7 @@ const FilterSection = ({
         aria-label="Search orders by keyword"
       />
       <FilterGroup>
-        {(userRole === "Admin" || userRole === "SuperAdmin") && (
+        {(userRole === "Admin" || userRole === "SuperAdmin" || userRole === "GlobalAdmin") && (
           <OverlayTrigger
             trigger="click"
             placement="bottom"

@@ -117,7 +117,11 @@ const Navbar = () => {
         setNotifications((prev) =>
           notificationPage === 1 ? data : [...prev, ...data]
         );
-        setUnreadCount(data.filter((n) => !n.read).length);
+        setUnreadCount((prev) =>
+          notificationPage === 1
+            ? data.filter((n) => !n.read).length
+            : prev + data.filter((n) => !n.read).length
+        );
         setHasMoreNotifications(pagination.currentPage < pagination.totalPages);
       } catch (error) {
         console.error("Error fetching notifications:", error);

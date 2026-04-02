@@ -28,8 +28,8 @@ const ProductionApproval = () => {
 
   // Socket.IO — real-time updates
   useEffect(() => {
-    const socket = io(socketOrigin, {
-      path: process.env.REACT_APP_FURNI_SOCKET_PATH || "/furni/socket.io",
+    const socket = io(`${socketOrigin}/furni`, {
+      
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 5,

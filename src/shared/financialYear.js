@@ -1,8 +1,11 @@
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export const FINANCIAL_YEAR_OPTIONS = [
+  "2023-2024",
+  "2024-2025",
   "2025-2026",
   "2026-2027",
+  "2027-2028",
 ];
 
 export const normalizeOrderDate = (value) => {

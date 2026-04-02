@@ -106,8 +106,8 @@ function Installation() {
       }
     })();
 
-    const socket = io(baseOrigin, {
-      path: process.env.REACT_APP_SO_SOCKET_PATH || "/sales/socket.io",
+    const socket = io(`${baseOrigin}/sales`, {
+      
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 5,

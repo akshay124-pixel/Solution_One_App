@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { FaEye } from "react-icons/fa";
 import { Button, Badge, Popover } from "react-bootstrap";
 import { FaHome, FaWrench, FaIndustry, FaTruck } from "react-icons/fa";
@@ -8,7 +8,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import furniApi from "../axiosSetup";
 import { toast } from "react-toastify";
 import { exportToExcel, readExcelFile } from "../../utils/excelHelper";
-import { ArrowRight } from "lucide-react";
+import { BarChart2, Upload, Download } from "lucide-react";
+// analytics icon: BarChart2 | upload icon: Upload | download icon: Download
 import io from "socket.io-client";
 import styled from "styled-components";
 import { FixedSizeList as List } from "react-window";
@@ -51,7 +52,7 @@ const MarkReadButton = styled(Button)`background: #28a745; border: none; padding
 const columnWidths = [60,120,160,140,180,180,140,200,140,150,120,120,120,100,140,250,250,250,150,100,100,80,120,100,120,140,140,140,140,140,120,120,120,140,200,140,140,140,120,120,120,140,120,120,140,140,140,200];
 const totalTableWidth = columnWidths.reduce((sum, width) => sum + width, 0);
 const normalizeTableText = (value) =>
-  typeof value === "string" ? value.replace(/^\s*[•·]\s*/, "").trim() : value;
+  typeof value === "string" ? value.replace(/^\s*[��]\s*/, "").trim() : value;
 
 const tableStyles = `
 body { overflow-x: hidden; }
@@ -340,7 +341,7 @@ const Sales = () => {
   }, []);
 
   useEffect(() => {
-    const socket = io(socketOrigin, { path: process.env.REACT_APP_FURNI_SOCKET_PATH || "/furni/socket.io", transports: ["websocket", "polling"], reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 1000, withCredentials: true });
+    const socket = io(`${socketOrigin}/furni`, {  transports: ["websocket", "polling"], reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 1000, withCredentials: true });
     socket.on("connect", () => { socket.emit("join", { userId, role: userRole }); });
     socket.on("connect_error", (error) => {});
     socket.on("deleteOrder", ({ _id, createdBy, assignedTo }) => {
@@ -572,7 +573,7 @@ const Sales = () => {
             <label style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "white", padding: "12px 24px", borderRadius: "30px", fontWeight: "600", fontSize: "1rem", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 6px 16px rgba(0,0,0,0.25)", transition: "all 0.4s ease" }}
               onMouseEnter={(e) => { e.target.style.transform = "scale(1.05)"; e.target.style.boxShadow = "0 10px 24px rgba(0,0,0,0.3)"; }}
               onMouseLeave={(e) => { e.target.style.transform = "scale(1)"; e.target.style.boxShadow = "0 6px 16px rgba(0,0,0,0.25)"; }}>
-              <span style={{ fontSize: "1.2rem" }}>⬅</span> Bulk Upload
+              <Upload size={18} /> Bulk Upload
               <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} style={{ display: "none" }} />
             </label>
           )}
@@ -585,14 +586,14 @@ const Sales = () => {
             <Button onClick={handleExport} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", padding: "12px 24px", borderRadius: "30px", color: "white", fontWeight: "600", fontSize: "1rem", boxShadow: "0 6px 16px rgba(0,0,0,0.25)", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.4s ease" }}
               onMouseEnter={(e) => { e.target.style.transform = "scale(1.05)"; e.target.style.boxShadow = "0 10px 24px rgba(0,0,0,0.3)"; }}
               onMouseLeave={(e) => { e.target.style.transform = "scale(1)"; e.target.style.boxShadow = "0 6px 16px rgba(0,0,0,0.25)"; }}>
-              <span style={{ fontSize: "1.2rem" }}>➔</span> Export Orders
+              <Download size={18} /> Export Orders
             </Button>
           )}
           {(userRole === "Admin" || userRole === "SuperAdmin" || userRole === "GlobalAdmin" || userRole === "salesperson") && (
             <Button variant="primary" onClick={() => setIsDashboardOpen(true)} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", padding: "10px 20px", borderRadius: "30px", fontSize: "1rem", fontWeight: "600", marginLeft: "10px", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.3s ease" }}
               onMouseEnter={(e) => (e.target.style.transform = "scale(1.05)")}
               onMouseLeave={(e) => (e.target.style.transform = "scale(1)")}>
-              <ArrowRight size={18} /> {userRole === "salesperson" ? "My Analytics" : "View Analytics"}
+              <BarChart2 size={18} /> {userRole === "salesperson" ? "My Analytics" : "View Analytics"}
             </Button>
           )}
         </div>

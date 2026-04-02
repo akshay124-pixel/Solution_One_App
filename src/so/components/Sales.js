@@ -9,7 +9,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import axios from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import { exportToExcel, readExcelFile } from "../../utils/excelHelper";
-import { ArrowRight } from "lucide-react";
+import { BarChart2, Upload, Download } from "lucide-react";
 import io from "socket.io-client";
 import styled from "styled-components";
 import { FixedSizeList as List } from "react-window";
@@ -621,7 +621,7 @@ const Row = React.memo(({ index, style, data }) => {
                   </button>
                 )}
 
-              {(userRole === "Admin" || userRole === "GlobalAdmin" || userRole === "SuperAdmin") && (
+              {(userRole === "GlobalAdmin" || userRole === "SuperAdmin") && (
                 <button
                   className="bin-button"
                   onClick={() => handleDeleteClick(order)}
@@ -1316,8 +1316,8 @@ const Sales = () => {
       }
     })();
 
-    const socket = io(baseOrigin, {
-      path: process.env.REACT_APP_SO_SOCKET_PATH || "/sales/socket.io",
+    const socket = io(`${baseOrigin}/sales`, {
+      
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 5,
@@ -2302,7 +2302,7 @@ const Sales = () => {
                 e.target.style.boxShadow = "0 6px 16px rgba(0,0,0,0.25)";
               }}
             >
-              <span style={{ fontSize: "1.2rem" }}>⬅</span>
+              <Upload size={18} />
               Bulk Upload
               <input
                 type="file"
@@ -2368,7 +2368,7 @@ const Sales = () => {
                 e.target.style.boxShadow = "0 6px 16px rgba(0,0,0,0.25)";
               }}
             >
-              <span style={{ fontSize: "1.2rem" }}>➔</span>
+              <Download size={18} />
               Export Orders
             </Button>
           )}
@@ -2395,7 +2395,7 @@ const Sales = () => {
                 onMouseEnter={(e) => (e.target.style.transform = "scale(1.05)")}
                 onMouseLeave={(e) => (e.target.style.transform = "scale(1)")}
               >
-                <ArrowRight size={18} />
+                <BarChart2 size={18} />
                 View Analytics
               </Button>
             )}

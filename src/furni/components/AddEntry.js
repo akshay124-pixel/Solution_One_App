@@ -94,7 +94,7 @@ function AddEntry({ onSubmit, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const userRole = localStorage.getItem("furniRole");
-    if (!["salesperson", "Admin", "SuperAdmin"].includes(userRole)) { toast.error("Only Sales or Admin users can create orders"); return; }
+    if (!["salesperson", "Admin", "SuperAdmin", "GlobalAdmin"].includes(userRole)) { toast.error("Only Sales or Admin users can create orders"); return; }
     if (!products || products.length === 0) { toast.error("Please add at least one product to the list"); return; }
     if (!formData.customername || !formData.name || !formData.contactNo || !formData.customerEmail) { toast.error("Please fill all required customer details"); return; }
     if (!/^\d{10}$/.test(formData.contactNo)) { toast.error("Contact number must be exactly 10 digits"); return; }
@@ -284,15 +284,15 @@ function AddEntry({ onSubmit, onClose }) {
                 <h4 style={{ fontSize: "calc(1rem + 0.2vw)", color: "#475569", marginBottom: "0.75rem" }}>Added Products:</h4>
                 <div style={{ maxHeight: "calc(40vh)", overflowY: "auto", scrollBehavior: "smooth", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "0.5rem", background: "#fff" }}>
                   {products.map((product, index) => (
-                    <div key={index} style={{ display: "flex", flexDirection: "column", gap: "0.4rem", padding: "0.75rem", background: "#f1f5f9", borderRadius: "0.5rem", marginBottom: "0.5rem", transition: "background 0.2s ease, transform 0.1s ease" }} onMouseOver={(e) => (e.currentTarget.style.background = "#e2e8f0")} onMouseOut={(e) => (e.currentTarget.style.background = "#f1f5f9")}>
-                      <span style={{ fontSize: "calc(0.85rem + 0.2vw)", color: "#1e293b" }}>Type: {product.productType}</span>
-                      <span style={{ fontSize: "calc(0.85rem + 0.2vw)", color: "#1e293b" }}>Size: {product.size || "N/A"}</span>
-                      <span style={{ fontSize: "calc(0.85rem + 0.2vw)", color: "#1e293b" }}>Spec: {product.spec || "N/A"}</span>
-                      <span style={{ fontSize: "calc(0.85rem + 0.2vw)", color: "#1e293b" }}>Qty: {product.qty}</span>
-                      <span style={{ fontSize: "calc(0.85rem + 0.2vw)", color: "#1e293b" }}>₹{product.unitPrice}</span>
-                      <span style={{ fontSize: "calc(0.85rem + 0.2vw)", color: "#1e293b" }}>GST: {product.gst}</span>
-                      <span style={{ fontSize: "calc(0.85rem + 0.2vw)", color: "#1e293b" }}>Model: {product.modelNos || "N/A"}</span>
-                      <button type="button" onClick={() => removeProduct(index)} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "calc(0.85rem + 0.2vw)", padding: "0.5rem 0", textAlign: "left", borderRadius: "0.25rem" }} aria-label={`Remove product ${product.productType}`}>Remove</button>
+                    <div key={index} style={{ display: "flex", alignItems: "center", gap: "1.5rem", padding: "0.6rem 0.75rem", background: "#f1f5f9", borderRadius: "0.5rem", marginBottom: "0.5rem", flexWrap: "nowrap", overflowX: "auto", transition: "background 0.2s ease" }} onMouseOver={(e) => (e.currentTarget.style.background = "#e2e8f0")} onMouseOut={(e) => (e.currentTarget.style.background = "#f1f5f9")}>
+                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", minWidth: "120px" }}>Type: {product.productType}</span>
+                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Size: {product.size || "N/A"}</span>
+                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Spec: {product.spec || "N/A"}</span>
+                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Qty: {product.qty}</span>
+                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>₹{product.unitPrice}</span>
+                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>GST: {product.gst}</span>
+                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Model: {product.modelNos || "N/A"}</span>
+                      <button type="button" onClick={() => removeProduct(index)} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "0.9rem", whiteSpace: "nowrap", marginLeft: "auto", flexShrink: 0 }} aria-label={`Remove product ${product.productType}`}>Remove</button>
                     </div>
                   ))}
                 </div>

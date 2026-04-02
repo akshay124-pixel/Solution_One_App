@@ -602,8 +602,8 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
           return process.env.REACT_APP_SO_URL;
         }
       })();
-      const socket = io(baseOrigin, {
-        path: process.env.REACT_APP_SO_SOCKET_PATH || "/sales/socket.io",
+      const socket = io(`${baseOrigin}/sales`, {
+        
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,

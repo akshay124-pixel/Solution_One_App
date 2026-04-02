@@ -467,7 +467,7 @@ function AddEntry({ onSubmit, onClose }) {
     e.preventDefault();
 
     const userRole = localStorage.getItem("role");
-    if (!["salesperson", "Admin", "SuperAdmin"].includes(userRole)) {
+    if (!["salesperson", "Admin", "SuperAdmin", "GlobalAdmin"].includes(userRole)) {
       toast.error("Only Sales Admin SuperAdmin users can create orders");
       return;
     }
@@ -1759,34 +1759,30 @@ function AddEntry({ onSubmit, onClose }) {
                       key={index}
                       style={{
                         display: "flex",
-                        justifyContent: "space-between",
-                        padding: "0.5rem",
+                        alignItems: "center",
+                        gap: "1.5rem",
+                        padding: "0.6rem 0.75rem",
                         background: "#f1f5f9",
                         borderRadius: "0.5rem",
                         marginBottom: "0.5rem",
+                        flexWrap: "nowrap",
+                        overflowX: "auto",
                       }}
                     >
-                      <span>
-                        {product.productType} | {product.size} | {product.spec}{" "}
-                        | Qty: {product.qty} | Price: ₹{product.unitPrice} |
-                        GST: {product.gst} | Warranty: {product.warranty}
-                        {product.modelNos && ` | Model No: ${product.modelNos}`}
-                        {product.productType === "Fujifilm-Printer" &&
-                          product.productCode &&
-                          ` | Product Code: ${product.productCode}`}
-                        {product.productType === "IFPD" &&
-                          product.brand &&
-                          ` | Brand: ${product.brand}`}
-                      </span>
+                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", minWidth: "120px" }}>Type: {product.productType}</span>
+                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Size: {product.size || "N/A"}</span>
+                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Spec: {product.spec || "N/A"}</span>
+                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Qty: {product.qty}</span>
+                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>₹{product.unitPrice}</span>
+                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>GST: {product.gst}</span>
+                      {product.warranty && <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Warranty: {product.warranty}</span>}
+                      {product.modelNos && <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Model: {product.modelNos}</span>}
+                      {product.productType === "Fujifilm-Printer" && product.productCode && <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Code: {product.productCode}</span>}
+                      {product.productType === "IFPD" && product.brand && <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Brand: {product.brand}</span>}
                       <button
                         type="button"
                         onClick={() => removeProduct(index)}
-                        style={{
-                          color: "#ef4444",
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                        }}
+                        style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "0.9rem", whiteSpace: "nowrap", marginLeft: "auto", flexShrink: 0 }}
                       >
                         Remove
                       </button>

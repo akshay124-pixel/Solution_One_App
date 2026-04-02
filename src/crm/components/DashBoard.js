@@ -922,6 +922,7 @@ function DashBoard() {
           return process.env.REACT_APP_CRM_URL;
         }
       })();
+      console.log("[CRM Dashboard Socket] Connecting to", baseOrigin, "path:", process.env.REACT_APP_CRM_SOCKET_PATH || "/crm/socket.io");
       socket = io(baseOrigin, {
         auth: { token: `Bearer ${token}` },
         path: process.env.REACT_APP_CRM_SOCKET_PATH || "/crm/socket.io",
@@ -931,6 +932,13 @@ function DashBoard() {
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
+      });
+
+      socket.on("connect", () => {
+        console.log("[CRM Dashboard Socket] Connected:", socket.id);
+      });
+      socket.on("connect_error", (err) => {
+        console.error("[CRM Dashboard Socket] connect_error:", err.message);
       });
 
       const handleCreated = (entry) => {
@@ -1043,7 +1051,7 @@ function DashBoard() {
         socket && socket.disconnect();
       } catch { }
     };
-  }, [matchesContext, matchesRoleAccess, applyStatsDelta]);
+  }, [isAuthenticated, userId, matchesContext, matchesRoleAccess, applyStatsDelta]);
 
   const handleDelete = useCallback(
     (deletedIds) => {

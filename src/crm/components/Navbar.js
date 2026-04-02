@@ -84,10 +84,8 @@ const Navbar = () => {
       socketInstance.on("connect_error", (error) => {
         console.error("Socket connection error:", error.message);
         if (error.message.includes("Authentication error")) {
-          // Token is expired/invalid — stop reconnecting and let the
-          // auth refresh flow handle it. Manually calling .connect() here
-          // on top of socket.io's built-in reconnection causes a storm of
-          // failed attempts that floods the server logs.
+          // Token is expired/invalid — stop reconnecting to prevent log spam.
+          // The auth:tokenRefreshed event below will reconnect with a fresh token.
           socketInstance.disconnect();
         }
       });
@@ -96,10 +94,18 @@ const Navbar = () => {
         console.error("Socket error:", error.message);
       });
 
+      // When the axios interceptor silently refreshes the token, reconnect the socket
+      const handleTokenRefreshed = (e) => {
+        socketInstance.auth.token = `Bearer ${e.detail.accessToken}`;
+        socketInstance.connect();
+      };
+      window.addEventListener("auth:tokenRefreshed", handleTokenRefreshed);
+
       setSocket(socketInstance);
 
       return () => {
         socketInstance.disconnect();
+        window.removeEventListener("auth:tokenRefreshed", handleTokenRefreshed);
         console.log("Socket disconnected");
       };
     }

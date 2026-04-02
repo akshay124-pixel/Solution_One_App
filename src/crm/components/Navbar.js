@@ -49,9 +49,9 @@ const Navbar = () => {
         auth: { token: `Bearer ${getAccessToken()}` },
         path: process.env.REACT_APP_CRM_SOCKET_PATH || "/crm/socket.io",
         reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
+        reconnectionAttempts: 3,
+        reconnectionDelay: 2000,
+        reconnectionDelayMax: 10000,
         withCredentials: true,
       });
 
@@ -84,9 +84,11 @@ const Navbar = () => {
       socketInstance.on("connect_error", (error) => {
         console.error("Socket connection error:", error.message);
         if (error.message.includes("Authentication error")) {
-          console.warn("Attempting to reconnect with new token");
-          socketInstance.auth.token = `Bearer ${getAccessToken()}`;
-          socketInstance.connect();
+          // Token is expired/invalid — stop reconnecting and let the
+          // auth refresh flow handle it. Manually calling .connect() here
+          // on top of socket.io's built-in reconnection causes a storm of
+          // failed attempts that floods the server logs.
+          socketInstance.disconnect();
         }
       });
 

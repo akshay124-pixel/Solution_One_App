@@ -36,7 +36,6 @@ const Navbar = () => {
 
   // Socket.IO connection
   useEffect(() => {
-    // Wait until both isAuthenticated AND token are available
     const token = getAccessToken();
     if (!isAuthenticated || !token) return;
 
@@ -47,8 +46,6 @@ const Navbar = () => {
         return process.env.REACT_APP_CRM_URL;
       }
     })();
-
-    console.log("[CRM Socket] Connecting to", baseOrigin, "path:", process.env.REACT_APP_CRM_SOCKET_PATH || "/crm/socket.io");
 
     const socketInstance = io(baseOrigin, {
       auth: { token: `Bearer ${token}` },
@@ -62,16 +59,12 @@ const Navbar = () => {
     });
 
     socketInstance.on("connect", () => {
-      console.log("[CRM Socket] Connected:", socketInstance.id);
+      console.log("[CRM] Socket connected:", socketInstance.id);
     });
 
     socketInstance.on("newNotification", (notification) => {
-      console.log("New notification received:", notification);
       setNotifications((prev) => {
-        if (prev.some((n) => n._id === notification._id)) {
-          console.log("Duplicate notification ignored:", notification._id);
-          return prev;
-        }
+        if (prev.some((n) => n._id === notification._id)) return prev;
         return [notification, ...prev];
       });
       if (!notification.read) {
@@ -80,7 +73,6 @@ const Navbar = () => {
     });
 
     socketInstance.on("notificationsCleared", () => {
-      console.log("Notifications cleared via socket");
       setNotifications([]);
       setUnreadCount(0);
       setNotificationPage(1);
@@ -88,25 +80,18 @@ const Navbar = () => {
     });
 
     socketInstance.on("connect_error", (error) => {
-      console.error("[CRM Socket] connect_error:", error.message);
       if (error.message.includes("Authentication error")) {
-        console.warn("[CRM Socket] Retrying with fresh token");
         socketInstance.auth.token = `Bearer ${getAccessToken()}`;
         socketInstance.connect();
       }
-    });
-
-    socketInstance.on("error", (error) => {
-      console.error("[CRM Socket] error:", error.message);
     });
 
     setSocket(socketInstance);
 
     return () => {
       socketInstance.disconnect();
-      console.log("[CRM Socket] Disconnected");
     };
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated]);
 
   // Fetch initial notifications
   useEffect(() => {

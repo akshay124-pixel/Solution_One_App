@@ -925,6 +925,7 @@ function DashBoard() {
       socket = io(baseOrigin, {
         auth: { token: `Bearer ${token}` },
         path: process.env.REACT_APP_CRM_SOCKET_PATH || "/crm/socket.io",
+        transports: ["websocket", "polling"],
         withCredentials: true,
         reconnection: true,
         reconnectionAttempts: 5,

@@ -335,7 +335,7 @@ const Production = () => {
                 <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0" }}>
                   <thead style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", position: "sticky", top: 0, zIndex: 2 }}>
                     <tr>
-                      {["Order ID", "So Date", "Customer Name", "Shipping Address", "Customer Email", "Contact No", "Order Type", "Product Details", "Size", "Spec", "Model Nos", "Remarks", "Production Status", "Quantity", "Actions"].map((header, index) => (
+                      {["Order ID", "So Date", "Customer Name", "Shipping Address", "Customer Email", "Contact No", "Order Type", "Product Details", "Size", "Spec", "Model Nos", "Attachment", "Remarks", "Production Status", "Quantity", "Actions"].map((header, index) => (
                         <th key={index} style={{ padding: "15px", textAlign: "center", fontWeight: "700", letterSpacing: "1px", textTransform: "uppercase", borderBottom: "2px solid rgba(255,255,255,0.2)" }}>{header}</th>
                       ))}
                     </tr>
@@ -360,6 +360,11 @@ const Production = () => {
                           <td style={tdStyle} title={firstProduct.size || "N/A"}>{firstProduct.size || "N/A"}</td>
                           <td style={tdStyle} title={firstProduct.spec || "N/A"}>{firstProduct.spec || "N/A"}</td>
                           <td style={tdStyle} title={firstProduct.modelNos?.length > 0 ? firstProduct.modelNos.join(", ") : "N/A"}>{firstProduct.modelNos?.length > 0 ? firstProduct.modelNos.join(", ") : "N/A"}</td>
+                          <td style={{ ...tdStyle, maxWidth: "150px" }} title={order.poFilePath ? "Attached" : "Not Attached"}>
+                            <Badge style={{ background: order.poFilePath ? "linear-gradient(135deg, #28a745, #4cd964)" : "linear-gradient(135deg, #ff6b6b, #ff8787)", color: "#fff", padding: "6px 14px", borderRadius: "20px", fontWeight: "600", fontSize: "0.9rem", boxShadow: "0 2px 5px rgba(0,0,0,0.15)" }}>
+                              {order.poFilePath ? "Attached" : "Not Attached"}
+                            </Badge>
+                          </td>
                           <td style={tdStyle} title={order.remarks || "N/A"}>{order.remarks || "N/A"}</td>
                           <td style={tdStyle} title={order.fulfillingStatus || "Pending"}>
                             <Badge style={{ background: order.fulfillingStatus === "Under Process" ? "linear-gradient(135deg, #f39c12, #f7c200)" : order.fulfillingStatus === "Pending" ? "linear-gradient(135deg, #ff6b6b, #ff8787)" : order.fulfillingStatus === "Partial Dispatch" ? "linear-gradient(135deg, #00c6ff, #0072ff)" : order.fulfillingStatus === "Fulfilled" ? "linear-gradient(135deg, #28a745, #4cd964)" : order.fulfillingStatus === "Order Cancel" ? "linear-gradient(135deg, #8e0e00, #e52d27)" : order.fulfillingStatus === "Hold" ? "linear-gradient(135deg, #2e2e2e, #4a4a4a)" : "linear-gradient(135deg, #6c757d, #a9a9a9)", color: "#fff", padding: "5px 10px", borderRadius: "12px", display: "inline-block", width: "100%", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>

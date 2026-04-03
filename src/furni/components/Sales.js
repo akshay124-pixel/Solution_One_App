@@ -104,6 +104,11 @@ const Row = React.memo(({ index, style, data }) => {
       return "#e6ffed";
     }
     if (order.sostatus === "Accounts Approved") return "#e6f0ff";
+    // Pending for Approval - highlight with darker purple when PO attached
+    if (order.sostatus === "Pending for Approval") {
+      if (order.poFilePath) return "#e4d1ff"; // Darker purple when PO attached
+      return "#f3e8ff"; // Normal light purple
+    }
     return "#f3e8ff";
   };
   const getHoverBackground = () => {
@@ -114,6 +119,11 @@ const Row = React.memo(({ index, style, data }) => {
       return "#d1f7dc";
     }
     if (order.sostatus === "Accounts Approved") return "#d1e4ff";
+    // Pending for Approval hover
+    if (order.sostatus === "Pending for Approval") {
+      if (order.poFilePath) return "#d4b8ff"; // Darker purple hover when PO attached
+      return "#ede4ff"; // Normal hover
+    }
     return "#ede4ff";
   };
 

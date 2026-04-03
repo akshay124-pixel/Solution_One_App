@@ -541,6 +541,7 @@ function AddEntry({ onSubmit, onClose }) {
       onClose();
     } catch (error) {
       console.error("Error:", error);
+      console.error("Error Response:", error.response?.data);
 
       // Handle validation errors with user-friendly messages
       if (error.response?.status === 400) {
@@ -562,6 +563,10 @@ function AddEntry({ onSubmit, onClose }) {
         }
       } else if (error.response?.status === 403) {
         toast.error("Unauthorized: Insufficient permissions or invalid token");
+      } else if (error.response?.status === 500) {
+        const errorData = error.response?.data;
+        const errorMessage = errorData?.error || errorData?.details || "Server error. Please try again.";
+        toast.error(`Server Error: ${errorMessage}`);
       } else {
         const errorMessage =
           error.response?.data?.error ||

@@ -1060,6 +1060,23 @@ Created By: ${getCreatedByName(entry.createdBy)}
           </Accordion.Item>
         </Accordion>
 
+        {/* PO File Attachment Download */}
+        {entry.poFilePath && isValidPoFilePath(entry.poFilePath) && (
+          <div style={{ marginTop: "1.5rem", padding: "1rem 1.5rem", background: "#fff", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <strong style={{ color: "#1e293b" }}>📎 PO File Attachment</strong>
+            <Button
+              variant="outline-primary"
+              size="sm"
+              onClick={() => handleDownload(entry.poFilePath)}
+              style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", padding: "6px 14px", borderRadius: "20px", display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", fontWeight: "600", color: "#ffffff", border: "none", boxShadow: "0 3px 8px rgba(0,0,0,0.2)", transition: "transform 0.2s ease, box-shadow 0.2s ease", cursor: "pointer" }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px) scale(1.02)"; e.currentTarget.style.boxShadow = "0 5px 12px rgba(0,0,0,0.3)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0) scale(1)"; e.currentTarget.style.boxShadow = "0 3px 8px rgba(0,0,0,0.2)"; }}
+            >
+              <Download size={14} /> Download PO File
+            </Button>
+          </div>
+        )}
+
         <Button
           onClick={handleCopy}
           style={{

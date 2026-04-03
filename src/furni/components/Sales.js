@@ -99,14 +99,20 @@ const Row = React.memo(({ index, style, data }) => {
   const getRowBackground = () => {
     if (order.sostatus === "Order Cancelled") return "#ffe5e5";
     if (isOrderComplete(order)) return "#ffffff";
-    if (order.sostatus === "Approved") return "#e6ffed";
+    if (order.sostatus === "Approved") {
+      if (order.poFilePath) return "#d4f4e6"; // Darker green when PO attached
+      return "#e6ffed";
+    }
     if (order.sostatus === "Accounts Approved") return "#e6f0ff";
     return "#f3e8ff";
   };
   const getHoverBackground = () => {
     if (order.sostatus === "Order Cancelled") return "#ffcccc";
     if (isOrderComplete(order)) return "#f0f7ff";
-    if (order.sostatus === "Approved") return "#d1f7dc";
+    if (order.sostatus === "Approved") {
+      if (order.poFilePath) return "#c8ede0"; // Darker green hover
+      return "#d1f7dc";
+    }
     if (order.sostatus === "Accounts Approved") return "#d1e4ff";
     return "#ede4ff";
   };

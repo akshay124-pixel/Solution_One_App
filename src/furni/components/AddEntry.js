@@ -12,6 +12,8 @@ function AddEntry({ onSubmit, onClose }) {
   const [selectedState, setSelectedState] = useState("");
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState([]);
+  const [poFile, setPoFile] = useState(null);
+  const [fileError, setFileError] = useState("");
   const [currentProduct, setCurrentProduct] = useState({ productType: "", size: "", spec: "", qty: "", modelNos: "", unitPrice: "", gst: "", customProduct: "" });
   const [formData, setFormData] = useState({
     soDate: new Date().toISOString().split("T")[0], name: "", city: "", state: "", pinCode: "", contactNo: "", alterno: "",
@@ -91,6 +93,28 @@ function AddEntry({ onSubmit, onClose }) {
   const handleStateChange = (e) => { const state = e.target.value; setSelectedState(state); setFormData((prev) => ({ ...prev, state, city: "" })); };
   const handleCityChange = (e) => setFormData((prev) => ({ ...prev, city: e.target.value }));
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const allowedTypes = ["application/pdf","image/png","image/jpeg","image/jpg","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document","application/vnd.ms-excel","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
+      const allowedExtensions = ["pdf","png","jpg","jpeg","doc","docx","xls","xlsx"];
+      const fileExt = file.name.split(".").pop().toLowerCase();
+      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
+        setFileError("Invalid file type. Only PDF, PNG, JPG, DOCX, XLS, XLSX are allowed.");
+        toast.error("Invalid file type. Only PDF, PNG, JPG, DOCX, XLS, XLSX are allowed.");
+        e.target.value = null; setPoFile(null); return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setFileError("File size must be less than 5MB");
+        toast.error("File size must be less than 5MB");
+        e.target.value = null; setPoFile(null); return;
+      }
+      setPoFile(file); setFileError("");
+    } else {
+      setPoFile(null); setFileError("");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const userRole = localStorage.getItem("furniRole");
@@ -123,15 +147,29 @@ function AddEntry({ onSubmit, onClose }) {
     };
     try {
       setLoading(true);
-      const response = await furniApi.post("/api/orders", newEntry);
+      const formDataToSend = new FormData();
+      for (const key in newEntry) {
+        if (key === "products") {
+          // Send products as JSON string
+          formDataToSend.append(key, JSON.stringify(newEntry[key]));
+        } else if (Array.isArray(newEntry[key])) {
+          formDataToSend.append(key, JSON.stringify(newEntry[key]));
+        } else {
+          formDataToSend.append(key, newEntry[key]);
+        }
+      }
+      if (poFile) formDataToSend.append("poFile", poFile);
+      const response = await furniApi.post("/api/orders", formDataToSend);
       onSubmit(response.data);
       onClose();
     } catch (error) {
       console.error("Error submitting order:", error);
-      const errorMessage = error.response?.data?.error || error.response?.data?.details?.join(", ") || "Failed to create order. Please try again.";
+      const errorMessage = error.response?.data?.error || error.response?.data?.details?.join(", ") || error.message || "Failed to create order. Please try again.";
       toast.error(errorMessage);
       if (error.response?.status === 403) toast.error("Unauthorized: Insufficient permissions or invalid token");
       else if (error.response?.status === 400) toast.error(`Validation Error: ${JSON.stringify(error.response?.data, null, 2)}`);
+      else if (error.response?.status === 413) toast.error("File size too large. Please upload a file smaller than 5MB");
+      else if (error.response?.status === 500) toast.error("Server error. Please try again later");
     } finally {
       setLoading(false);
     }
@@ -365,6 +403,29 @@ function AddEntry({ onSubmit, onClose }) {
                 )}
               </div>
             </div>
+          </div>
+          {/* PO File Attachment */}
+          <div>
+            <h3 style={sectionHeadingStyle}>📎 Attachment (Optional)</h3>
+            <div style={{ display: "flex", alignItems: "center", border: "1px solid #e2e8f0", borderRadius: "0.75rem", backgroundColor: "#f8fafc", padding: "0.5rem", transition: "border-color 0.3s ease", width: "100%", maxWidth: "400px", height: "2.75rem", boxSizing: "border-box", overflow: "hidden" }}>
+              <label htmlFor="furniPoFile" style={{ flex: 1, padding: "0.5rem 0.75rem", background: "linear-gradient(135deg, #e2e8f0, #f8fafc)", borderRadius: "0.5rem", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.95rem", color: "#475569", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", height: "100%" }}
+                onMouseOver={(e) => (e.currentTarget.style.background = "linear-gradient(135deg, #d1d5db, #e5e7eb)")}
+                onMouseOut={(e) => (e.currentTarget.style.background = "linear-gradient(135deg, #e2e8f0, #f8fafc)")}>
+                <svg style={{ width: "1.25rem", height: "1.25rem", color: "#6366f1", flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16V8m0 0l-4 4m4-4l4 4m6-4v8m0 0l4-4m-4 4l-4-4" />
+                </svg>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                  {poFile ? poFile.name : "Upload Attachment (PDF, PNG, JPG, DOCX, XLS, XLSX)"}
+                </span>
+              </label>
+              <input id="furniPoFile" type="file" name="poFile" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.xls" onChange={handleFileChange} style={{ display: "none" }} />
+              {poFile && (
+                <button type="button" onClick={() => { setPoFile(null); setFileError(""); document.getElementById("furniPoFile").value = null; }} style={{ padding: "0.5rem", background: "none", border: "none", color: "#ef4444", cursor: "pointer", display: "flex", alignItems: "center", flexShrink: 0 }} title="Remove File">
+                  <svg style={{ width: "1.25rem", height: "1.25rem" }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              )}
+            </div>
+            {fileError && <p style={{ color: "#ef4444", fontSize: "0.85rem", marginTop: "0.25rem" }}>{fileError}</p>}
           </div>
           {/* Form Actions */}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "1rem" }}>

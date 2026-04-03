@@ -237,7 +237,7 @@ const Navbar = ({ isAuthenticated, onLogout, userRole }) => {
               />
             </svg>
           </button>{" "}
-          <h4 style={{ fontWeight: "bold" }}>( IT )</h4>
+          <h4 style={{ fontWeight: "bold" }}>( AV & EdTech )</h4>
         </div>
 
         <div

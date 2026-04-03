@@ -8,7 +8,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import furniApi from "../axiosSetup";
 import { toast } from "react-toastify";
 import { exportToExcel, readExcelFile } from "../../utils/excelHelper";
-import { BarChart2, Upload, Download } from "lucide-react";
+import { BarChart2, Upload, Download, Users } from "lucide-react";
 // analytics icon: BarChart2 | upload icon: Upload | download icon: Download
 import io from "socket.io-client";
 import styled from "styled-components";
@@ -18,6 +18,7 @@ import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import Pagination from "@mui/material/Pagination";
 import debounce from "lodash/debounce";
 import SalesDashboardDrawer from "./Dashbords/SalesDashboardDrawer";
+import TeamBuilder from "./TeamBuilder";
 import { isOrderComplete } from "../utils/orderUtils";
 import { FINANCIAL_YEAR_OPTIONS } from "../../shared/financialYear";
 const ViewEntry = React.lazy(() => import("./ViewEntry"));
@@ -249,6 +250,7 @@ const Sales = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [isTeamBuilderOpen, setIsTeamBuilderOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [productionStatusFilter, setProductionStatusFilter] = useState("All");
   const [loading, setLoading] = useState(false);
@@ -577,18 +579,18 @@ const Sales = () => {
               <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} style={{ display: "none" }} />
             </label>
           )}
-          <Button onClick={() => setIsAddModalOpen(true)} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", padding: "12px 24px", borderRadius: "30px", color: "white", fontWeight: "600", fontSize: "1rem", boxShadow: "0 6px 16px rgba(0,0,0,0.25)", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.4s ease" }}
-            onMouseEnter={(e) => { e.target.style.transform = "scale(1.05)"; e.target.style.boxShadow = "0 10px 24px rgba(0,0,0,0.3)"; }}
-            onMouseLeave={(e) => { e.target.style.transform = "scale(1)"; e.target.style.boxShadow = "0 6px 16px rgba(0,0,0,0.25)"; }}>
-            <span style={{ fontSize: "1.2rem" }}>+</span> Add Order
-          </Button>
+        
           {userRole === "GlobalAdmin" && (
             <Button onClick={handleExport} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", padding: "12px 24px", borderRadius: "30px", color: "white", fontWeight: "600", fontSize: "1rem", boxShadow: "0 6px 16px rgba(0,0,0,0.25)", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.4s ease" }}
               onMouseEnter={(e) => { e.target.style.transform = "scale(1.05)"; e.target.style.boxShadow = "0 10px 24px rgba(0,0,0,0.3)"; }}
               onMouseLeave={(e) => { e.target.style.transform = "scale(1)"; e.target.style.boxShadow = "0 6px 16px rgba(0,0,0,0.25)"; }}>
               <Download size={18} /> Export Orders
             </Button>
-          )}
+          )}  <Button onClick={() => setIsAddModalOpen(true)} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", padding: "12px 24px", borderRadius: "30px", color: "white", fontWeight: "600", fontSize: "1rem", boxShadow: "0 6px 16px rgba(0,0,0,0.25)", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.4s ease" }}
+            onMouseEnter={(e) => { e.target.style.transform = "scale(1.05)"; e.target.style.boxShadow = "0 10px 24px rgba(0,0,0,0.3)"; }}
+            onMouseLeave={(e) => { e.target.style.transform = "scale(1)"; e.target.style.boxShadow = "0 6px 16px rgba(0,0,0,0.25)"; }}>
+            <span style={{ fontSize: "1.2rem" }}>+</span> Add Order
+          </Button>
           {(userRole === "Admin" || userRole === "SuperAdmin" || userRole === "GlobalAdmin" || userRole === "salesperson") && (
             <Button variant="primary" onClick={() => setIsDashboardOpen(true)} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", padding: "10px 20px", borderRadius: "30px", fontSize: "1rem", fontWeight: "600", marginLeft: "10px", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.3s ease" }}
               onMouseEnter={(e) => (e.target.style.transform = "scale(1.05)")}
@@ -596,8 +598,22 @@ const Sales = () => {
               <BarChart2 size={18} /> {userRole === "salesperson" ? "My Analytics" : "View Analytics"}
             </Button>
           )}
+          {(userRole === "Admin" || userRole === "SuperAdmin" || userRole === "GlobalAdmin") && (
+            <Button
+              onClick={() => setIsTeamBuilderOpen(true)}
+              style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", padding: "12px 24px", borderRadius: "30px", color: "white", fontWeight: "600", fontSize: "1rem", boxShadow: "0 6px 16px rgba(0,0,0,0.25)", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.4s ease" }}
+              onMouseEnter={(e) => { e.target.style.transform = "scale(1.05)"; e.target.style.boxShadow = "0 10px 24px rgba(0,0,0,0.3)"; }}
+              onMouseLeave={(e) => { e.target.style.transform = "scale(1)"; e.target.style.boxShadow = "0 6px 16px rgba(0,0,0,0.25)"; }}
+            >
+              <Users size={18} />
+              Manage Team
+            </Button>
+          )}
         </div>
         <SalesDashboardDrawer isOpen={isDashboardOpen} onClose={() => setIsDashboardOpen(false)} orders={orders} userRole={userRole} />
+        {isTeamBuilderOpen && (
+          <TeamBuilder isOpen={isTeamBuilderOpen} onClose={() => setIsTeamBuilderOpen(false)} userId={userId} />
+        )}
         {isAddModalOpen && (<AddEntry onSubmit={handleAddEntry} onClose={() => setIsAddModalOpen(false)} />)}
         {isViewModalOpen && (<ViewEntry isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} entry={selectedOrder} />)}
         {isDeleteModalOpen && (<DeleteModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onDelete={handleDelete} itemId={selectedOrder?._id} />)}

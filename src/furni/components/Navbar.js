@@ -58,7 +58,7 @@ const Navbar = ({ isAuthenticated, onLogout, userRole }) => {
             onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
             onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
           />
-          <h4 style={{ fontWeight: "bold", color: "white", marginLeft: "10px", marginBottom: 0 }}>( Furniture )</h4>
+          <h4 style={{ fontWeight: "bold", color: "white", marginLeft: "10px"}}>( Furniture )</h4>
         </div>
 
         <div className="furni-navbar-links" style={{ display: "flex", gap: "1rem" }} />

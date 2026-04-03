@@ -9,7 +9,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import axios from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import { exportToExcel, readExcelFile } from "../../utils/excelHelper";
-import { BarChart2, Upload, Download } from "lucide-react";
+import { BarChart2, Upload, Download,Users } from "lucide-react";
 import io from "socket.io-client";
 import styled from "styled-components";
 import { FixedSizeList as List } from "react-window";
@@ -2246,37 +2246,7 @@ const Sales = () => {
             flexWrap: "wrap",
           }}
         >
-          {" "}
-          {(userRole === "GlobalAdmin" || userRole === "SuperAdmin" || userRole === "Admin") && (
-            <Button
-              onClick={() => setIsTeamBuilderOpen(true)}
-              style={{
-                background: "linear-gradient(135deg, #2575fc, #6a11cb)",
-                border: "none",
-                padding: "12px 24px",
-                borderRadius: "30px",
-                color: "white",
-                fontWeight: "600",
-                fontSize: "1rem",
-                boxShadow: "0 6px 16px rgba(0,0,0,0.25)",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                transition: "all 0.4s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = "scale(1.05)";
-                e.target.style.boxShadow = "0 10px 24px rgba(0,0,0,0.3)";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = "scale(1)";
-                e.target.style.boxShadow = "0 6px 16px rgba(0,0,0,0.25)";
-              }}
-            >
-              <span style={{ fontSize: "1.2rem" }}>👥</span>
-              Manage Team
-            </Button>
-          )}
+          
           {(userRole === "Admin" || userRole === "GlobalAdmin" || userRole === "SuperAdmin" || userRole === "salesperson") && (
             <label
               style={{
@@ -2311,6 +2281,35 @@ const Sales = () => {
                 style={{ display: "none" }}
               />
             </label>
+          )} {userRole === "GlobalAdmin" && (
+            <Button
+              onClick={handleExport}
+              style={{
+                background: "linear-gradient(135deg, #2575fc, #6a11cb)",
+                border: "none",
+                padding: "12px 24px",
+                borderRadius: "30px",
+                color: "white",
+                fontWeight: "600",
+                fontSize: "1rem",
+                boxShadow: "0 6px 16px rgba(0,0,0,0.25)",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                transition: "all 0.4s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = "scale(1.05)";
+                e.target.style.boxShadow = "0 10px 24px rgba(0,0,0,0.3)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = "scale(1)";
+                e.target.style.boxShadow = "0 6px 16px rgba(0,0,0,0.25)";
+              }}
+            >
+              <Download size={18} />
+              Export Orders
+            </Button>
           )}
           {(userRole === "GlobalAdmin" || userRole === "SuperAdmin" || userRole === "Admin" || userRole === "salesperson") && (
             <Button
@@ -2342,36 +2341,7 @@ const Sales = () => {
               Add Order
             </Button>
           )}
-          {userRole === "GlobalAdmin" && (
-            <Button
-              onClick={handleExport}
-              style={{
-                background: "linear-gradient(135deg, #2575fc, #6a11cb)",
-                border: "none",
-                padding: "12px 24px",
-                borderRadius: "30px",
-                color: "white",
-                fontWeight: "600",
-                fontSize: "1rem",
-                boxShadow: "0 6px 16px rgba(0,0,0,0.25)",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                transition: "all 0.4s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = "scale(1.05)";
-                e.target.style.boxShadow = "0 10px 24px rgba(0,0,0,0.3)";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = "scale(1)";
-                e.target.style.boxShadow = "0 6px 16px rgba(0,0,0,0.25)";
-              }}
-            >
-              <Download size={18} />
-              Export Orders
-            </Button>
-          )}
+         
           {(userRole === "Admin" ||
             userRole === "GlobalAdmin" ||
             userRole === "SuperAdmin" ||
@@ -2398,7 +2368,37 @@ const Sales = () => {
                 <BarChart2 size={18} />
                 View Analytics
               </Button>
-            )}
+            )}{" "}
+          {(userRole === "GlobalAdmin" || userRole === "SuperAdmin" || userRole === "Admin") && (
+            <Button
+              onClick={() => setIsTeamBuilderOpen(true)}
+              style={{
+                background: "linear-gradient(135deg, #2575fc, #6a11cb)",
+                border: "none",
+                padding: "12px 24px",
+                borderRadius: "30px",
+                color: "white",
+                fontWeight: "600",
+                fontSize: "1rem",
+                boxShadow: "0 6px 16px rgba(0,0,0,0.25)",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                transition: "all 0.4s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = "scale(1.05)";
+                e.target.style.boxShadow = "0 10px 24px rgba(0,0,0,0.3)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = "scale(1)";
+                e.target.style.boxShadow = "0 6px 16px rgba(0,0,0,0.25)";
+              }}
+            >
+             <Users size={18} />
+              Manage Team
+            </Button>
+          )}
         </div>
 
         <SalesDashboardDrawer

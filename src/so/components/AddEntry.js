@@ -533,10 +533,7 @@ function AddEntry({ onSubmit, onClose }) {
       setLoading(true);
       const response = await axios.post(
         `${process.env.REACT_APP_SO_URL}/api/orders`,
-        formDataToSend,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
+        formDataToSend
       );
 
       clearDraft();

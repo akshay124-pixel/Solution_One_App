@@ -453,8 +453,8 @@ const Production = () => {
                   </div>
                   {viewOrder.poFilePath && (
                     <div style={{ marginTop: "15px" }}>
-                      <strong>📎 PO File: </strong>
-                      <Button variant="info" size="sm" onClick={() => handleDownload(viewOrder.poFilePath)} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px" }}>Download PO 📥</Button>
+                      <strong>📎 Attachment: </strong>
+                      <Button variant="info" size="sm" onClick={() => handleDownload(viewOrder.poFilePath)} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px" }}>Download 📥</Button>
                     </div>
                   )}
                   {viewOrder.installationFile && (

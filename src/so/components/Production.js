@@ -2541,7 +2541,7 @@ const Production = () => {
                       <InfoItem label="Order Remarks" value={viewOrder.remarks} />
                       {viewOrder.poFilePath ? (
                         <div className="info-item">
-                          <span className="info-label">PO File</span>
+                          <span className="info-label">Attachment</span>
                           <div className="info-value">
                             <Button
                               size="sm"

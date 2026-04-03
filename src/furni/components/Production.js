@@ -451,6 +451,12 @@ const Production = () => {
                       <span key={label} style={{ fontSize: "1rem", color: "#555" }}><strong>{label}:</strong> {value || "N/A"}</span>
                     ))}
                   </div>
+                  {viewOrder.poFilePath && (
+                    <div style={{ marginTop: "15px" }}>
+                      <strong>📎 PO File: </strong>
+                      <Button variant="info" size="sm" onClick={() => handleDownload(viewOrder.poFilePath)} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px" }}>Download PO 📥</Button>
+                    </div>
+                  )}
                   {viewOrder.installationFile && (
                     <div style={{ marginTop: "15px" }}>
                       <strong>Installation Report: </strong>

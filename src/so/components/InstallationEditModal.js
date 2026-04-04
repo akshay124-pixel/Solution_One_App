@@ -64,18 +64,11 @@ const InstallationEditModal = ({ show, onHide, order, onUpdate }) => {
             // ✅ Use authenticated download endpoint
             const fileUrl = `${process.env.REACT_APP_SO_URL}/api/download/${encodeURIComponent(fileName)}`;
 
-            const token = getPortalAccessToken();
-            if (!token) {
-                toast.error("Authentication token not found. Please log in again.");
-                return;
-            }
-
             const response = await fetch(fileUrl, {
                 method: "GET",
                 headers: {
                     Accept:
                         "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    Authorization: `Bearer ${token}`,
                 },
             });
 

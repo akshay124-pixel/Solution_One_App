@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import soApi from "../axiosSetup";
+import axios from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import { Button, Modal, Form, Spinner, Badge } from "react-bootstrap";
 import { FaEye, FaTimes } from "react-icons/fa";
@@ -336,26 +336,56 @@ const Production = () => {
         return;
       }
 
-      // ✅ Use axios instance like CRM does (auto handles baseURL)
-      const response = await soApi.get(`/api/download/${encodeURIComponent(fileName)}`, {
-        responseType: "blob",
+      // ✅ Use authenticated download endpoint
+      const fileUrl = `${process.env.REACT_APP_SO_URL}/api/download/${encodeURIComponent(fileName)}`;
+
+      const response = await fetch(fileUrl, {
+        method: "GET",
+        headers: {
+          Accept:
+            "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        },
       });
 
-      const blob = response.data;
+      if (!response.ok) {
+        throw new Error(
+          `Server error: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const contentType = response.headers.get("content-type");
+      const validTypes = [
+        "application/pdf",
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ];
+
+      if (!contentType || !validTypes.includes(contentType)) {
+        throw new Error("Invalid file type returned from server!");
+      }
+
+      const blob = await response.blob();
+
+      // ✅ FileName fix
+      const extension = contentType.split("/")[1] || "file";
       const downloadFileName =
         viewOrder.poFilePath.split("/").pop() ||
-        `order_${viewOrder.orderId || "unknown"}.pdf`;
+        `order_${viewOrder.orderId || "unknown"}.${extension}`;
 
-      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = url;
+      link.href = window.URL.createObjectURL(blob);
       link.download = downloadFileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(link.href);
 
-      toast.success("File downloaded successfully!");
+      toast.success("File download started!");
     } catch (err) {
       toast.error("Failed to download file! Check server or file path.");
       console.error("Download error:", err);

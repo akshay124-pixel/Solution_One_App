@@ -5,7 +5,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import soApi from "../axiosSetup";
+import axios from "../../so/axiosSetup";
 import { Button, Modal, Badge, Form, Spinner } from "react-bootstrap";
 import { FaEye, FaTimes, FaDownload } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -462,22 +462,33 @@ function Installation() {
         return;
       }
 
-      // ✅ Use axios instance like CRM does (auto handles baseURL)
-      const response = await soApi.get(`/api/download/${encodeURIComponent(fileName)}`, {
-        responseType: "blob",
+      // ✅ Use authenticated download endpoint
+      const fileUrl = `${process.env.REACT_APP_SO_URL}/api/download/${encodeURIComponent(fileName)}`;
+      const response = await fetch(fileUrl, {
+        method: "GET",
+        headers: {
+          Accept:
+            "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        },
       });
 
-      const blob = response.data;
-      const downloadFileName = filePath.split("/").pop() || `download.pdf`;
+      if (!response.ok) {
+        throw new Error("Failed to fetch file");
+      }
 
-      const url = window.URL.createObjectURL(blob);
+      const blob = await response.blob();
+      const contentType =
+        response.headers.get("content-type") || "application/octet-stream";
+      const extension = contentType.split("/")[1] || "file";
+      const downloadFileName = filePath.split("/").pop() || `download.${extension}`;
+
       const link = document.createElement("a");
-      link.href = url;
+      link.href = window.URL.createObjectURL(blob);
       link.download = downloadFileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(link.href);
 
       toast.success("Download started!");
     } catch (err) {

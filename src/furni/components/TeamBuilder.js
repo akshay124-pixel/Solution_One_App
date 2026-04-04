@@ -189,7 +189,13 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
       reconnectionDelay: 1000,
       withCredentials: true,
     });
-    socket.on("connect", () => socket.emit("join", { userId, role: "salesperson" }));
+    socket.on("connect", () => {
+      console.log(`[Furni Socket] Client connected — socketId=${socket.id} userId=${userId} username=salesperson`);
+      socket.emit("join", { userId, role: "salesperson" });
+    });
+    socket.on("disconnect", (reason) => {
+      console.log(`[Furni Socket] Client disconnected — socketId=${socket.id} userId=${userId} reason=${reason}`);
+    });
     socket.on("teamUpdate", ({ leaderId }) => { if (leaderId === userId) handleRefresh(); });
     return () => socket.disconnect();
   }, [isOpen, userId, handleRefresh]);

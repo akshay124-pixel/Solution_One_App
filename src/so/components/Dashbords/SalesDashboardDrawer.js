@@ -612,6 +612,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
       });
 
       socket.on("connect", () => {
+        console.log(`[SO Socket] Client connected — socketId=${socket.id} userId=${userId} username=${userRole}`);
         socket.emit("join", { userId, role: userRole });
         toast.success("Connected to real-time updates!");
       });
@@ -630,6 +631,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
       });
 
       socket.on("disconnect", (reason) => {
+        console.log(`[SO Socket] Client disconnected — socketId=${socket.id} userId=${userId} reason=${reason}`);
         if (reason !== "io client disconnect") {
           toast.warn(`Disconnected from server: ${reason}. Reconnecting...`);
         }

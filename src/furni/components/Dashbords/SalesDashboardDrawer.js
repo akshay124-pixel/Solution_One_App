@@ -232,7 +232,13 @@ const SalesDashboardDrawer = ({ isOpen, onClose, userRole }) => {
       socket.on("connect", () => {
         const userId = localStorage.getItem("furniUserId");
         const role = localStorage.getItem("furniRole");
+        console.log(`[Furni Socket] Client connected — socketId=${socket.id} userId=${userId} username=${role}`);
         socket.emit("join", { userId, role });
+      });
+
+      socket.on("disconnect", (reason) => {
+        const userId = localStorage.getItem("furniUserId");
+        console.log(`[Furni Socket] Client disconnected — socketId=${socket.id} userId=${userId} reason=${reason}`);
       });
 
       socket.on("orderUpdate", ({ operationType, fullDocument }) => {

@@ -56,7 +56,13 @@ const ProductionApproval = () => {
     socket.on("connect", () => {
       const userId = localStorage.getItem("userId");
       const role = localStorage.getItem("role");
+      console.log(`[SO Socket] Client connected — socketId=${socket.id} userId=${userId} username=${role}`);
       socket.emit("join", { userId, role });
+    });
+
+    socket.on("disconnect", (reason) => {
+      const userId = localStorage.getItem("userId");
+      console.log(`[SO Socket] Client disconnected — socketId=${socket.id} userId=${userId} reason=${reason}`);
     });
 
     // Hinglish: Backend 'orderUpdate' event use kar raha hai (change streams). Event name yahan sync kiya.

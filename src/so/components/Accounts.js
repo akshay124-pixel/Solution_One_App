@@ -89,7 +89,12 @@ function Accounts() {
       (doc?.paymentReceived || "Not Received") !== "Received";
 
     socket.on("connect", () => {
+      console.log(`[SO Socket] Client connected — socketId=${socket.id} userId=${userId} username=${userRole}`);
       socket.emit("join", { userId, role: userRole });
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log(`[SO Socket] Client disconnected — socketId=${socket.id} userId=${userId} reason=${reason}`);
     });
 
     socket.on("orderUpdate", ({ operationType, fullDocument, documentId }) => {

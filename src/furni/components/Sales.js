@@ -360,8 +360,14 @@ const Sales = () => {
 
   useEffect(() => {
     const socket = io(`${socketOrigin}`, { path: "/furni/socket.io", transports: ["websocket", "polling"], reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 1000, withCredentials: true });
-    socket.on("connect", () => { socket.emit("join", { userId, role: userRole }); });
+    socket.on("connect", () => { 
+      console.log(`[Furni Socket] Client connected — socketId=${socket.id} userId=${userId} username=${userRole}`);
+      socket.emit("join", { userId, role: userRole }); 
+    });
     socket.on("connect_error", (error) => {});
+    socket.on("disconnect", (reason) => {
+      console.log(`[Furni Socket] Client disconnected — socketId=${socket.id} userId=${userId} reason=${reason}`);
+    });
     socket.on("deleteOrder", ({ _id, createdBy, assignedTo }) => {
       const owners = [createdBy, assignedTo].filter(Boolean);
       if (!owners.includes(userId)) return;

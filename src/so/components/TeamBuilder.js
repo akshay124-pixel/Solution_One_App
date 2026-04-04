@@ -591,7 +591,12 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
     });
 
     socket.on("connect", () => {
+      console.log(`[SO Socket] Client connected — socketId=${socket.id} userId=${userId} username=salesperson`);
       socket.emit("join", { userId, role: "salesperson" });
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log(`[SO Socket] Client disconnected — socketId=${socket.id} userId=${userId} reason=${reason}`);
     });
 
     socket.on("teamUpdate", ({ userId: updatedUserId, leaderId, action }) => {

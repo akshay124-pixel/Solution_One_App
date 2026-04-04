@@ -1326,11 +1326,16 @@ const Sales = () => {
     });
 
     socket.on("connect", () => {
+      console.log(`[SO Socket] Client connected — socketId=${socket.id} userId=${userId} username=${userRole}`);
       socket.emit("join", { userId, role: userRole });
     });
 
     socket.on("connect_error", (error) => {
       console.error("Socket.IO connection error:", error);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log(`[SO Socket] Client disconnected — socketId=${socket.id} userId=${userId} reason=${reason}`);
     });
 
     socket.on("deleteOrder", ({ _id, createdBy, assignedTo }) => {

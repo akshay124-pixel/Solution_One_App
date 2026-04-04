@@ -181,7 +181,8 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
       try { return new URL(process.env.REACT_APP_FURNI_URL || "http://localhost:5050").origin; }
       catch { return "http://localhost:5050"; }
     })();
-    const socket = io(`${baseOrigin}/furni`, {
+    const socket = io(baseOrigin, {
+      path: "/furni/socket.io",
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 5,

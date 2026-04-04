@@ -43,8 +43,8 @@ const ProductionApproval = () => {
       }
     })();
 
-    const socket = io(`${baseOrigin}/sales`, {
-      
+    const socket = io(baseOrigin, {
+      path: "/sales/socket.io",
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,

@@ -75,8 +75,8 @@ function Accounts() {
       }
     })();
 
-    const socket = io(`${baseOrigin}/sales`, {
-      
+    const socket = io(baseOrigin, {
+      path: "/sales/socket.io",
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 5,

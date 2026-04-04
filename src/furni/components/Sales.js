@@ -359,7 +359,7 @@ const Sales = () => {
   }, []);
 
   useEffect(() => {
-    const socket = io(`${socketOrigin}/furni`, {  transports: ["websocket", "polling"], reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 1000, withCredentials: true });
+    const socket = io(`${socketOrigin}`, { path: "/furni/socket.io", transports: ["websocket", "polling"], reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 1000, withCredentials: true });
     socket.on("connect", () => { socket.emit("join", { userId, role: userRole }); });
     socket.on("connect_error", (error) => {});
     socket.on("deleteOrder", ({ _id, createdBy, assignedTo }) => {

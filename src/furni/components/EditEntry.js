@@ -15,6 +15,22 @@ const FURNI_ORIGIN = (() => {
   catch { return "http://localhost:5050"; }
 })();
 
+/**
+ * Business Rule: Production Status Automation (mirrors SO EditEntry)
+ * - Non-Morinda → always "Fulfilled"
+ * - Morinda + was "Fulfilled" → reset to "Pending"
+ * - Morinda + other status → keep current
+ */
+const evaluateProductionStatus = (dispatchFrom, currentStatus) => {
+  if (!dispatchFrom) return currentStatus || "Pending";
+  if (dispatchFrom !== "Morinda") return "Fulfilled";
+  if (dispatchFrom === "Morinda" && currentStatus === "Fulfilled") return "Pending";
+  return currentStatus || "Pending";
+};
+
+/** Production Status field is read-only when dispatch is from a non-Morinda location */
+const isProductionStatusDisabled = (dispatchFrom) => !!dispatchFrom && dispatchFrom !== "Morinda";
+
 const StyledModal = styled(Modal)`
   .modal-content { border-radius: 12px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2); max-width: 600px; margin: auto; }
   .modal-header, .modal-footer { background: linear-gradient(135deg, #2575fc, #6a11cb); color: white; border: none; }
@@ -60,6 +76,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   const selectedState = watch("state");
   const products = watch("products") || [];
   const paymentMethod = watch("paymentMethod");
+  const dispatchFrom = watch("dispatchFrom");
   const currentFinancialYear = getFinancialYear(watch("soDate"));
 
   useEffect(() => {
@@ -256,7 +273,16 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
         <Form.Group controlId="createdBy"><Form.Label>👤 Created By</Form.Label><Form.Control {...register("createdBy")} readOnly disabled /></Form.Group>
         <Form.Group controlId="soDate"><Form.Label>📅 SO Date *</Form.Label><Form.Control type="date" {...register("soDate", { required: "SO Date is required" })} onChange={(e) => { setValue("soDate", e.target.value, { shouldDirty: true, shouldValidate: true }); debouncedHandleInputChange("soDate", e.target.value); }} isInvalid={!!errors.soDate} /><Form.Control.Feedback type="invalid">{errors.soDate?.message}</Form.Control.Feedback></Form.Group>
         <Form.Group controlId="financialYear"><Form.Label>Financial Year</Form.Label><Form.Control value={currentFinancialYear || ""} readOnly disabled /></Form.Group>
-        <Form.Group controlId="dispatchFrom"><Form.Label>📍 Dispatch From</Form.Label><Form.Select {...register("dispatchFrom")} onChange={(e) => debouncedHandleInputChange("dispatchFrom", e.target.value)} isInvalid={!!errors.dispatchFrom} aria-label="Dispatch From"><option value="" disabled>-- Select Dispatch Location --</option><option value="Patna">Patna</option><option value="Bareilly">Bareilly</option><option value="Morinda">Morinda</option><option value="Ranchi">Ranchi</option><option value="Lucknow">Lucknow</option><option value="Delhi">Delhi</option><option value="Jaipur">Jaipur</option><option value="Rajasthan">Rajasthan</option></Form.Select></Form.Group>
+        <Form.Group controlId="dispatchFrom"><Form.Label>📍 Dispatch From</Form.Label><Form.Select {...register("dispatchFrom")} onChange={(e) => {
+          const newVal = e.target.value;
+          debouncedHandleInputChange("dispatchFrom", newVal);
+          // Business Rule: auto-update Production Status when Dispatch location changes
+          const currentStatus = watch("fulfillingStatus");
+          const nextStatus = evaluateProductionStatus(newVal, currentStatus);
+          if (nextStatus !== currentStatus) {
+            setValue("fulfillingStatus", nextStatus, { shouldValidate: true, shouldDirty: true });
+          }
+        }} isInvalid={!!errors.dispatchFrom} aria-label="Dispatch From"><option value="" disabled>-- Select Dispatch Location --</option><option value="Patna">Patna</option><option value="Bareilly">Bareilly</option><option value="Morinda">Morinda</option><option value="Ranchi">Ranchi</option><option value="Lucknow">Lucknow</option><option value="Delhi">Delhi</option><option value="Jaipur">Jaipur</option><option value="Rajasthan">Rajasthan</option></Form.Select></Form.Group>
         <Form.Group controlId="dispatchDate"><Form.Label>📅 Dispatch Date</Form.Label><Form.Control type="date" {...register("dispatchDate")} onChange={(e) => debouncedHandleInputChange("dispatchDate", e.target.value)} /></Form.Group>
         <Form.Group controlId="deliveryDate"><Form.Label>📅 Delivery Date</Form.Label><Form.Control type="date" {...register("deliveryDate")} onChange={(e) => debouncedHandleInputChange("deliveryDate", e.target.value)} /></Form.Group>
         <Form.Group controlId="name"><Form.Label>👤 Contact Person</Form.Label><Form.Control {...register("name")} onChange={(e) => debouncedHandleInputChange("name", e.target.value)} isInvalid={!!errors.name} placeholder="Enter contact person name" /></Form.Group>
@@ -376,7 +402,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
         <Form.Group controlId="billNumber"><Form.Label>📄 Bill Number</Form.Label><Form.Control {...register("billNumber")} onChange={(e) => debouncedHandleInputChange("billNumber", e.target.value)} placeholder="Enter bill number" /></Form.Group>
         <Form.Group controlId="billStatus"><Form.Label>📋 Bill Status</Form.Label><Controller name="billStatus" control={control} render={({ field }) => (<Form.Select {...field} onChange={(e) => { field.onChange(e); debouncedHandleInputChange("billStatus", e.target.value); }}><option value="Pending">Pending</option><option value="Under Billing">Under Billing</option><option value="Billing Complete">Billing Complete</option></Form.Select>)} /></Form.Group>
         <Form.Group controlId="paymentReceived"><Form.Label>💰 Payment Received</Form.Label><Controller name="paymentReceived" control={control} render={({ field }) => (<Form.Select {...field} onChange={(e) => { field.onChange(e); debouncedHandleInputChange("paymentReceived", e.target.value); }}><option value="Not Received">Not Received</option><option value="Received">Received</option></Form.Select>)} /></Form.Group>
-        <Form.Group controlId="fulfillingStatus"><Form.Label>📋 Production Status</Form.Label><Controller name="fulfillingStatus" control={control} render={({ field }) => (<Form.Select {...field} onChange={(e) => { field.onChange(e); debouncedHandleInputChange("fulfillingStatus", e.target.value); }}><option value="Pending">Pending</option><option value="Under Process">Under Process</option><option value="Order Cancel">Order Cancel</option><option value="Partial Dispatch">Partial Dispatch</option><option value="Fulfilled">Fulfilled</option></Form.Select>)} /></Form.Group>
+        <Form.Group controlId="fulfillingStatus"><Form.Label>📋 Production Status</Form.Label><Controller name="fulfillingStatus" control={control} render={({ field }) => (<Form.Select {...field} disabled={isProductionStatusDisabled(dispatchFrom)} onChange={(e) => { field.onChange(e); debouncedHandleInputChange("fulfillingStatus", e.target.value); }}><option value="Pending">Pending</option><option value="Under Process">Under Process</option><option value="Order Cancel">Order Cancel</option><option value="Partial Dispatch">Partial Dispatch</option><option value="Fulfilled">Fulfilled</option></Form.Select>)} /></Form.Group>
         <Form.Group controlId="fulfillmentDate"><Form.Label>📅 Production Date</Form.Label><Form.Control type="date" {...register("fulfillmentDate")} onChange={(e) => debouncedHandleInputChange("fulfillmentDate", e.target.value)} /></Form.Group>
         <Form.Group controlId="remarksByProduction"><Form.Label>✏️ Remarks by Production</Form.Label><Form.Control as="textarea" rows={2} {...register("remarksByProduction")} onChange={(e) => debouncedHandleInputChange("remarksByProduction", e.target.value)} placeholder="Enter production remarks" /></Form.Group>
         <Form.Group controlId="remarksByAccounts"><Form.Label>✏️ Remarks by Accounts</Form.Label><Form.Control as="textarea" rows={2} {...register("remarksByAccounts")} onChange={(e) => debouncedHandleInputChange("remarksByAccounts", e.target.value)} placeholder="Enter accounts remarks" /></Form.Group>

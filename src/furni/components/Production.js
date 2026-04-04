@@ -2,12 +2,15 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import furniApi from "../axiosSetup";
 import { toast } from "react-toastify";
 import { Button, Modal, Form, Spinner, Badge } from "react-bootstrap";
-import { FaEye } from "react-icons/fa";
+import { Accordion, Card } from "react-bootstrap";import { FaEye } from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { exportToExcel } from "../../utils/excelHelper";
 import "../../App.css";
 import styled from "styled-components";
 import DatePicker from "react-datepicker";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import { FileText } from "lucide-react";
 
 const DatePickerWrapper = styled.div`
   display: flex; gap: 10px; align-items: center;
@@ -54,6 +57,8 @@ const Production = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [orderTypeFilter, setOrderTypeFilter] = useState("All");
+  const [prodPdfLoading, setProdPdfLoading] = useState(false);
+  const prodPdfRef = React.useRef(null);
 
   const clearFilters = useCallback(() => {
     setSearchQuery(""); setStartDate(null); setEndDate(null);
@@ -206,6 +211,37 @@ const Production = () => {
     navigator.clipboard.writeText(textToCopy)
       .then(() => { setCopied(true); toast.success("Details copied to clipboard!", { toastId: "copy-success" }); setTimeout(() => setCopied(false), 2000); })
       .catch((err) => { toast.error("Failed to copy details!", { toastId: "copy-error" }); console.error("Copy error:", err); });
+  }, [viewOrder]);
+
+  const handleProdPDF = useCallback(async () => {
+    if (!prodPdfRef.current) return;
+    setProdPdfLoading(true);
+    try {
+      const canvas = await html2canvas(prodPdfRef.current, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+      const pdf = new jsPDF("p", "mm", "a4");
+      const PAGE_WIDTH = 210, PAGE_HEIGHT = 297, MARGIN_TOP = 15, MARGIN_BOTTOM = 15;
+      const CONTENT_HEIGHT = PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM;
+      const imgWidth = PAGE_WIDTH;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pxPerMm = canvas.height / imgHeight;
+      const pageContentHeightPx = (CONTENT_HEIGHT - 8) * pxPerMm;
+      let sourceY = 0, pageIndex = 0;
+      while (sourceY < canvas.height) {
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = Math.min(pageContentHeightPx, canvas.height - sourceY);
+        pageCanvas.getContext("2d").drawImage(canvas, 0, sourceY, canvas.width, pageCanvas.height, 0, 0, canvas.width, pageCanvas.height);
+        const imgData = pageCanvas.toDataURL("image/jpeg", 0.98);
+        if (pageIndex > 0) pdf.addPage();
+        const renderedH = (pageCanvas.height * imgWidth) / canvas.width;
+        pdf.addImage(imgData, "JPEG", 0, pageIndex === 0 ? 0 : MARGIN_TOP, imgWidth, renderedH);
+        sourceY += pageCanvas.height;
+        pageIndex++;
+      }
+      pdf.save(`Production_${viewOrder?.orderId || "order"}.pdf`);
+      toast.success("PDF exported successfully!");
+    } catch (err) { toast.error("Failed to export PDF!"); console.error(err); }
+    finally { setProdPdfLoading(false); }
   }, [viewOrder]);
 
   const handleExportExcel = useCallback(async () => {
@@ -435,67 +471,159 @@ const Production = () => {
           </Modal.Body>
         </Modal>
         {/* View Modal */}
-        <Modal show={showViewModal} onHide={() => setShowViewModal(false)} backdrop="static" keyboard={false} size="lg">
-          <Modal.Header closeButton style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", padding: "20px", borderBottom: "none" }}>
-            <Modal.Title style={{ fontWeight: "700", fontSize: "1.8rem", letterSpacing: "1px", textTransform: "uppercase", display: "flex", alignItems: "center" }}>
-              <span style={{ marginRight: "10px", fontSize: "1.5rem" }}>📋</span>Production Order Details
+        <Modal show={showViewModal} onHide={() => setShowViewModal(false)} backdrop="static" keyboard={false} size="xl" centered style={{ backdropFilter: "blur(5px)" }}>
+          <Modal.Header
+            style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", padding: "1.5rem 2rem", border: "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+          >
+            <Modal.Title style={{ fontWeight: "700", fontSize: "1.8rem", letterSpacing: "1.2px", textTransform: "uppercase", fontFamily: "'Poppins', sans-serif", display: "flex", alignItems: "center", gap: "10px" }}>
+              <span role="img" aria-label="clipboard">📋</span>
+              Production Order #{viewOrder?.orderId || "N/A"}
             </Modal.Title>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <Button onClick={handleProdPDF} disabled={prodPdfLoading}
+                style={{ background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.85)", borderRadius: "50px", padding: "8px 20px", fontSize: "0.95rem", fontWeight: "600", color: "#fff", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.2s ease", whiteSpace: "nowrap" }}
+                onMouseEnter={(e) => { if (!prodPdfLoading) e.currentTarget.style.background = "rgba(255,255,255,0.25)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}>
+                {prodPdfLoading ? <><Spinner size="sm" animation="border" /> Exporting...</> : <><FileText size={16} /> Export PDF</>}
+              </Button>
+              <Button variant="light" onClick={() => setShowViewModal(false)} style={{ borderRadius: "50%", width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.2)" }}>✕</Button>
+            </div>
           </Modal.Header>
-          <Modal.Body style={{ padding: "30px", background: "#fff", borderRadius: "0 0 15px 15px", display: "flex", flexDirection: "column", gap: "20px" }}>
+          <Modal.Body style={{ padding: "2rem", background: "linear-gradient(180deg, #f8fafc, #e2e8f0)", borderRadius: "0 0 15px 15px", maxHeight: "80vh", overflowY: "auto", scrollbarWidth: "thin", scrollbarColor: "#2575fc #e6f0fa" }}>
             {viewOrder && (
               <>
-                <div style={{ background: "#f8f9fa", borderRadius: "10px", padding: "20px" }}>
-                  <h3 style={{ fontSize: "1.3rem", fontWeight: "600", color: "#333", marginBottom: "15px", textTransform: "uppercase" }}>Order Information</h3>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px" }}>
-                    {[["Order ID", viewOrder.orderId], ["SO Date", viewOrder.soDate ? new Date(viewOrder.soDate).toLocaleDateString("en-IN") : "N/A"], ["Customer Name", viewOrder.customername], ["Shipping Address", viewOrder.shippingAddress], ["Customer Email", viewOrder.customerEmail], ["Contact No", viewOrder.contactNo], ["Order Type", viewOrder.orderType], ["Sales Order Remarks", viewOrder.remarks], ["Dispatch From", viewOrder.dispatchFrom]].map(([label, value]) => (
-                      <span key={label} style={{ fontSize: "1rem", color: "#555" }}><strong>{label}:</strong> {value || "N/A"}</span>
-                    ))}
+                {/* ── Off-screen PDF print container ── */}
+                <div ref={prodPdfRef} style={{ width: "210mm", padding: "15mm 15mm 10mm 15mm", background: "#fff", color: "#333", fontFamily: "'Segoe UI',Tahoma,Geneva,Verdana,sans-serif", lineHeight: 1.5, position: "absolute", left: "-9999px", top: "-9999px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #2575fc", paddingBottom: "10px", marginBottom: "20px" }}>
+                    <div>
+                      <h1 style={{ color: "#2575fc", margin: 0, fontSize: "24px", textTransform: "uppercase", fontWeight: "bold" }}>Production Order</h1>
+                      <div style={{ fontSize: "14px", color: "#666", marginTop: "5px" }}>Official Business Record</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <img src="/logo.png" alt="Logo" style={{ height: "60px", width: "auto" }} onError={(e) => (e.target.style.display = "none")} />
+                      <div style={{ marginTop: "10px", fontWeight: "bold", fontSize: "16px" }}>Order ID: {viewOrder.orderId || "N/A"}</div>
+                    </div>
                   </div>
-                  {viewOrder.poFilePath && (
-                    <div style={{ marginTop: "15px" }}>
-                      <strong>📎 Attachment: </strong>
-                      <Button variant="info" size="sm" onClick={() => handleDownload(viewOrder.poFilePath)} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px" }}>Download 📥</Button>
+                  {/* Order Info */}
+                  <div style={{ marginBottom: "12px" }}>
+                    <div style={{ background: "#f8f9fa", padding: "6px 10px", borderLeft: "4px solid #6a11cb", fontWeight: "bold", textTransform: "uppercase", marginBottom: "10px", fontSize: "15px" }}>Order Information</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                      {[["SO Date", viewOrder.soDate ? new Date(viewOrder.soDate).toLocaleDateString("en-IN") : "N/A"], ["Order Type", viewOrder.orderType || "N/A"], ["Customer Name", viewOrder.customername || "N/A"], ["Contact No", viewOrder.contactNo || "N/A"], ["Email", viewOrder.customerEmail || "N/A"], ["Dispatch From", viewOrder.dispatchFrom || "N/A"], ["SO Status", viewOrder.sostatus || "N/A"], ["Sales Remarks", viewOrder.remarks || "N/A"]].map(([label, val]) => (
+                        <div key={label} style={{ fontSize: "13px" }}><strong style={{ color: "#444" }}>{label}:</strong> {val}</div>
+                      ))}
+                      <div style={{ fontSize: "13px", gridColumn: "span 2" }}><strong style={{ color: "#444" }}>Shipping Address:</strong> {viewOrder.shippingAddress || "N/A"}</div>
                     </div>
-                  )}
-                  {viewOrder.installationFile && (
-                    <div style={{ marginTop: "15px" }}>
-                      <strong>Installation Report: </strong>
-                      <Button variant="info" size="sm" onClick={() => handleDownload(viewOrder.installationFile)} style={{ background: "linear-gradient(135deg, #17a2b8, #138496)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px" }}>Download Report 📥</Button>
-                    </div>
-                  )}
-                </div>
-                <div style={{ background: "#f8f9fa", borderRadius: "10px", padding: "20px" }}>
-                  <h3 style={{ fontSize: "1.3rem", fontWeight: "600", color: "#333", marginBottom: "20px", textTransform: "uppercase", borderBottom: "2px solid #e0e0e0", paddingBottom: "10px" }}>Product Information</h3>
-                  {Array.isArray(viewOrder.products) && viewOrder.products.length > 0 ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                      {viewOrder.products.map((product, index) => (
-                        <div key={index} style={{ background: "#ffffff", borderRadius: "8px", padding: "15px", boxShadow: "0 2px 5px rgba(0,0,0,0.05)" }}>
-                          <h4 style={{ fontSize: "1.1rem", fontWeight: "600", color: "#2575fc", marginBottom: "15px" }}>Product {index + 1}</h4>
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", fontSize: "1rem", color: "#555" }}>
-                            <div><strong>Type:</strong> {product.productType || "N/A"}</div>
-                            <div><strong>Quantity:</strong> {product.qty || "N/A"}</div>
-                            <div><strong>Size:</strong> {product.size || "N/A"}</div>
-                            <div><strong>Spec:</strong> {product.spec || "N/A"}</div>
-                            <div><strong>Unit Price:</strong> {product.unitPrice ? `₹${parseFloat(product.unitPrice).toFixed(2)}` : "N/A"}</div>
-                            <div><strong>Model Nos:</strong> {product.modelNos?.length > 0 ? product.modelNos.join(", ") : "N/A"}</div>
-                          </div>
-                        </div>
+                  </div>
+                  {/* Products */}
+                  <div style={{ marginBottom: "12px" }}>
+                    <div style={{ background: "#f8f9fa", padding: "6px 10px", borderLeft: "4px solid #6a11cb", fontWeight: "bold", textTransform: "uppercase", marginBottom: "10px", fontSize: "15px" }}>Product Details</div>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr>{["#", "Product", "Qty", "Size / Spec", "Unit Price", "GST", "Model Nos"].map(h => <th key={h} style={{ background: "#f1f3f5", textAlign: "left", padding: "8px", border: "1px solid #dee2e6", fontSize: "12px" }}>{h}</th>)}</tr>
+                      </thead>
+                      <tbody>
+                        {Array.isArray(viewOrder.products) && viewOrder.products.length > 0 ? viewOrder.products.map((p, i) => (
+                          <tr key={i}>
+                            <td style={{ padding: "8px", border: "1px solid #dee2e6", fontSize: "12px" }}>{i + 1}</td>
+                            <td style={{ padding: "8px", border: "1px solid #dee2e6", fontSize: "12px" }}><strong>{p.productType || "N/A"}</strong></td>
+                            <td style={{ padding: "8px", border: "1px solid #dee2e6", fontSize: "12px" }}>{p.qty || 0}</td>
+                            <td style={{ padding: "8px", border: "1px solid #dee2e6", fontSize: "12px" }}>{[p.size, p.spec].filter(v => v && v !== "N/A").join(" / ") || "N/A"}</td>
+                            <td style={{ padding: "8px", border: "1px solid #dee2e6", fontSize: "12px" }}>₹{p.unitPrice?.toFixed(2) || "0.00"}</td>
+                            <td style={{ padding: "8px", border: "1px solid #dee2e6", fontSize: "12px" }}>{p.gst || 0}%</td>
+                            <td style={{ padding: "8px", border: "1px solid #dee2e6", fontSize: "11px" }}>{p.modelNos?.length > 0 ? p.modelNos.join(", ") : "N/A"}</td>
+                          </tr>
+                        )) : <tr><td colSpan="7" style={{ padding: "8px", border: "1px solid #dee2e6", textAlign: "center", fontSize: "12px" }}>No products</td></tr>}
+                      </tbody>
+                    </table>
+                    <div style={{ fontSize: "13px", marginTop: "8px" }}><strong>Total Unit Price:</strong> ₹{Array.isArray(viewOrder.products) ? viewOrder.products.reduce((s, p) => s + (p.unitPrice || 0) * (p.qty || 0), 0).toFixed(2) : "0.00"}</div>
+                  </div>
+                  {/* Production Info */}
+                  <div style={{ marginBottom: "12px" }}>
+                    <div style={{ background: "#f8f9fa", padding: "6px 10px", borderLeft: "4px solid #6a11cb", fontWeight: "bold", textTransform: "uppercase", marginBottom: "10px", fontSize: "15px" }}>Production Information</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                      {[["Production Status", viewOrder.fulfillingStatus || "Pending"], ["Total Quantity", Array.isArray(viewOrder.products) ? viewOrder.products.reduce((s, p) => s + (p.qty || 0), 0) : "N/A"], ["Remarks (Production)", viewOrder.remarksByProduction || "N/A"]].map(([label, val]) => (
+                        <div key={label} style={{ fontSize: "13px" }}><strong style={{ color: "#444" }}>{label}:</strong> {val}</div>
                       ))}
                     </div>
-                  ) : (<div style={{ fontSize: "1rem", color: "#555", textAlign: "center", padding: "20px" }}><strong>No Products Available</strong></div>)}
-                </div>
-                <div style={{ background: "#f8f9fa", borderRadius: "10px", padding: "20px" }}>
-                  <h3 style={{ fontSize: "1.3rem", fontWeight: "600", color: "#333", marginBottom: "15px", textTransform: "uppercase" }}>Production Information</h3>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px" }}>
-                    <span style={{ fontSize: "1rem", color: "#555" }}><strong>Production Status:</strong> {viewOrder.fulfillingStatus || "Pending"}</span>
-                    <span style={{ fontSize: "1rem", color: "#555" }}><strong>Remarks:</strong> {viewOrder.remarksByProduction || "N/A"}</span>
-                    <span style={{ fontSize: "1rem", color: "#555" }}><strong>Total Quantity:</strong> {Array.isArray(viewOrder.products) ? viewOrder.products.reduce((sum, p) => sum + (p.qty || 0), 0) : "N/A"}</span>
                   </div>
                 </div>
-                <Button onClick={handleCopy} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", padding: "12px", borderRadius: "25px", color: "#fff", fontWeight: "600", fontSize: "1.1rem", textTransform: "uppercase" }}
-                  onMouseEnter={(e) => (e.target.style.transform = "translateY(-3px)")} onMouseLeave={(e) => (e.target.style.transform = "translateY(0)")}>
-                  {copied ? "✅ Copied!" : "📑 Copy Details"}
-                </Button>
+
+                {/* ── Visible accordion UI ── */}
+                <Accordion defaultActiveKey={["0", "1", "2"]} alwaysOpen>
+                  <Accordion.Item eventKey="0">
+                    <Accordion.Header style={{ fontWeight: "600", fontFamily: "'Poppins', sans-serif" }}>📅 Order Information</Accordion.Header>
+                    <Accordion.Body style={{ background: "#fff", borderRadius: "10px", padding: "1.5rem", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem" }}>
+                        <div><strong>Order ID:</strong> {viewOrder.orderId || "N/A"}</div>
+                        <div><strong>SO Date:</strong> {viewOrder.soDate ? new Date(viewOrder.soDate).toLocaleDateString("en-IN") : "N/A"}</div>
+                        <div><strong>Order Type:</strong> <Badge bg={viewOrder.orderType === "B2C" ? "success" : viewOrder.orderType === "B2B" ? "info" : viewOrder.orderType === "B2G" ? "primary" : "secondary"}>{viewOrder.orderType || "N/A"}</Badge></div>
+                        <div><strong>Customer Name:</strong> {viewOrder.customername || "N/A"}</div>
+                        <div><strong>Contact No:</strong> {viewOrder.contactNo || "N/A"}</div>
+                        <div><strong>Email:</strong> {viewOrder.customerEmail || "N/A"}</div>
+                        <div><strong>Shipping Address:</strong> {viewOrder.shippingAddress || "N/A"}</div>
+                        <div><strong>Dispatch From:</strong> {viewOrder.dispatchFrom || "N/A"}</div>
+                        <div><strong>Sales Remarks:</strong> {viewOrder.remarks || "N/A"}</div>
+                        <div><strong>SO Status:</strong> <Badge bg={viewOrder.sostatus === "Approved" ? "success" : viewOrder.sostatus === "Accounts Approved" ? "info" : "warning"}>{viewOrder.sostatus || "N/A"}</Badge></div>
+                      </div>
+                      {viewOrder.poFilePath && (
+                        <div style={{ marginTop: "1rem" }}>
+                          <strong>📎 Attachment: </strong>
+                          <Button size="sm" onClick={() => handleDownload(viewOrder.poFilePath)} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px" }}>Download 📥</Button>
+                        </div>
+                      )}
+                    </Accordion.Body>
+                  </Accordion.Item>
+                  <Accordion.Item eventKey="1">
+                    <Accordion.Header style={{ fontWeight: "600", fontFamily: "'Poppins', sans-serif" }}>📦 Product Information</Accordion.Header>
+                    <Accordion.Body style={{ background: "#fff", borderRadius: "10px", padding: "1.5rem", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
+                      {Array.isArray(viewOrder.products) && viewOrder.products.length > 0 ? viewOrder.products.map((product, index) => (
+                        <Card key={index} style={{ marginBottom: "1rem", border: "none", boxShadow: "0 2px 10px rgba(0,0,0,0.1)", borderRadius: "10px" }}>
+                          <Card.Body>
+                            <Card.Title style={{ fontSize: "1.1rem", fontWeight: "600", color: "#1e293b" }}>Product {index + 1}: {product.productType || "N/A"}</Card.Title>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.5rem" }}>
+                              <div><strong>Quantity:</strong> {product.qty || "N/A"}</div>
+                              <div><strong>Size:</strong> {product.size || "N/A"}</div>
+                              <div><strong>Spec:</strong> {product.spec || "N/A"}</div>
+                              <div><strong>Unit Price:</strong> ₹{product.unitPrice?.toFixed(2) || "0.00"}</div>
+                              <div><strong>GST:</strong> {product.gst || "N/A"}%</div>
+                              <div><strong>Model Nos:</strong> {product.modelNos?.length > 0 ? product.modelNos.join(", ") : "N/A"}</div>
+                            </div>
+                          </Card.Body>
+                        </Card>
+                      )) : <p style={{ color: "#555" }}>No products available.</p>}
+                      <div style={{ marginTop: "0.5rem" }}><strong>Total Unit Price:</strong> ₹{Array.isArray(viewOrder.products) ? viewOrder.products.reduce((sum, p) => sum + (p.unitPrice || 0) * (p.qty || 0), 0).toFixed(2) : "0.00"}</div>
+                    </Accordion.Body>
+                  </Accordion.Item>
+                  <Accordion.Item eventKey="2">
+                    <Accordion.Header style={{ fontWeight: "600", fontFamily: "'Poppins', sans-serif" }}>🛠️ Production Information</Accordion.Header>
+                    <Accordion.Body style={{ background: "#fff", borderRadius: "10px", padding: "1.5rem", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem" }}>
+                        <div><strong>Production Status:</strong>{" "}
+                          <Badge style={{ background: viewOrder.fulfillingStatus === "Under Process" ? "linear-gradient(135deg, #f39c12, #f7c200)" : viewOrder.fulfillingStatus === "Pending" ? "linear-gradient(135deg, #ff6b6b, #ff8787)" : viewOrder.fulfillingStatus === "Fulfilled" ? "linear-gradient(135deg, #28a745, #4cd964)" : "linear-gradient(135deg, #6c757d, #a9a9a9)", color: "#fff", padding: "5px 10px", borderRadius: "12px" }}>
+                            {viewOrder.fulfillingStatus || "Pending"}
+                          </Badge>
+                        </div>
+                        <div><strong>Total Quantity:</strong> {Array.isArray(viewOrder.products) ? viewOrder.products.reduce((sum, p) => sum + (p.qty || 0), 0) : "N/A"}</div>
+                        <div><strong>Remarks (Production):</strong> {viewOrder.remarksByProduction || "N/A"}</div>
+                        <div><strong>Sales Remarks:</strong> {viewOrder.remarks || "N/A"}</div>
+                      </div>
+                      {viewOrder.installationFile && (
+                        <div style={{ marginTop: "1rem" }}>
+                          <strong>Installation Report: </strong>
+                          <Button size="sm" onClick={() => handleDownload(viewOrder.installationFile)} style={{ background: "linear-gradient(135deg, #17a2b8, #138496)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px" }}>Download Report 📥</Button>
+                        </div>
+                      )}
+                    </Accordion.Body>
+                  </Accordion.Item>
+                </Accordion>
+                <div style={{ display: "flex", gap: "1rem", marginTop: "2rem" }}>
+                  <Button onClick={handleCopy}
+                    style={{ flex: 1, background: "linear-gradient(135deg, #2563eb, #7e22ce)", border: "none", borderRadius: "50px", padding: "12px 24px", fontSize: "1.1rem", fontWeight: "600", color: "#fff", display: "flex", alignItems: "center", gap: "10px", justifyContent: "center", boxShadow: "0 6px 20px rgba(0,0,0,0.2)", transition: "all 0.3s ease" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 8px 25px rgba(0,0,0,0.3)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.2)"; }}>
+                    📑 {copied ? "Copied to Clipboard!" : "Copy Details"}
+                  </Button>
+                </div>
               </>
             )}
           </Modal.Body>

@@ -1,6 +1,8 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import furniApi from "../axiosSetup";
 import { Button, Modal, Badge } from "react-bootstrap";
+import { Spinner } from "react-bootstrap";
+import { Accordion, Card } from "react-bootstrap";
 import { FaEye } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { exportToExcel } from "../../utils/excelHelper";
@@ -9,6 +11,9 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import styled from "styled-components";
 import { isOrderComplete } from "../utils/orderUtils";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import { FileText } from "lucide-react";
 
 const ModernFilterContainer = styled.div`
   display: flex; flex-direction: row; align-items: flex-end; gap: 12px;
@@ -76,6 +81,8 @@ function Finish() {
   const [endDate, setEndDate] = useState(null);
   const [totalResults, setTotalResults] = useState(0);
   const [productQuantity, setProductQuantity] = useState(0);
+  const [finishPdfLoading, setFinishPdfLoading] = useState(false);
+  const finishPdfRef = useRef(null);
 
   const dispatchFromOptions = ["", "Patna", "Bareilly", "Ranchi", "Morinda", "Lucknow", "Delhi"];
 
@@ -205,6 +212,37 @@ function Finish() {
     toast.success("Details copied to clipboard!", { position: "top-right", autoClose: 2000 });
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const handleFinishPDF = useCallback(async () => {
+    if (!finishPdfRef.current) return;
+    setFinishPdfLoading(true);
+    try {
+      const canvas = await html2canvas(finishPdfRef.current, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+      const pdf = new jsPDF("p", "mm", "a4");
+      const PAGE_WIDTH = 210, PAGE_HEIGHT = 297, MARGIN_TOP = 15, MARGIN_BOTTOM = 15;
+      const CONTENT_HEIGHT = PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM;
+      const imgWidth = PAGE_WIDTH;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pxPerMm = canvas.height / imgHeight;
+      const pageContentHeightPx = (CONTENT_HEIGHT - 8) * pxPerMm;
+      let sourceY = 0, pageIndex = 0;
+      while (sourceY < canvas.height) {
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = Math.min(pageContentHeightPx, canvas.height - sourceY);
+        pageCanvas.getContext("2d").drawImage(canvas, 0, sourceY, canvas.width, pageCanvas.height, 0, 0, canvas.width, pageCanvas.height);
+        const imgData = pageCanvas.toDataURL("image/jpeg", 0.98);
+        if (pageIndex > 0) pdf.addPage();
+        const renderedH = (pageCanvas.height * imgWidth) / canvas.width;
+        pdf.addImage(imgData, "JPEG", 0, pageIndex === 0 ? 0 : MARGIN_TOP, imgWidth, renderedH);
+        sourceY += pageCanvas.height;
+        pageIndex++;
+      }
+      pdf.save(`Dispatch_${viewOrder?.orderId || "order"}.pdf`);
+      toast.success("PDF exported successfully!");
+    } catch (err) { toast.error("Failed to export PDF!"); console.error(err); }
+    finally { setFinishPdfLoading(false); }
+  }, [viewOrder]);
 
   const handleExportToXLSX = async () => {
     const tableData = filteredOrders.map((order) => ({
@@ -368,42 +406,137 @@ function Finish() {
       <footer className="footer-container">
         <p style={{ marginTop: "10px", color: "white", height: "20px" }}>© 2025 Sales Order Management. All rights reserved.</p>
       </footer>
-      <Modal show={showViewModal} onHide={() => setShowViewModal(false)} backdrop="static" keyboard={false} size="lg">
+      <Modal show={showViewModal} onHide={() => setShowViewModal(false)} backdrop="static" keyboard={false} size="xl" centered style={{ backdropFilter: "blur(5px)" }}>
         <style>{`.serial-nos-container { max-height: 100px; overflow-y: auto; padding: 5px 10px; background: #fff; border-radius: 5px; border: 1px solid #eee; } .serial-nos-container ul { margin: 0; padding-left: 20px; } .serial-nos-container li { font-size: 0.95rem; color: #555; line-height: 1.4; }`}</style>
-        <Modal.Header closeButton style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", padding: "20px", borderBottom: "none" }}>
-          <Modal.Title style={{ fontWeight: "700", fontSize: "1.8rem", letterSpacing: "1px", textTransform: "uppercase", display: "flex", alignItems: "center" }}>
-            <span style={{ marginRight: "10px", fontSize: "1.5rem" }}>📋</span>Order Details
+        <Modal.Header style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", padding: "1.5rem 2rem", border: "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Modal.Title style={{ fontWeight: "700", fontSize: "1.8rem", letterSpacing: "1.2px", textTransform: "uppercase", fontFamily: "'Poppins', sans-serif", display: "flex", alignItems: "center", gap: "10px" }}>
+            <span role="img" aria-label="clipboard">📋</span>
+            Dispatch Order #{viewOrder?.orderId || "N/A"}
           </Modal.Title>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Button onClick={handleFinishPDF} disabled={finishPdfLoading}
+              style={{ background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.85)", borderRadius: "50px", padding: "8px 20px", fontSize: "0.95rem", fontWeight: "600", color: "#fff", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.2s ease", whiteSpace: "nowrap" }}
+              onMouseEnter={(e) => { if (!finishPdfLoading) e.currentTarget.style.background = "rgba(255,255,255,0.25)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}>
+              {finishPdfLoading ? <><Spinner size="sm" animation="border" /> Exporting...</> : <><FileText size={16} /> Export PDF</>}
+            </Button>
+            <Button variant="light" onClick={() => setShowViewModal(false)} style={{ borderRadius: "50%", width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.2)" }}>✕</Button>
+          </div>
         </Modal.Header>
-        <Modal.Body style={{ padding: "30px", background: "#fff", borderRadius: "0 0 15px 15px", display: "flex", flexDirection: "column", gap: "20px" }}>
+        <Modal.Body style={{ padding: "2rem", background: "linear-gradient(180deg, #f8fafc, #e2e8f0)", borderRadius: "0 0 15px 15px", maxHeight: "80vh", overflowY: "auto", scrollbarWidth: "thin", scrollbarColor: "#2575fc #e6f0fa" }}>
           {viewOrder && (
             <>
-              <div style={{ background: "#f8f9fa", borderRadius: "10px", padding: "20px" }}>
-                <h3 style={{ fontSize: "1.3rem", fontWeight: "600", color: "#333", marginBottom: "15px", textTransform: "uppercase" }}>Product Info</h3>
-                {viewOrder.products && viewOrder.products.length > 0 ? (
-                  viewOrder.products.map((product, index) => (
-                    <div key={index} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px", padding: "10px 0", borderBottom: index < viewOrder.products.length - 1 ? "1px solid #eee" : "none", alignItems: "start" }}>
-                      <span style={{ fontSize: "1rem", color: "#555" }}><strong>Product {index + 1}:</strong> {product.productType || "N/A"}</span>
-                      <span style={{ fontSize: "1rem", color: "#555" }}><strong>Qty:</strong> {product.qty || "N/A"}</span>
-                      <span style={{ fontSize: "1rem", color: "#555" }}><strong>Size:</strong> {product.size || "N/A"}</span>
-                      <span style={{ fontSize: "1rem", color: "#555" }}><strong>Spec:</strong> {product.spec || "N/A"}</span>
-                      <span style={{ fontSize: "1rem", color: "#555" }}><strong>Model Nos:</strong> {product.modelNos?.[0] || "N/A"}</span>
-                    </div>
-                  ))
-                ) : (<span style={{ fontSize: "1rem", color: "#555" }}><strong>Products:</strong> N/A</span>)}
-              </div>
-              <div style={{ background: "#f8f9fa", borderRadius: "10px", padding: "20px" }}>
-                <h3 style={{ fontSize: "1.3rem", fontWeight: "600", color: "#333", marginBottom: "15px", textTransform: "uppercase" }}>Order Info</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px" }}>
-                  {[["Order ID", viewOrder.orderId], ["SO Date", viewOrder.soDate ? new Date(viewOrder.soDate).toLocaleDateString() : "N/A"], ["Dispatch Date", viewOrder.dispatchDate ? new Date(viewOrder.dispatchDate).toLocaleDateString() : "N/A"], ["Dispatch From", viewOrder.dispatchFrom], ["Bill Number", viewOrder.billNumber], ["Customer", viewOrder.customername], ["Address", viewOrder.shippingAddress], ["Dispatch Status", viewOrder.dispatchStatus || "Not Dispatched"], ["Docket No", viewOrder.docketNo], ["Sales Person", viewOrder.salesPerson]].map(([label, value]) => (
-                    <span key={label} style={{ fontSize: "1rem", color: "#555" }}><strong>{label}:</strong> {value || "N/A"}</span>
-                  ))}
+              {/* ── Off-screen PDF print container ── */}
+              <div ref={finishPdfRef} style={{ width: "210mm", padding: "15mm 15mm 10mm 15mm", background: "#fff", color: "#333", fontFamily: "'Segoe UI',Tahoma,Geneva,Verdana,sans-serif", lineHeight: 1.5, position: "absolute", left: "-9999px", top: "-9999px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #2575fc", paddingBottom: "10px", marginBottom: "20px" }}>
+                  <div>
+                    <h1 style={{ color: "#2575fc", margin: 0, fontSize: "24px", textTransform: "uppercase", fontWeight: "bold" }}>Dispatch Order</h1>
+                    <div style={{ fontSize: "14px", color: "#666", marginTop: "5px" }}>Official Business Record</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <img src="/logo.png" alt="Logo" style={{ height: "60px", width: "auto" }} onError={(e) => (e.target.style.display = "none")} />
+                    <div style={{ marginTop: "10px", fontWeight: "bold", fontSize: "16px" }}>Order ID: {viewOrder.orderId || "N/A"}</div>
+                  </div>
+                </div>
+                {/* Order Info */}
+                <div style={{ marginBottom: "12px" }}>
+                  <div style={{ background: "#f8f9fa", padding: "6px 10px", borderLeft: "4px solid #6a11cb", fontWeight: "bold", textTransform: "uppercase", marginBottom: "10px", fontSize: "15px" }}>Order Information</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    {[["SO Date", viewOrder.soDate ? new Date(viewOrder.soDate).toLocaleDateString() : "N/A"], ["Dispatch Date", viewOrder.dispatchDate ? new Date(viewOrder.dispatchDate).toLocaleDateString() : "N/A"], ["Dispatch From", viewOrder.dispatchFrom || "N/A"], ["Bill Number", viewOrder.billNumber || "N/A"], ["Customer", viewOrder.customername || "N/A"], ["Contact No", viewOrder.contactNo || "N/A"], ["Sales Person", viewOrder.salesPerson || "N/A"], ["Docket No", viewOrder.docketNo || "N/A"], ["Dispatch Status", viewOrder.dispatchStatus || "Not Dispatched"], ["Freight Status", viewOrder.freightstatus || "To Pay"], ["Billing Status", viewOrder.billStatus || "Pending"], ["Stamp Signed", viewOrder.stamp || "Not Received"], ["Production Status", viewOrder.fulfillingStatus || "N/A"], ["Order Type", viewOrder.orderType || "N/A"]].map(([label, val]) => (
+                      <div key={label} style={{ fontSize: "13px" }}><strong style={{ color: "#444" }}>{label}:</strong> {val}</div>
+                    ))}
+                    <div style={{ fontSize: "13px", gridColumn: "span 2" }}><strong style={{ color: "#444" }}>Shipping Address:</strong> {viewOrder.shippingAddress || "N/A"}</div>
+                    {viewOrder.remarksBydispatch && <div style={{ fontSize: "13px", gridColumn: "span 2" }}><strong style={{ color: "#444" }}>Dispatch Remarks:</strong> {viewOrder.remarksBydispatch}</div>}
+                    {viewOrder.remarksByProduction && <div style={{ fontSize: "13px", gridColumn: "span 2" }}><strong style={{ color: "#444" }}>Production Remarks:</strong> {viewOrder.remarksByProduction}</div>}
+                  </div>
+                </div>
+                {/* Products */}
+                <div style={{ marginBottom: "12px" }}>
+                  <div style={{ background: "#f8f9fa", padding: "6px 10px", borderLeft: "4px solid #6a11cb", fontWeight: "bold", textTransform: "uppercase", marginBottom: "10px", fontSize: "15px" }}>Product Details</div>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr>{["#", "Product", "Qty", "Size / Spec", "Model Nos"].map(h => <th key={h} style={{ background: "#f1f3f5", textAlign: "left", padding: "8px", border: "1px solid #dee2e6", fontSize: "12px" }}>{h}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      {viewOrder.products && viewOrder.products.length > 0 ? viewOrder.products.map((p, i) => (
+                        <tr key={i}>
+                          <td style={{ padding: "8px", border: "1px solid #dee2e6", fontSize: "12px" }}>{i + 1}</td>
+                          <td style={{ padding: "8px", border: "1px solid #dee2e6", fontSize: "12px" }}><strong>{p.productType || "N/A"}</strong></td>
+                          <td style={{ padding: "8px", border: "1px solid #dee2e6", fontSize: "12px" }}>{p.qty || 0}</td>
+                          <td style={{ padding: "8px", border: "1px solid #dee2e6", fontSize: "12px" }}>{[p.size, p.spec].filter(v => v && v !== "N/A").join(" / ") || "N/A"}</td>
+                          <td style={{ padding: "8px", border: "1px solid #dee2e6", fontSize: "11px" }}>{p.modelNos?.filter(Boolean).join(", ") || "N/A"}</td>
+                        </tr>
+                      )) : <tr><td colSpan="5" style={{ padding: "8px", border: "1px solid #dee2e6", textAlign: "center", fontSize: "12px" }}>No products</td></tr>}
+                    </tbody>
+                  </table>
+                  <div style={{ fontSize: "13px", marginTop: "8px" }}><strong>Total Quantity:</strong> {viewOrder.products ? viewOrder.products.reduce((s, p) => s + (p.qty || 0), 0) : "N/A"}</div>
                 </div>
               </div>
-              <Button onClick={handleCopy} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", padding: "12px", borderRadius: "25px", color: "#fff", fontWeight: "600", fontSize: "1.1rem", textTransform: "uppercase", alignSelf: "flex-end" }}
-                onMouseEnter={(e) => (e.target.style.transform = "translateY(-3px)")} onMouseLeave={(e) => (e.target.style.transform = "translateY(0)")}>
-                {copied ? "✅ Copied!" : "📑 Copy Details"}
-              </Button>
+
+              {/* ── Visible accordion UI ── */}
+              <Accordion defaultActiveKey={["0", "1", "2"]} alwaysOpen>
+                <Accordion.Item eventKey="0">
+                  <Accordion.Header style={{ fontWeight: "600", fontFamily: "'Poppins', sans-serif" }}>📅 Order Information</Accordion.Header>
+                  <Accordion.Body style={{ background: "#fff", borderRadius: "10px", padding: "1.5rem", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem" }}>
+                      <div><strong>Order ID:</strong> {viewOrder.orderId || "N/A"}</div>
+                      <div><strong>SO Date:</strong> {viewOrder.soDate ? new Date(viewOrder.soDate).toLocaleDateString() : "N/A"}</div>
+                      <div><strong>Dispatch Date:</strong> {viewOrder.dispatchDate ? new Date(viewOrder.dispatchDate).toLocaleDateString() : "N/A"}</div>
+                      <div><strong>Dispatch From:</strong> {viewOrder.dispatchFrom || "N/A"}</div>
+                      <div><strong>Bill Number:</strong> {viewOrder.billNumber || "N/A"}</div>
+                      <div><strong>Customer:</strong> {viewOrder.customername || "N/A"}</div>
+                      <div><strong>Contact No:</strong> {viewOrder.contactNo || "N/A"}</div>
+                      <div><strong>Shipping Address:</strong> {viewOrder.shippingAddress || "N/A"}</div>
+                      <div><strong>Sales Person:</strong> {viewOrder.salesPerson || "N/A"}</div>
+                      <div><strong>Docket No:</strong> {viewOrder.docketNo || "N/A"}</div>
+                      <div><strong>Dispatch Status:</strong>{" "}<Badge style={{ background: viewOrder.dispatchStatus === "Not Dispatched" ? "linear-gradient(135deg, #ff6b6b, #ff8787)" : viewOrder.dispatchStatus === "Dispatched" ? "linear-gradient(135deg, #00c6ff, #0072ff)" : viewOrder.dispatchStatus === "Delivered" ? "linear-gradient(135deg, #28a745, #4cd964)" : "linear-gradient(135deg, #6c757d, #a9a9a9)", color: "#fff", padding: "5px 10px", borderRadius: "12px" }}>{viewOrder.dispatchStatus || "Not Dispatched"}</Badge></div>
+                      <div><strong>Freight Status:</strong>{" "}<Badge style={{ background: viewOrder.freightstatus === "To Pay" ? "linear-gradient(135deg, #ff6b6b, #ff8787)" : viewOrder.freightstatus === "Including" ? "linear-gradient(135deg, #28a745, #4cd964)" : "linear-gradient(135deg, #ffc107, #ffca2c)", color: "#fff", padding: "5px 10px", borderRadius: "12px" }}>{viewOrder.freightstatus || "To Pay"}</Badge></div>
+                      <div><strong>Billing Status:</strong>{" "}<Badge style={{ background: viewOrder.billStatus === "Pending" ? "linear-gradient(135deg, #ff6b6b, #ff8787)" : viewOrder.billStatus === "Under Billing" ? "linear-gradient(135deg, #ffc107, #ffca2c)" : "linear-gradient(135deg, #28a745, #4cd964)", color: "#fff", padding: "5px 10px", borderRadius: "12px" }}>{viewOrder.billStatus || "Pending"}</Badge></div>
+                      <div><strong>Stamp Signed:</strong>{" "}<Badge style={{ background: viewOrder.stamp === "Received" ? "linear-gradient(135deg, #28a745, #4cd964)" : "linear-gradient(135deg, #ff6b6b, #ff8787)", color: "#fff", padding: "5px 10px", borderRadius: "12px" }}>{viewOrder.stamp || "Not Received"}</Badge></div>
+                      <div><strong>Dispatch Remarks:</strong> {viewOrder.remarksBydispatch || "N/A"}</div>
+                      <div><strong>Production Remarks:</strong> {viewOrder.remarksByProduction || "N/A"}</div>
+                    </div>
+                  </Accordion.Body>
+                </Accordion.Item>
+                <Accordion.Item eventKey="1">
+                  <Accordion.Header style={{ fontWeight: "600", fontFamily: "'Poppins', sans-serif" }}>📦 Product Information</Accordion.Header>
+                  <Accordion.Body style={{ background: "#fff", borderRadius: "10px", padding: "1.5rem", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
+                    {viewOrder.products && viewOrder.products.length > 0 ? viewOrder.products.map((product, index) => (
+                      <Card key={index} style={{ marginBottom: "1rem", border: "none", boxShadow: "0 2px 10px rgba(0,0,0,0.1)", borderRadius: "10px" }}>
+                        <Card.Body>
+                          <Card.Title style={{ fontSize: "1.1rem", fontWeight: "600", color: "#1e293b" }}>Product {index + 1}: {product.productType || "N/A"}</Card.Title>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.5rem" }}>
+                            <div><strong>Qty:</strong> {product.qty || "N/A"}</div>
+                            <div><strong>Size:</strong> {product.size || "N/A"}</div>
+                            <div><strong>Spec:</strong> {product.spec || "N/A"}</div>
+                            <div><strong>Model Nos:</strong> {product.modelNos?.filter(Boolean).join(", ") || "N/A"}</div>
+                            {product.serialNos?.filter(Boolean).length > 0 && <div><strong>Serial Nos:</strong> {product.serialNos.filter(Boolean).join(", ")}</div>}
+                          </div>
+                        </Card.Body>
+                      </Card>
+                    )) : <p style={{ color: "#555" }}>No products available.</p>}
+                    <div style={{ marginTop: "0.5rem" }}><strong>Total Quantity:</strong> {viewOrder.products ? viewOrder.products.reduce((sum, p) => sum + (p.qty || 0), 0) : "N/A"}</div>
+                  </Accordion.Body>
+                </Accordion.Item>
+                <Accordion.Item eventKey="2">
+                  <Accordion.Header style={{ fontWeight: "600", fontFamily: "'Poppins', sans-serif" }}>🛠️ Production Status</Accordion.Header>
+                  <Accordion.Body style={{ background: "#fff", borderRadius: "10px", padding: "1.5rem", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem" }}>
+                      <div><strong>Production Status:</strong>{" "}<Badge style={{ background: viewOrder.fulfillingStatus === "Under Process" ? "linear-gradient(135deg, #ff9800, #f44336)" : viewOrder.fulfillingStatus === "Pending" ? "linear-gradient(135deg, #ffeb3b, #ff9800)" : viewOrder.fulfillingStatus === "Partial Dispatch" ? "linear-gradient(135deg, #00c6ff, #0072ff)" : "linear-gradient(135deg, #28a745, #4cd964)", color: "#fff", padding: "5px 10px", borderRadius: "12px" }}>{viewOrder.fulfillingStatus || "N/A"}</Badge></div>
+                      <div><strong>Order Type:</strong> {viewOrder.orderType || "N/A"}</div>
+                      <div><strong>Fulfillment Date:</strong> {viewOrder.fulfillmentDate ? new Date(viewOrder.fulfillmentDate).toLocaleDateString() : "N/A"}</div>
+                    </div>
+                  </Accordion.Body>
+                </Accordion.Item>
+              </Accordion>
+              <div style={{ display: "flex", gap: "1rem", marginTop: "2rem" }}>
+                <Button onClick={handleCopy}
+                  style={{ flex: 1, background: "linear-gradient(135deg, #2563eb, #7e22ce)", border: "none", borderRadius: "50px", padding: "12px 24px", fontSize: "1.1rem", fontWeight: "600", color: "#fff", display: "flex", alignItems: "center", gap: "10px", justifyContent: "center", boxShadow: "0 6px 20px rgba(0,0,0,0.2)", transition: "all 0.3s ease" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 8px 25px rgba(0,0,0,0.3)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.2)"; }}>
+                  📑 {copied ? "Copied to Clipboard!" : "Copy Details"}
+                </Button>
+              </div>
             </>
           )}
         </Modal.Body>

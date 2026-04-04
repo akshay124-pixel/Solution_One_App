@@ -1,11 +1,16 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { Modal, Button, Badge, Accordion, Card } from "react-bootstrap";
+import { Spinner } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { toast } from "react-toastify";
-import { Copy, Download } from "lucide-react";
+import { Copy, Download, FileText } from "lucide-react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 function ViewEntry({ isOpen, onClose, entry }) {
   const [copied, setCopied] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const pdfRef = useRef(null);
   const isObjectId = (v) =>
     typeof v === "string" && /^[a-fA-F0-9]{24}$/.test(v);
   const getCreatedByName = useCallback((cb) =>
@@ -233,6 +238,60 @@ Created By: ${getCreatedByName(entry.createdBy)}
       });
   }, [entry, getCreatedByName]);
 
+  const handleExportPDF = useCallback(async () => {
+    if (!entry) return;
+    setIsGeneratingPDF(true);
+    try {
+      const input = pdfRef.current;
+      const canvas = await html2canvas(input, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+
+      const pdf = new jsPDF("p", "mm", "a4");
+      const PAGE_WIDTH = 210;
+      const PAGE_HEIGHT = 297;
+      const MARGIN_TOP = 15;
+      const MARGIN_BOTTOM = 15;
+      const CONTENT_HEIGHT = PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM;
+
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      const imgWidth = PAGE_WIDTH;
+      const imgHeight = (canvasHeight * imgWidth) / canvasWidth;
+      const pxPerMm = canvasHeight / imgHeight;
+      const SAFE_BOTTOM_MM = 8;
+      const pageContentHeightPx = (CONTENT_HEIGHT - SAFE_BOTTOM_MM) * pxPerMm;
+
+      let sourceY = 0;
+      let pageIndex = 0;
+
+      while (sourceY < canvasHeight) {
+        const pageCanvas = document.createElement("canvas");
+        const ctx = pageCanvas.getContext("2d");
+        pageCanvas.width = canvasWidth;
+        pageCanvas.height = Math.min(pageContentHeightPx, canvasHeight - sourceY);
+        ctx.drawImage(canvas, 0, sourceY, canvasWidth, pageCanvas.height, 0, 0, canvasWidth, pageCanvas.height);
+        const imgData = pageCanvas.toDataURL("image/jpeg", 0.98);
+        if (pageIndex > 0) pdf.addPage();
+        const renderedHeightMm = (pageCanvas.height * imgWidth) / canvasWidth;
+        const yPosition = pageIndex === 0 ? 0 : MARGIN_TOP;
+        pdf.addImage(imgData, "JPEG", 0, yPosition, imgWidth, renderedHeightMm);
+        sourceY += pageCanvas.height;
+        pageIndex++;
+      }
+
+      pdf.save(`Furni_Order_${entry.orderId || "Details"}.pdf`);
+      toast.success("PDF exported successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to export PDF");
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  }, [entry]);
+
   if (!entry) return null;
 
   const totalUnitPrice = entry.products
@@ -290,22 +349,92 @@ Created By: ${getCreatedByName(entry.createdBy)}
           </span>
           Sales Order #{entry.orderId || "N/A"}
         </Modal.Title>
-        <Button
-          variant="light"
-          onClick={onClose}
-          style={{
-            borderRadius: "50%",
-            width: "40px",
-            height: "40px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 2px 10px rgba(0, 0, 0, 0.2)",
-          }}
-        >
-          ✕
-        </Button>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <Button
+            onClick={handleExportPDF}
+            disabled={isGeneratingPDF}
+            style={{
+              background: "rgba(255,255,255,0.15)",
+              border: "2px solid rgba(255,255,255,0.85)",
+              borderRadius: "50px",
+              padding: "8px 20px",
+              fontSize: "0.95rem",
+              fontWeight: "600",
+              color: "#fff",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              transition: "all 0.2s ease",
+              whiteSpace: "nowrap",
+            }}
+            onMouseEnter={(e) => { if (!isGeneratingPDF) e.currentTarget.style.background = "rgba(255,255,255,0.25)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}
+          >
+            {isGeneratingPDF ? (
+              <><Spinner size="sm" animation="border" /> Exporting...</>
+            ) : (
+              <><FileText size={16} /> Export PDF</>
+            )}
+          </Button>
+          <Button
+            variant="light"
+            onClick={onClose}
+            style={{
+              borderRadius: "50%",
+              width: "40px",
+              height: "40px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 2px 10px rgba(0, 0, 0, 0.2)",
+            }}
+          >
+            ✕
+          </Button>
+        </div>
       </Modal.Header>
+
+      <style>{`
+        .pdf-print-container {
+          width: 210mm;
+          padding: 15mm 15mm 10mm 15mm;
+          background: #fff;
+          color: #333;
+          font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+          line-height: 1.5;
+          min-height: unset;
+          height: auto;
+          position: absolute;
+          left: -9999px;
+          top: -9999px;
+        }
+        .pdf-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 2px solid #2575fc;
+          padding-bottom: 10px;
+          margin-bottom: 20px;
+        }
+        .pdf-title { color: #2575fc; margin: 0; font-size: 24px; text-transform: uppercase; font-weight: bold; }
+        .pdf-logo { height: 60px; width: auto; }
+        .pdf-section { margin-bottom: 12px; page-break-inside: avoid; }
+        .pdf-section-title {
+          background: #f8f9fa;
+          padding: 6px 10px;
+          border-left: 4px solid #6a11cb;
+          font-weight: bold;
+          text-transform: uppercase;
+          margin-bottom: 10px;
+          font-size: 15px;
+        }
+        .pdf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .pdf-item { font-size: 13px; }
+        .pdf-item strong { color: #444; }
+        .pdf-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        .pdf-table th { background: #f1f3f5; text-align: left; padding: 8px; border: 1px solid #dee2e6; font-size: 12px; }
+        .pdf-table td { padding: 8px; border: 1px solid #dee2e6; font-size: 12px; vertical-align: top; }
+      `}</style>
 
       <Modal.Body
         style={{
@@ -319,6 +448,148 @@ Created By: ${getCreatedByName(entry.createdBy)}
           scrollbarColor: "#2575fc #e6f0fa",
         }}
       >
+        {/* ── Off-screen PDF print container (captured by html2canvas) ── */}
+        <div ref={pdfRef} className="pdf-print-container">
+          <div className="pdf-header">
+            <div>
+              <h1 className="pdf-title">Furniture Order</h1>
+              <div style={{ fontSize: "14px", color: "#666", marginTop: "5px" }}>Official Business Record</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <img src="/logo.png" alt="Logo" className="pdf-logo" onError={(e) => (e.target.style.display = "none")} />
+              <div style={{ marginTop: "10px", fontWeight: "bold", fontSize: "16px" }}>
+                Order ID: {entry.orderId || "N/A"}
+              </div>
+            </div>
+          </div>
+
+          {/* Order Information */}
+          <div className="pdf-section">
+            <div className="pdf-section-title">Order Information</div>
+            <div className="pdf-grid">
+              <div className="pdf-item"><strong>SO Date:</strong> {entry.soDate ? new Date(entry.soDate).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true }) : "N/A"}</div>
+              <div className="pdf-item"><strong>Order Type:</strong> {entry.orderType || "N/A"}</div>
+              <div className="pdf-item"><strong>GEM Order No:</strong> {entry.gemOrderNumber || "N/A"}</div>
+              <div className="pdf-item"><strong>Sales Person:</strong> {entry.salesPerson || "N/A"}</div>
+              <div className="pdf-item"><strong>Reporting Person:</strong> {entry.report || "N/A"}</div>
+              <div className="pdf-item"><strong>Company:</strong> {entry.company || "N/A"}</div>
+              <div className="pdf-item"><strong>Created By:</strong> {getCreatedByName(entry.createdBy)}</div>
+              <div className="pdf-item"><strong>SO Status:</strong> {entry.sostatus || "N/A"}</div>
+              <div className="pdf-item"><strong>Dispatch Status:</strong> {entry.dispatchStatus || "N/A"}</div>
+              <div className="pdf-item"><strong>PI Number:</strong> {entry.piNumber || "N/A"}</div>
+              <div className="pdf-item"><strong>Bill Number:</strong> {entry.billNumber || "N/A"}</div>
+              <div className="pdf-item"><strong>Dispatch From:</strong> {entry.dispatchFrom || "N/A"}</div>
+            </div>
+          </div>
+
+          {/* Customer Details */}
+          <div className="pdf-section">
+            <div className="pdf-section-title">Customer Details</div>
+            <div className="pdf-grid">
+              <div className="pdf-item"><strong>Customer Name:</strong> {entry.customername || "N/A"}</div>
+              <div className="pdf-item"><strong>Contact Person:</strong> {entry.name || "N/A"}</div>
+              <div className="pdf-item"><strong>Contact No:</strong> {entry.contactNo || "N/A"}</div>
+              <div className="pdf-item"><strong>Alternate No:</strong> {entry.alterno || "N/A"}</div>
+              <div className="pdf-item"><strong>Email:</strong> {entry.customerEmail || "N/A"}</div>
+              <div className="pdf-item"><strong>GST No:</strong> {entry.gstno || "N/A"}</div>
+              <div className="pdf-item"><strong>City/State:</strong> {entry.city || "N/A"}, {entry.state || "N/A"} ({entry.pinCode || "N/A"})</div>
+              <div className="pdf-item" style={{ gridColumn: "span 2" }}><strong>Shipping Address:</strong> {entry.shippingAddress || "N/A"}</div>
+              <div className="pdf-item" style={{ gridColumn: "span 2" }}><strong>Billing Address:</strong> {entry.billingAddress || "N/A"}</div>
+            </div>
+          </div>
+
+          {/* Products */}
+          <div className="pdf-section">
+            <div className="pdf-section-title">Product & Technical Details</div>
+            <table className="pdf-table">
+              <thead>
+                <tr>
+                  <th style={{ width: "30px" }}>#</th>
+                  <th>Description</th>
+                  <th>Qty</th>
+                  <th>Size / Spec</th>
+                  <th>Unit Price</th>
+                  <th>GST</th>
+                  <th>Model Nos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entry.products && entry.products.length > 0 ? entry.products.map((p, idx) => (
+                  <tr key={idx}>
+                    <td>{idx + 1}</td>
+                    <td>
+                      <strong>{p.productType || "N/A"}</strong>
+                      {p.brand && <><br /><small>{p.brand}</small></>}
+                    </td>
+                    <td>{p.qty || 0}</td>
+                    <td>{[p.size, p.spec].filter(v => v && v !== "N/A").join(" / ") || "N/A"}</td>
+                    <td>₹{p.unitPrice?.toFixed(2) || "0.00"}</td>
+                    <td>{p.gst || 0}%</td>
+                    <td style={{ fontSize: "10px" }}>
+                      {p.modelNos?.length > 0 && <div><strong>MN:</strong> {p.modelNos.join(", ")}</div>}
+                      {p.warranty && <div><strong>Warranty:</strong> {p.warranty}</div>}
+                    </td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan="7" style={{ textAlign: "center" }}>No products found</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Financial */}
+          <div className="pdf-section">
+            <div className="pdf-section-title">Financial & Payment Information</div>
+            <div className="pdf-grid">
+              <div className="pdf-item"><strong>Total Unit Value:</strong> ₹{totalUnitPrice.toFixed(2)}</div>
+              <div className="pdf-item"><strong>Order Total:</strong> ₹{entry.total?.toFixed(2) || "0.00"}</div>
+              <div className="pdf-item"><strong>Payment Method:</strong> {entry.paymentMethod || "N/A"}</div>
+              <div className="pdf-item"><strong>Payment Terms:</strong> {entry.paymentTerms || "N/A"}</div>
+              <div className="pdf-item"><strong>Payment Collected:</strong> {entry.paymentCollected || "N/A"}</div>
+              <div className="pdf-item"><strong>Payment Due:</strong> {entry.paymentDue || "N/A"}</div>
+              <div className="pdf-item"><strong>NEFT/Trans ID:</strong> {entry.neftTransactionId || "N/A"}</div>
+              <div className="pdf-item"><strong>Cheque ID:</strong> {entry.chequeId || "N/A"}</div>
+              <div className="pdf-item"><strong>Invoice No/Date:</strong> {entry.invoiceNo || "N/A"} ({entry.invoiceDate ? new Date(entry.invoiceDate).toLocaleDateString("en-GB") : "N/A"})</div>
+              <div className="pdf-item"><strong>Freight:</strong> ₹{entry.actualFreight?.toFixed(2) || "0.00"} ({entry.freightstatus || "N/A"})</div>
+              <div className="pdf-item"><strong>Installation Charges:</strong> {entry.installation || "N/A"} ({entry.installchargesstatus || "N/A"})</div>
+              <div className="pdf-item"><strong>Bill Status:</strong> {entry.billStatus || "N/A"}</div>
+            </div>
+          </div>
+
+          {/* Production, Logistics & Installation */}
+          <div className="pdf-section">
+            <div className="pdf-section-title">Production, Logistics & Installation</div>
+            <div className="pdf-grid">
+              <div className="pdf-item"><strong>Production Status:</strong> {entry.fulfillingStatus || "N/A"}</div>
+              <div className="pdf-item"><strong>Fulfillment Date:</strong> {entry.fulfillmentDate ? new Date(entry.fulfillmentDate).toLocaleDateString("en-GB") : "N/A"}</div>
+              <div className="pdf-item"><strong>Dispatch Date:</strong> {entry.dispatchDate ? new Date(entry.dispatchDate).toLocaleDateString("en-GB") : "N/A"}</div>
+              <div className="pdf-item"><strong>Transporter Details:</strong> {entry.transporterDetails || "N/A"}</div>
+              <div className="pdf-item"><strong>Delivery Date:</strong> {entry.deliveryDate ? new Date(entry.deliveryDate).toLocaleDateString("en-GB") : "N/A"}</div>
+              <div className="pdf-item"><strong>Receipt Date:</strong> {entry.receiptDate ? new Date(entry.receiptDate).toLocaleDateString("en-GB") : "N/A"}</div>
+              <div className="pdf-item"><strong>Installation Status:</strong> {entry.installationStatus || "N/A"}</div>
+              <div className="pdf-item"><strong>Installation Report:</strong> {entry.installationReport || "N/A"}</div>
+              <div className="pdf-item"><strong>Stamp Signed:</strong> {entry.stamp || "N/A"}</div>
+              <div className="pdf-item"><strong>Demo Date:</strong> {entry.demoDate ? new Date(entry.demoDate).toLocaleDateString("en-GB") : "N/A"}</div>
+            </div>
+          </div>
+
+          {/* Remarks */}
+          {(entry.remarks || entry.remarksByProduction || entry.remarksByAccounts || entry.remarksByBilling || entry.remarksByInstallation || entry.verificationRemarks) && (
+            <div className="pdf-section">
+              <div className="pdf-section-title">Official Remarks</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                {entry.remarks && <div className="pdf-item"><strong>General:</strong> {entry.remarks}</div>}
+                {entry.remarksByProduction && <div className="pdf-item"><strong>Production:</strong> {entry.remarksByProduction}</div>}
+                {entry.remarksByAccounts && <div className="pdf-item"><strong>Accounts:</strong> {entry.remarksByAccounts}</div>}
+                {entry.remarksByBilling && <div className="pdf-item"><strong>Billing:</strong> {entry.remarksByBilling}</div>}
+                {entry.remarksByInstallation && <div className="pdf-item"><strong>Installation:</strong> {entry.remarksByInstallation}</div>}
+                {entry.verificationRemarks && <div className="pdf-item"><strong>Verification:</strong> {entry.verificationRemarks}</div>}
+              </div>
+            </div>
+          )}
+        </div>
+        {/* ── End PDF container ── */}
+
         <Accordion defaultActiveKey={["0"]} alwaysOpen>
           {/* Order Info Section */}
           <Accordion.Item eventKey="0">
@@ -1077,10 +1348,11 @@ Created By: ${getCreatedByName(entry.createdBy)}
           </div>
         )}
 
+        <div style={{ display: "flex", gap: "1rem", marginTop: "2rem", flexWrap: "wrap" }}>
         <Button
           onClick={handleCopy}
           style={{
-            marginTop: "2rem",
+            flex: 1,
             background: "linear-gradient(135deg, #2563eb, #7e22ce)",
             border: "none",
             borderRadius: "50px",
@@ -1091,23 +1363,23 @@ Created By: ${getCreatedByName(entry.createdBy)}
             display: "flex",
             alignItems: "center",
             gap: "10px",
-            width: "100%",
             justifyContent: "center",
             boxShadow: "0 6px 20px rgba(0, 0, 0, 0.2)",
             transition: "all 0.3s ease",
           }}
           onMouseEnter={(e) => {
-            e.target.style.transform = "translateY(-3px)";
-            e.target.style.boxShadow = "0 8px 25px rgba(0, 0, 0, 0.3)";
+            e.currentTarget.style.transform = "translateY(-3px)";
+            e.currentTarget.style.boxShadow = "0 8px 25px rgba(0, 0, 0, 0.3)";
           }}
           onMouseLeave={(e) => {
-            e.target.style.transform = "translateY(0)";
-            e.target.style.boxShadow = "0 6px 20px rgba(0, 0, 0, 0.2)";
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 6px 20px rgba(0, 0, 0, 0.2)";
           }}
         >
           <Copy size={20} />
           {copied ? "Copied to Clipboard!" : "Copy Details"}
         </Button>
+        </div>
       </Modal.Body>
     </Modal>
   );

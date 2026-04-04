@@ -7,6 +7,7 @@ import {
   paymentMethodOptions, paymentTermsOptions, salesPersonlist, Reportinglist, dispatchFromOptions,
 } from "./Options";
 import { getFinancialYear } from "../../shared/financialYear";
+import ConfirmModal from "./ConfirmModal";
 
 function AddEntry({ onSubmit, onClose }) {
   const [selectedState, setSelectedState] = useState("");
@@ -14,6 +15,7 @@ function AddEntry({ onSubmit, onClose }) {
   const [products, setProducts] = useState([]);
   const [poFile, setPoFile] = useState(null);
   const [fileError, setFileError] = useState("");
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState({ productType: "", size: "", spec: "", qty: "", modelNos: "", unitPrice: "", gst: "", customProduct: "" });
   const [formData, setFormData] = useState({
     soDate: new Date().toISOString().split("T")[0], name: "", city: "", state: "", pinCode: "", contactNo: "", alterno: "",
@@ -22,6 +24,63 @@ function AddEntry({ onSubmit, onClose }) {
     sameAddress: false, orderType: "B2C", paymentCollected: "", paymentMethod: "", paymentDue: "", neftTransactionId: "",
     chequeId: "", gemOrderNumber: "", deliveryDate: "", demoDate: "", paymentTerms: "", dispatchFrom: "", fulfillingStatus: "Pending",
   });
+
+  // ── Auto-Save ──────────────────────────────────────────────────────────────
+  const AUTO_SAVE_KEY = "furniAddEntryDraft";
+
+  const clearDraft = () => {
+    try { localStorage.removeItem(AUTO_SAVE_KEY); }
+    catch (err) { console.error("Error clearing draft:", err); }
+  };
+
+  // Restore draft on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(AUTO_SAVE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.formData) setFormData((prev) => ({ ...prev, ...parsed.formData }));
+        if (parsed.products) setProducts(parsed.products);
+        if (parsed.currentProduct) setCurrentProduct(parsed.currentProduct);
+        if (parsed.selectedState) setSelectedState(parsed.selectedState);
+      }
+    } catch (err) { console.error("Error loading draft:", err); }
+  }, []);
+
+  // Auto-save with 500ms debounce — mirrors SO AddEntry exactly
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      try {
+        localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify({ formData, products, currentProduct, selectedState }));
+      } catch (err) { console.error("Error saving draft:", err); }
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [formData, products, currentProduct, selectedState]);
+
+  // handleClose — shows confirm modal if form has data, otherwise closes directly
+  const handleClose = () => {
+    const hasDraft =
+      Object.values(formData).some((v) => v !== "" && v !== false && v !== "Pending") ||
+      products.length > 0 ||
+      poFile;
+    if (hasDraft) {
+      setIsConfirmModalOpen(true);
+    } else {
+      onClose();
+    }
+  };
+
+  const handleConfirmDiscard = () => {
+    clearDraft();
+    setIsConfirmModalOpen(false);
+    onClose();
+  };
+
+  const handleCancelDiscard = () => {
+    setIsConfirmModalOpen(false);
+    onClose();
+  };
+  // ── End Auto-Save ──────────────────────────────────────────────────────────
 
   const gstOptions = useMemo(() => (formData.orderType === "B2G" ? ["18", "including"] : ["18"]), [formData.orderType]);
   const financialYear = useMemo(() => getFinancialYear(formData.soDate), [formData.soDate]);
@@ -160,6 +219,7 @@ function AddEntry({ onSubmit, onClose }) {
       }
       if (poFile) formDataToSend.append("poFile", poFile);
       const response = await furniApi.post("/api/orders", formDataToSend);
+      clearDraft();
       onSubmit(response.data);
       onClose();
     } catch (error) {
@@ -221,11 +281,17 @@ function AddEntry({ onSubmit, onClose }) {
 
   return (
     <>
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(71, 85, 105, 0.8))", backdropFilter: "blur(4px)", zIndex: 999, opacity: 0, animation: "fadeIn 0.4s ease forwards" }} onClick={onClose} aria-label="Close modal"></div>
+      <ConfirmModal
+        isOpen={isConfirmModalOpen}
+        onConfirm={handleConfirmDiscard}
+        onCancel={handleCancelDiscard}
+        message="You have unsaved changes. Do you want to discard the draft?"
+      />
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(71, 85, 105, 0.8))", backdropFilter: "blur(4px)", zIndex: 999, opacity: 0, animation: "fadeIn 0.4s ease forwards" }} onClick={handleClose} aria-label="Close modal"></div>
       <div className="modal-container" style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", background: "linear-gradient(145deg, #ffffff, #f8fafc)", padding: "2rem", borderRadius: "1.25rem", boxShadow: "0 15px 40px rgba(0, 0, 0, 0.25), 0 5px 15px rgba(0, 0, 0, 0.1)", zIndex: 1000, maxHeight: "85vh", width: "90%", maxWidth: "1100px", fontFamily: "'Poppins', sans-serif", opacity: 0, animation: "slideUp 0.4s ease forwards", overflowY: "auto" }}>
         <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
           <h2 style={{ fontSize: "2.2rem", fontWeight: "700", background: "linear-gradient(135deg, #2575fc, #6a11cb)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "1px", textShadow: "1px 1px 3px rgba(0, 0, 0, 0.05)", marginBottom: "1rem" }}>📝 Add Furniture Order</h2>
-          <button onClick={onClose} style={{ position: "absolute", top: "1rem", right: "1rem", background: "none", border: "none", cursor: "pointer", color: "#64748b", zIndex: 1001 }} aria-label="Close modal">
+          <button onClick={handleClose} style={{ position: "absolute", top: "1rem", right: "1rem", background: "none", border: "none", cursor: "pointer", color: "#64748b", zIndex: 1001 }} aria-label="Close modal">
             <svg style={{ width: "1.75rem", height: "1.75rem" }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
@@ -429,7 +495,7 @@ function AddEntry({ onSubmit, onClose }) {
           </div>
           {/* Form Actions */}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "1rem" }}>
-            <button type="button" onClick={onClose} style={{ padding: "0.75rem 1.5rem", backgroundColor: "#e2e8f0", color: "#475569", border: "none", borderRadius: "0.75rem", cursor: "pointer" }} aria-label="Cancel">Cancel</button>
+            <button type="button" onClick={handleClose} style={{ padding: "0.75rem 1.5rem", backgroundColor: "#e2e8f0", color: "#475569", border: "none", borderRadius: "0.75rem", cursor: "pointer" }} aria-label="Cancel">Cancel</button>
             <button type="submit" disabled={loading} style={{ padding: "0.75rem 1.5rem", background: "linear-gradient(135deg, #7c3aed, #3b82f6)", color: "#ffffff", border: "none", borderRadius: "0.75rem", cursor: loading ? "not-allowed" : "pointer" }} aria-label="Submit Order">{loading ? <Spinner animation="border" size="sm" /> : "Submit"}</button>
           </div>
         </form>

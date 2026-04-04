@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import "../App.css";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import soApi from "../axiosSetup";
 import { toast } from "react-toastify";
 
 // SO standalone Signup — redirects to unified portal signup endpoint.
@@ -30,7 +30,7 @@ function Signup() {
     try {
       // Use unified portal signup endpoint
       const PORTAL_URL = process.env.REACT_APP_PORTAL_URL || "http://localhost:5050";
-      const response = await axios.post(
+      const response = await soApi.post(
         `${PORTAL_URL}/api/auth/signup`,
         form,
         { withCredentials: true }

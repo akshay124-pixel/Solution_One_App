@@ -1,7 +1,7 @@
 // TeamBuilder: Modern, animated team management UI with real-time updates
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Modal, Button, Spinner, Alert, Badge } from "react-bootstrap";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import styled from "styled-components";
 import io from "socket.io-client";
@@ -463,7 +463,7 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
   // GET /api/current-user -> used to gate team mgmt if user is already assigned to a leader
   const fetchCurrentUser = useCallback(async () => {
     try {
-      const response = await axios.get(`/api/current-user`);
+      const response = await soApi.get(`/api/current-user`);
       setCurrentUser(response.data?.data || null);
       setError(null);
     } catch (err) {
@@ -476,7 +476,7 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
   const fetchAvailableUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/fetch-available-users`);
+      const response = await soApi.get(`/api/fetch-available-users`);
 
       setAvailableUsers(response.data.data || []);
       setError(null);
@@ -495,7 +495,7 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
   const fetchTeamMembers = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/fetch-my-team`);
+      const response = await soApi.get(`/api/fetch-my-team`);
 
       setTeamMembers(response.data.data || []);
       setError(null);
@@ -516,7 +516,7 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
     async (targetUserId) => {
       try {
         setActionLoading(targetUserId);
-        await axios.post(`/api/assign-user`, { userId: targetUserId });
+        await soApi.post(`/api/assign-user`, { userId: targetUserId });
 
         toast.success("User assigned successfully");
         await Promise.all([fetchAvailableUsers(), fetchTeamMembers()]);
@@ -537,7 +537,7 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
     async (targetUserId) => {
       try {
         setActionLoading(targetUserId);
-        await axios.post(`/api/unassign-user`, { userId: targetUserId });
+        await soApi.post(`/api/unassign-user`, { userId: targetUserId });
 
         toast.success("User unassigned successfully");
         await Promise.all([fetchAvailableUsers(), fetchTeamMembers()]);

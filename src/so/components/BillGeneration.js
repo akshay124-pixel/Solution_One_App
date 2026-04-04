@@ -3,7 +3,7 @@ import { Button, Form, Badge, InputGroup } from "react-bootstrap";
 import { FaEye, FaSearch, FaFilter, FaTimes, FaFileExcel } from "react-icons/fa";
 import ViewEntry from "./ViewEntry";
 import EditBill from "./EditBill";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import { exportToExcel } from "../../utils/excelHelper";
 import PreviewModal from "./PreviewModal";
@@ -57,8 +57,8 @@ const BillGeneration = () => {
   const fetchOrders = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_SO_URL}/api/get-bill-orders`
+      const response = await soApi.get(
+        `/api/get-bill-orders`
       );
       setOrders(response.data.data);
     } catch (error) {

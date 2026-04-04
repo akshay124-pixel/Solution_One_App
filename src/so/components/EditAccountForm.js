@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, memo } from "react";
 import { getDirtyValues } from "../utils/formUtils";
 import { Modal, Form, Button } from "react-bootstrap";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 const MODAL_HEADER_STYLE = {
     background: "linear-gradient(135deg, #2575fc, #6a11cb)",
@@ -312,8 +312,8 @@ const EditAccountForm = ({ show, onHide, order, onOrderUpdated }) => {
                 }
             });
 
-            const response = await axios.patch(
-                `${process.env.REACT_APP_SO_URL}/api/edit/${order._id}`,
+            const response = await soApi.patch(
+                `/api/edit/${order._id}`,
                 finalPayload
             );
 

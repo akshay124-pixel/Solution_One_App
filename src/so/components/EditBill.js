@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -33,8 +33,8 @@ const EditBill = ({ isOpen, onClose, onEntryUpdated, entryToEdit }) => {
           ? formData.invoiceDate.toISOString()
           : null,
       };
-      const response = await axios.patch(
-        `${process.env.REACT_APP_SO_URL}/api/edit/${entryToEdit._id}`,
+      const response = await soApi.patch(
+        `/api/edit/${entryToEdit._id}`,
         payload
       );
       onEntryUpdated(response.data.data);

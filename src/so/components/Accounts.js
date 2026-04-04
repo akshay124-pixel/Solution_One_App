@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { Button, Badge, Form, Spinner } from "react-bootstrap";
 import { FaEye, FaTimes } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -29,8 +29,8 @@ function Accounts() {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_SO_URL}/api/accounts-orders`
+      const response = await soApi.get(
+        `/api/accounts-orders`
       );
       if (response.data.success) {
         const data = Array.isArray(response.data.data)

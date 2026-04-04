@@ -5,7 +5,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { Button, Modal, Badge, Form, Spinner } from "react-bootstrap";
 import { FaEye, FaTimes, FaDownload } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -44,8 +44,8 @@ function Installation() {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_SO_URL}/api/installation-orders`
+      const response = await soApi.get(
+        `/api/installation-orders`
       );
       if (response.data.success) {
         const filteredData = response.data.data.filter(
@@ -467,21 +467,21 @@ function Installation() {
         return;
       }
 
-      // ✅ Use authenticated download endpoint
-      const fileUrl = `${process.env.REACT_APP_SO_URL}/api/download/${encodeURIComponent(fileName)}`;
-      const response = await fetch(fileUrl, {
-        method: "GET",
+      // ✅ Use authenticated download endpoint with soApi
+      const fileUrl = `/api/download/${encodeURIComponent(fileName)}`;
+      const response = await soApi.get(fileUrl, {
+        responseType: "blob",
         headers: {
           Accept:
             "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         },
       });
 
-      if (!response.ok) {
+      if (!response.status === 200) {
         throw new Error("Failed to fetch file");
       }
 
-      const blob = await response.blob();
+      const blob = response.data;
       const contentType =
         response.headers.get("content-type") || "application/octet-stream";
       const extension = contentType.split("/")[1] || "file";
@@ -493,7 +493,7 @@ function Installation() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(link.href);
+      window.URL.revokeObjectURL(link.href)
 
       toast.success("Download started!");
     } catch (err) {
@@ -555,8 +555,8 @@ function Installation() {
   const handleSendMail = useCallback(async (order) => {
     setMailingInProgress(order._id);
     try {
-      const response = await axios.post(
-        `${process.env.REACT_APP_SO_URL}/api/send-completion-mail`,
+      const response = await soApi.post(
+        `/api/send-completion-mail`,
         { orderId: order._id }
       );
 

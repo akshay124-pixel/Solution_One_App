@@ -4,7 +4,7 @@ import { FaEye } from "react-icons/fa";
 import io from "socket.io-client";
 import ViewEntry from "./ViewEntry";
 import EditProductionApproval from "./EditProductionApproval";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import { exportToExcel } from "../../utils/excelHelper";
 import { getPortalAccessToken } from "../../portal/PortalAuthContext";
@@ -115,8 +115,8 @@ const ProductionApproval = () => {
 
   const fetchOrders = useCallback(async () => {
     try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_SO_URL}/api/production-approval-orders`
+      const response = await soApi.get(
+        `/api/production-approval-orders`
       );
       setOrders(response.data.data);
     } catch (error) {

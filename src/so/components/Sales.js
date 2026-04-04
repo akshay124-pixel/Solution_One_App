@@ -6,7 +6,7 @@ import Pagination from "@mui/material/Pagination";
 import TeamBuilder from "./TeamBuilder";
 import FilterSection from "./FilterSection";
 import "react-datepicker/dist/react-datepicker.css";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import { exportToExcel, readExcelFile } from "../../utils/excelHelper";
 import { BarChart2, Upload, Download,Users } from "lucide-react";
@@ -1125,8 +1125,8 @@ const Sales = () => {
   useEffect(() => {
     const fetchAllOrdersForFilter = async () => {
       try {
-        const response = await axios.get(
-          `${process.env.REACT_APP_SO_URL}/api/get-orders`
+        const response = await soApi.get(
+          `/api/get-orders`
         );
 
         let allData = [];
@@ -1214,8 +1214,8 @@ const Sales = () => {
       if (startDate) queryParams.startDate = startDate.toISOString();
       if (endDate) queryParams.endDate = endDate.toISOString();
 
-      const response = await axios.get(
-        `${process.env.REACT_APP_SO_URL}/api/get-orders-paginated`,
+      const response = await soApi.get(
+        `/api/get-orders-paginated`,
         {
           params: queryParams,
         }
@@ -1253,8 +1253,8 @@ const Sales = () => {
   // Fetch dashboard counts (global totals)
   const fetchDashboardCounts = useCallback(async () => {
     try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_SO_URL}/api/dashboard-counts`
+      const response = await soApi.get(
+        `/api/dashboard-counts`
       );
       setDashboardCounts(
         response.data || { totalOrders: 0, installation: 0, production: 0, dispatch: 0 }
@@ -1267,8 +1267,8 @@ const Sales = () => {
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_SO_URL}/api/notifications`
+      const response = await soApi.get(
+        `/api/notifications`
       );
       setNotifications(response.data.data);
     } catch (error) {
@@ -1280,8 +1280,8 @@ const Sales = () => {
   // Mark all notifications as read
   const markAllRead = useCallback(async () => {
     try {
-      await axios.post(
-        `${process.env.REACT_APP_SO_URL}/api/mark-read`,
+      await soApi.post(
+        `/api/mark-read`,
         {}
       );
       setNotifications((prev) =>
@@ -1297,7 +1297,7 @@ const Sales = () => {
   // Clear all notifications
   const clearNotifications = useCallback(async () => {
     try {
-      await axios.delete(`${process.env.REACT_APP_SO_URL}/api/clear`);
+      await soApi.delete(`/api/clear`);
       setNotifications([]);
       toast.success("All notifications cleared!");
     } catch (error) {
@@ -1756,8 +1756,8 @@ const Sales = () => {
             };
           });
 
-          const response = await axios.post(
-            `${process.env.REACT_APP_SO_URL}/api/bulk-orders`,
+          const response = await soApi.post(
+            `/api/bulk-orders`,
             newEntries,
             {
               headers: { "Content-Type": "application/json" },
@@ -1806,8 +1806,8 @@ const Sales = () => {
   const handleExport = useCallback(() => {
     const downloadFile = async () => {
       try {
-        const response = await axios.get(
-          `${process.env.REACT_APP_SO_URL}/api/export`,
+        const response = await soApi.get(
+          `/api/export`,
           {
             params: {
               search: searchTerm,
@@ -1825,8 +1825,8 @@ const Sales = () => {
           }
         );
 
-        // Create blob link to download
-        const url = window.URL.createObjectURL(new Blob([response.data]));
+        // Create blob link to download (response.data is already a blob with responseType: "blob")
+        const url = window.URL.createObjectURL(response.data);
         const link = document.createElement("a");
         link.href = url;
         link.setAttribute(
@@ -1836,6 +1836,7 @@ const Sales = () => {
         document.body.appendChild(link);
         link.click();
         link.parentNode.removeChild(link);
+        window.URL.revokeObjectURL(url);
         toast.success("Orders exported successfully!");
       } catch (error) {
         console.error("Error downloading export:", error);

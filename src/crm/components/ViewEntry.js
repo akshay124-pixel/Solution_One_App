@@ -633,7 +633,7 @@ function ViewEntry({ isOpen, onClose, entry, role }) {
         }
 
         const response = await api.get(
-          `/api/download/${encodeURIComponent(filename)}`,
+          `/download/${encodeURIComponent(filename)}`,
           {
             responseType: "blob",
           }

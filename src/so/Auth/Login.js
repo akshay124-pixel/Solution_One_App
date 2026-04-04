@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import "../App.css";
 import { Link } from "react-router-dom";
-import axios from "axios";
+import soApi from "../axiosSetup";
 import { Spinner } from "react-bootstrap";
 import { toast } from "react-toastify";
 
@@ -32,7 +32,7 @@ function Login({ onLogin }) {
     try {
       // Use unified portal login endpoint
       const PORTAL_URL = process.env.REACT_APP_PORTAL_URL || "http://localhost:5050";
-      const response = await axios.post(
+      const response = await soApi.post(
         `${PORTAL_URL}/api/auth/login`,
         formData,
         { withCredentials: true }

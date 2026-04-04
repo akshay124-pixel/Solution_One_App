@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import styled from "styled-components";
 import { Button, Form } from "react-bootstrap";
 import { X, Download, Calendar } from "lucide-react";
-import axios from "../../../so/axiosSetup";
+import soApi from "../../../so/axiosSetup";
 import { io } from "socket.io-client";
 import { toast } from "react-toastify";
 import { exportToExcel } from "../../../utils/excelHelper";
@@ -540,8 +540,8 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
       if (startDate) params.startDate = startDate.toISOString();
       if (endDate) params.endDate = endDate.toISOString();
 
-      const response = await axios.get(
-        `${process.env.REACT_APP_SO_URL}/api/get-analytics`,
+      const response = await soApi.get(
+        `/api/get-analytics`,
         { params }
       );
 
@@ -573,14 +573,14 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
       fetchOrders();
       (async () => {
         try {
-          const res = await axios.get(
-            `${process.env.REACT_APP_SO_URL}/api/current-user`
+          const res = await soApi.get(
+            `/api/current-user`
           );
           setCurrentUser(res.data);
           if (userRole === "salesperson") {
             try {
-              const teamRes = await axios.get(
-                `${process.env.REACT_APP_SO_URL}/api/fetch-my-team`
+              const teamRes = await soApi.get(
+                `/api/fetch-my-team`
               );
               const ids = (teamRes.data?.data || []).map((u) => u._id);
               setTeamMemberIds(ids);

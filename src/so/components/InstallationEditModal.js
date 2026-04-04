@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { FaDownload } from "react-icons/fa";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 
 // PERFORMANCE: Separated Edit Modal component to prevent parent re-renders on typing
 const InstallationEditModal = ({ show, onHide, order, onUpdate }) => {
@@ -61,22 +61,22 @@ const InstallationEditModal = ({ show, onHide, order, onUpdate }) => {
                 return;
             }
 
-            // ✅ Use authenticated download endpoint
-            const fileUrl = `${process.env.REACT_APP_SO_URL}/api/download/${encodeURIComponent(fileName)}`;
+            // ✅ Use authenticated download endpoint with soApi
+            const fileUrl = `/api/download/${encodeURIComponent(fileName)}`;
 
-            const response = await fetch(fileUrl, {
-                method: "GET",
+            const response = await soApi.get(fileUrl, {
+                responseType: "blob",
                 headers: {
                     Accept:
                         "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 },
             });
 
-            if (!response.ok) {
+            if (!response.status === 200) {
                 throw new Error("Failed to fetch file");
             }
 
-            const blob = await response.blob();
+            const blob = response.data;
             const contentType = response.headers.get("content-type") || "application/octet-stream";
             const extension = contentType.split("/")[1] || "file";
             const downloadFileName = filePath.split("/").pop() || `download.${extension}`;
@@ -87,7 +87,7 @@ const InstallationEditModal = ({ show, onHide, order, onUpdate }) => {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            window.URL.revokeObjectURL(link.href);
+            window.URL.revokeObjectURL(link.href)
 
             toast.success("Download started!");
         } catch (err) {
@@ -155,8 +155,8 @@ const InstallationEditModal = ({ show, onHide, order, onUpdate }) => {
 
         setLoading(true);
         try {
-            const response = await axios.patch(
-                `${process.env.REACT_APP_SO_URL}/api/edit/${order._id}`,
+            const response = await soApi.patch(
+                `/api/edit/${order._id}`,
                 formData,
                 {
                     headers: { "Content-Type": "multipart/form-data" },

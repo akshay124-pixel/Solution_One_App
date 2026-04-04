@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { Button, Modal, Badge, Form, Spinner } from "react-bootstrap";
 import { FaEye, FaTimes } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -89,8 +89,8 @@ function Finish() {
 
   const fetchFinishedGoods = useCallback(async () => {
     try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_SO_URL}/api/finished-goods`
+      const response = await soApi.get(
+        `/api/finished-goods`
       );
       if (response.data.success) {
         // Map backend 'Fulfilled' to frontend 'Completed'

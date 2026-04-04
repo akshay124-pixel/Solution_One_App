@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { Modal, Form, Spinner, Alert } from "react-bootstrap";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import { useForm, Controller } from "react-hook-form";
 import styled from "styled-components";
@@ -691,8 +691,8 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
           formDataPayload.append("installationFile", installationFile);
         }
 
-        response = await axios.patch(
-          `${process.env.REACT_APP_SO_URL}/api/edit/${entryToEdit._id}`,
+        response = await soApi.patch(
+          `/api/edit/${entryToEdit._id}`,
           formDataPayload,
           {
             headers: { "Content-Type": "multipart/form-data" },
@@ -710,8 +710,8 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
           }
         });
 
-        response = await axios.patch(
-          `${process.env.REACT_APP_SO_URL}/api/edit/${entryToEdit._id}`,
+        response = await soApi.patch(
+          `/api/edit/${entryToEdit._id}`,
           finalPayload, // Send filtered payload
           {
             headers: { "Content-Type": "application/json" },
@@ -775,8 +775,8 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
         productno: updateData.productno,
         remarks: updateData.remarks || null,
       };
-      const response = await axios.patch(
-        `${process.env.REACT_APP_SO_URL}/api/edit/${entryToEdit._id}`,
+      const response = await soApi.patch(
+        `/api/edit/${entryToEdit._id}`,
         submissionData,
         {
           headers: { "Content-Type": "application/json" },

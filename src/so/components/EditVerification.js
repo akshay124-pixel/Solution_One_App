@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 
 const EditVerification = ({ isOpen, onClose, onEntryUpdated, entryToEdit }) => {
@@ -34,8 +34,8 @@ const EditVerification = ({ isOpen, onClose, onEntryUpdated, entryToEdit }) => {
     if (!validateForm()) return;
 
     try {
-      const response = await axios.patch(
-        `${process.env.REACT_APP_SO_URL}/api/edit/${entryToEdit._id}`,
+      const response = await soApi.patch(
+        `/api/edit/${entryToEdit._id}`,
         formData
       );
       onEntryUpdated(response.data.data);

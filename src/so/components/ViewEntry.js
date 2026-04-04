@@ -3,6 +3,7 @@ import { Modal, Button, Badge, Accordion, Card } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { toast } from "react-toastify";
 import { Copy, Download, FileText } from "lucide-react";
+import soApi from "../../so/axiosSetup";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { useRef } from "react";
@@ -157,24 +158,24 @@ function ViewEntry({ isOpen, onClose, entry }) {
         return;
       }
 
-      // ✅ Use authenticated download endpoint
-      const fileUrl = `${process.env.REACT_APP_SO_URL}/api/download/${encodeURIComponent(fileName)}`;
+      // ✅ Use authenticated download endpoint with soApi
+      const fileUrl = `/api/download/${encodeURIComponent(fileName)}`;
 
-      const response = await fetch(fileUrl, {
-        method: "GET",
+      const response = await soApi.get(fileUrl, {
+        responseType: "blob",
         headers: {
           Accept:
             "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         },
       });
 
-      if (!response.ok) {
+      if (!response.status === 200) {
         throw new Error(
           `Server error: ${response.status} ${response.statusText}`,
         );
       }
 
-      const contentType = response.headers.get("content-type");
+      const contentType = response.headers["content-type"];
       const validTypes = [
         "application/pdf",
         "image/png",
@@ -190,7 +191,7 @@ function ViewEntry({ isOpen, onClose, entry }) {
         throw new Error("Invalid file type returned from server!");
       }
 
-      const blob = await response.blob();
+      const blob = response.data;
 
       // ✅ FileName fix
       const extension = contentType.split("/")[1] || "file";
@@ -204,7 +205,7 @@ function ViewEntry({ isOpen, onClose, entry }) {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(link.href);
+      window.URL.revokeObjectURL(link.href)
 
       toast.success("File download started!");
     } catch (err) {

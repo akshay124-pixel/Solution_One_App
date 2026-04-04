@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 
 function DeleteModal({ isOpen, onClose, onDelete, itemId }) {
@@ -15,8 +15,8 @@ function DeleteModal({ isOpen, onClose, onDelete, itemId }) {
     setIsLoading(true);
     try {
       // Single delete request
-      const response = await axios.delete(
-        `${process.env.REACT_APP_SO_URL}/api/delete/${itemId}`
+      const response = await soApi.delete(
+        `/api/delete/${itemId}`
       );
 
       if (response.data.success) {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { getDirtyValues } from "../utils/formUtils"; // Import Diff Utility
 import { Modal, Form, Button } from "react-bootstrap";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 
 const EditProductionApproval = ({
@@ -102,8 +102,8 @@ const EditProductionApproval = ({
         return;
       }
 
-      const response = await axios.patch(
-        `${process.env.REACT_APP_SO_URL}/api/edit/${entryToEdit._id}`,
+      const response = await soApi.patch(
+        `/api/edit/${entryToEdit._id}`,
         dirtyValues
       );
       onEntryUpdated(response.data.data);

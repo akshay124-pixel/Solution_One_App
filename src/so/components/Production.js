@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import { Button, Modal, Form, Spinner, Badge } from "react-bootstrap";
 import { FaEye, FaTimes } from "react-icons/fa";
@@ -152,8 +152,8 @@ const Production = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_SO_URL}/api/production-orders`
+      const response = await soApi.get(
+        `/api/production-orders`
       );
       if (response.data.success) {
         const sortedOrders = response.data.data.sort((a, b) => {
@@ -336,24 +336,24 @@ const Production = () => {
         return;
       }
 
-      // ✅ Use authenticated download endpoint
-      const fileUrl = `${process.env.REACT_APP_SO_URL}/api/download/${encodeURIComponent(fileName)}`;
+      // ✅ Use authenticated download endpoint with soApi
+      const fileUrl = `/api/download/${encodeURIComponent(fileName)}`;
 
-      const response = await fetch(fileUrl, {
-        method: "GET",
+      const response = await soApi.get(fileUrl, {
+        responseType: "blob",
         headers: {
           Accept:
             "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         },
       });
 
-      if (!response.ok) {
+      if (!response.status === 200) {
         throw new Error(
           `Server error: ${response.status} ${response.statusText}`
         );
       }
 
-      const contentType = response.headers.get("content-type");
+      const contentType = response.headers["content-type"];
       const validTypes = [
         "application/pdf",
         "image/png",
@@ -369,7 +369,7 @@ const Production = () => {
         throw new Error("Invalid file type returned from server!");
       }
 
-      const blob = await response.blob();
+      const blob = response.data;
 
       // ✅ FileName fix
       const extension = contentType.split("/")[1] || "file";
@@ -383,7 +383,7 @@ const Production = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(link.href);
+      window.URL.revokeObjectURL(link.href)
 
       toast.success("File download started!");
     } catch (err) {
@@ -465,8 +465,8 @@ const Production = () => {
     const submitData = { ...formData, products };
     delete submitData.productUnits;
     try {
-      const response = await axios.patch(
-        `${process.env.REACT_APP_SO_URL}/api/edit/${editOrder?._id}`,
+      const response = await soApi.patch(
+        `/api/edit/${editOrder?._id}`,
         submitData
       );
       if (response.data.success) {

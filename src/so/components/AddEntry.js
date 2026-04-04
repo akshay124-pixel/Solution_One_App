@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import { Spinner } from "react-bootstrap";
 import {
@@ -531,8 +531,8 @@ function AddEntry({ onSubmit, onClose }) {
 
     try {
       setLoading(true);
-      const response = await axios.post(
-        `${process.env.REACT_APP_SO_URL}/api/orders`,
+      const response = await soApi.post(
+        `/api/orders`,
         formDataToSend
       );
 

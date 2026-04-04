@@ -3,7 +3,7 @@ import { Button, Form, Badge } from "react-bootstrap";
 import { FaEye } from "react-icons/fa";
 import ViewEntry from "./ViewEntry";
 import EditVerification from "./EditVerification";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import { exportToExcel } from "../../utils/excelHelper";
 import io from "socket.io-client";
@@ -23,8 +23,8 @@ const Verification = () => {
 
   const fetchOrders = useCallback(async () => {
     try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_SO_URL}/api/get-verification-orders`
+      const response = await soApi.get(
+        `/api/get-verification-orders`
       );
       setOrders(response.data.data);
     } catch (error) {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getDirtyValues } from "../utils/formUtils"; // Refined Diff Utility
 import { Modal, Button, Input, Select, Collapse } from "antd";
-import axios from "../../so/axiosSetup";
+import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 
 const { Option } = Select;
@@ -175,8 +175,8 @@ const OutFinishedGoodModal = ({
         return;
       }
 
-      const response = await axios.patch(
-        `${process.env.REACT_APP_SO_URL}/api/edit/${entryToEdit._id}`,
+      const response = await soApi.patch(
+        `/api/edit/${entryToEdit._id}`,
         finalPayload,
         {
           headers: { "Content-Type": "application/json" },

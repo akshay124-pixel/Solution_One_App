@@ -463,8 +463,7 @@ function Installation() {
       }
 
       // ✅ Use authenticated download endpoint instead of static URL
-      const fileUrl = `${process.env.REACT_APP_SO_URL}/api/download/${encodeURIComponent(fileName)}`;
-
+            const fileUrl = `${process.env.REACT_APP_SO_URL}/api/so/api/download/${encodeURIComponent(fileName)}`;
       const response = await fetch(fileUrl, {
         method: "GET",
         headers: {

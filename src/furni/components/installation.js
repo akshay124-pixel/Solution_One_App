@@ -39,11 +39,10 @@ function Installation() {
       if (!processedPath.includes("Uploads") && !processedPath.startsWith("http")) {
         processedPath = `/Uploads/${processedPath.startsWith("/") ? processedPath.slice(1) : processedPath}`;
       }
-      const fileUrl = `${FURNI_ORIGIN}${processedPath.startsWith("/") ? "" : "/"}${processedPath}`;
-      const response = await fetch(fileUrl, { method: "GET", headers: { Accept: "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" } });
-      if (!response.ok) throw new Error("Failed to fetch file");
-      const blob = await response.blob();
-      const contentType = response.headers.get("content-type") || "application/octet-stream";
+      const endpoint = processedPath.startsWith("/") ? processedPath : `/${processedPath}`;
+      const response = await furniApi.get(endpoint, { responseType: "blob", headers: { Accept: "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" } });
+      const blob = response.data;
+      const contentType = response.headers["content-type"] || "application/octet-stream";
       const extension = contentType.split("/")[1] || "file";
       const fileName = filePath.split("/").pop() || `download.${extension}`;
       const link = document.createElement("a");

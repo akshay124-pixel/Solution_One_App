@@ -324,14 +324,20 @@ const Production = () => {
   // Download Po Fie
   const handleDownload = useCallback(async () => {
     try {
-      const fileUrl = `${process.env.REACT_APP_SO_URL}${viewOrder.poFilePath.startsWith("/") ? "" : "/"
-        }${viewOrder.poFilePath}`;
-
-      // Validate file URL
-      if (!fileUrl || fileUrl === process.env.REACT_APP_SO_URL + "/") {
-        toast.error("Invalid file path provided!");
+      if (!viewOrder?.poFilePath) {
+        toast.error("No file available for download!");
         return;
       }
+
+      // Extract filename from path
+      const fileName = viewOrder.poFilePath.split("/").pop();
+      if (!fileName) {
+        toast.error("Invalid file name!");
+        return;
+      }
+
+      // ✅ Use authenticated download endpoint instead of static URL
+      const fileUrl = `${process.env.REACT_APP_SO_URL}/api/download/${encodeURIComponent(fileName)}`;
 
       const response = await fetch(fileUrl, {
         method: "GET",
@@ -367,13 +373,13 @@ const Production = () => {
 
       // ✅ FileName fix
       const extension = contentType.split("/")[1] || "file";
-      const fileName =
+      const downloadFileName =
         viewOrder.poFilePath.split("/").pop() ||
         `order_${viewOrder.orderId || "unknown"}.${extension}`;
 
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
-      link.download = fileName;
+      link.download = downloadFileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

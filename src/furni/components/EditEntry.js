@@ -53,6 +53,8 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [installationFile, setInstallationFile] = useState(null);
   const [installationFileError, setInstallationFileError] = useState("");
+  const [poFile, setPoFile] = useState(null);
+  const [poFileError, setPoFileError] = useState("");
 
   const { register, handleSubmit, control, formState: { errors }, reset, watch, setValue } = useForm({ mode: "onChange", defaultValues: initialFormData });
   const selectedState = watch("state");
@@ -148,6 +150,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
         else if (submissionData[key] !== undefined && submissionData[key] !== null) { formData.append(key, submissionData[key]); }
       });
       if (installationFile) formData.append("installationFile", installationFile);
+      if (poFile) formData.append("poFile", poFile);
       const response = await furniApi.put(`/api/edit/${entryToEdit._id}`, formData, { headers: { "Content-Type": "multipart/form-data" } });
       onEntryUpdated(response.data.data);
       setView("options");
@@ -216,6 +219,17 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
       window.URL.revokeObjectURL(link.href);
       toast.success("Download started!");
     } catch (err) { console.error(err); toast.error("Download failed. Check server."); }
+  };
+
+  const handlePoFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { setPoFileError("File size exceeds 5MB limit."); setPoFile(null); return; }
+      const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
+      if (!allowedTypes.includes(file.type)) { setPoFileError("Invalid file type. Only PDF, JPG, PNG, DOCX, XLSX allowed."); setPoFile(null); return; }
+      setPoFile(file);
+      setPoFileError("");
+    }
   };
 
   const handleInstallationFileChange = (e) => {
@@ -326,6 +340,28 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
             </div>
           )}
           {installationFileError && (<div style={{ color: "#ef4444", fontSize: "0.85rem", marginTop: "0.5rem", fontWeight: "500" }}>{installationFileError}</div>)}
+        </div>
+        {/* PO File Upload */}
+        <div style={{ marginTop: "1.5rem", marginBottom: "2rem" }}>
+          <Form.Label style={{ fontWeight: "600", color: "#374151", marginBottom: "0.5rem", display: "block" }}>📎File Attachment</Form.Label>
+          <div style={{ width: "100%", maxWidth: "460px", overflow: "hidden", boxSizing: "border-box", border: `2px dashed ${poFile ? "#22c55e" : "#cbd5e1"}`, borderRadius: "1rem", padding: "0.75rem", backgroundColor: poFile ? "#f0fdf4" : "#f8fafc", transition: "all 0.2s ease-in-out" }}>
+            <label htmlFor="poFileEdit" title={poFile ? poFile.name : "Click to upload"} style={{ display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", alignItems: "center", gap: "0.75rem", width: "100%", minHeight: "44px", padding: "0.6rem 0.75rem", borderRadius: "0.75rem", background: "linear-gradient(to right, #ffffff, #f1f5f9)", border: "1px solid #e2e8f0", cursor: "pointer", overflow: "hidden", boxSizing: "border-box" }} onMouseOver={(e) => (e.currentTarget.style.background = "#e2e8f0")} onMouseOut={(e) => (e.currentTarget.style.background = "linear-gradient(to right, #ffffff, #f1f5f9)")}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "1.4rem", height: "1.4rem" }}>
+                <svg style={{ width: "100%", height: "100%", color: "#4f46e5" }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 16V8m0 0l-4 4m4-4l4 4" /></svg>
+              </div>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#1e293b", fontSize: "0.9rem", fontWeight: "500", display: "block" }}>{poFile ? poFile.name : entryToEdit?.poFilePath ? "Replace existing PO file" : "Click to upload PO file"}</span>
+            </label>
+            <input id="poFileEdit" type="file" name="poFile" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.xls" onChange={handlePoFileChange} style={{ display: "none" }} />
+            <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.5rem", textAlign: "center", fontWeight: "500" }}>Supported: PDF, JPG, PNG, DOCX, XLSX</div>
+            {poFile && (<button type="button" onClick={(e) => { e.preventDefault(); setPoFile(null); setPoFileError(""); const input = document.getElementById("poFileEdit"); if (input) input.value = ""; }} style={{ marginTop: "0.75rem", width: "100%", padding: "0.5rem", borderRadius: "0.5rem", border: "1px solid #fecaca", background: "#fee2e2", color: "#b91c1c", fontSize: "0.85rem", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }} onMouseOver={(e) => (e.currentTarget.style.background = "#fca5a5")} onMouseOut={(e) => (e.currentTarget.style.background = "#fee2e2")}><span>✖</span> Remove PO File</button>)}
+          </div>
+          {entryToEdit?.poFilePath && !poFile && (
+            <div style={{ marginTop: "0.75rem", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <span style={{ color: "#64748b" }}>Current file:</span>
+              <button type="button" onClick={() => handleDownload(entryToEdit.poFilePath)} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "20px", background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", fontWeight: "600", fontSize: "0.85rem", border: "none", boxShadow: "0 2px 5px rgba(0,0,0,0.2)", cursor: "pointer" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}><FaDownload /> Download PO File</button>
+            </div>
+          )}
+          {poFileError && (<div style={{ color: "#ef4444", fontSize: "0.85rem", marginTop: "0.5rem", fontWeight: "500" }}>{poFileError}</div>)}
         </div>
         <Form.Group controlId="remarksByInstallation"><Form.Label>✏️ Remarks by Installation</Form.Label><Form.Control as="textarea" rows={2} {...register("remarksByInstallation")} onChange={(e) => debouncedHandleInputChange("remarksByInstallation", e.target.value)} placeholder="Enter installation remarks" /></Form.Group>
         <Form.Group controlId="dispatchStatus"><Form.Label>🚚 Dispatch Status</Form.Label><Controller name="dispatchStatus" control={control} render={({ field }) => (<Form.Select {...field} onChange={(e) => { field.onChange(e); debouncedHandleInputChange("dispatchStatus", e.target.value); }}><option value="Not Dispatched">Not Dispatched</option><option value="Hold by Salesperson">Hold by Salesperson</option><option value="Hold by Customer">Hold by Customer</option><option value="Order Cancelled">Order Cancelled</option><option value="Dispatched">Dispatched</option><option value="Delivered">Delivered</option></Form.Select>)} /></Form.Group>

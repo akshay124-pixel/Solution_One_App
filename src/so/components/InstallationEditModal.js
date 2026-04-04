@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { FaDownload } from "react-icons/fa";
-import axios from "../../so/axiosSetup";
+import soApi from "../axiosSetup";
 
 // PERFORMANCE: Separated Edit Modal component to prevent parent re-renders on typing
 const InstallationEditModal = ({ show, onHide, order, onUpdate }) => {
@@ -61,33 +61,22 @@ const InstallationEditModal = ({ show, onHide, order, onUpdate }) => {
                 return;
             }
 
-            // ✅ Use authenticated download endpoint
-            const fileUrl = `${process.env.REACT_APP_SO_URL}/api/download/${encodeURIComponent(fileName)}`;
-
-            const response = await fetch(fileUrl, {
-                method: "GET",
-                headers: {
-                    Accept:
-                        "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                },
+            // ✅ Use axios instance like CRM does (auto handles baseURL)
+            const response = await soApi.get(`/api/download/${encodeURIComponent(fileName)}`, {
+                responseType: "blob",
             });
 
-            if (!response.ok) {
-                throw new Error("Failed to fetch file");
-            }
+            const blob = response.data;
+            const downloadFileName = filePath.split("/").pop() || `download.pdf`;
 
-            const blob = await response.blob();
-            const contentType = response.headers.get("content-type") || "application/octet-stream";
-            const extension = contentType.split("/")[1] || "file";
-            const downloadFileName = filePath.split("/").pop() || `download.${extension}`;
-
+            const url = window.URL.createObjectURL(blob);
             const link = document.createElement("a");
-            link.href = window.URL.createObjectURL(blob);
+            link.href = url;
             link.download = downloadFileName;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            window.URL.revokeObjectURL(link.href);
+            window.URL.revokeObjectURL(url);
 
             toast.success("Download started!");
         } catch (err) {

@@ -159,6 +159,7 @@ export const statesAndCities = {
     "Panipat",
     "Ambala",
     "Hisar",
+    "Palwal",
     "Rohtak",
     "Karnal",
     "Bhiwani",

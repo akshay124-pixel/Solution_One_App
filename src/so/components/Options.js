@@ -663,6 +663,7 @@ export const statesAndCities = {
     "Faridabad",
     "Tohna",
     "Panipat",
+    "Palwal",
     "Ambala",
     "Hisar",
     "Rohtak",

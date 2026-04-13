@@ -215,6 +215,7 @@ Fulfillment Date: ${entry.fulfillmentDate
         : "N/A"
       }
 Remarks: ${entry.remarks || "N/A"}
+Product Remarks: ${entry.productRemarks || "N/A"}
 Remarks By Production: ${entry.remarksByProduction || "N/A"}
 Remarks By Accounts: ${entry.remarksByAccounts || "N/A"}
 Remarks By Billing: ${entry.remarksByBilling || "N/A"}
@@ -535,6 +536,11 @@ Created By: ${getCreatedByName(entry.createdBy)}
                 )}
               </tbody>
             </table>
+            {entry.productRemarks && (
+              <div style={{ marginTop: "8px", padding: "6px 10px", background: "#f8fafc", borderRadius: "6px", fontSize: "11px", color: "#475569" }}>
+                <strong>Product Remarks:</strong> {entry.productRemarks}
+              </div>
+            )}
           </div>
 
           {/* Financial */}
@@ -574,11 +580,12 @@ Created By: ${getCreatedByName(entry.createdBy)}
           </div>
 
           {/* Remarks */}
-          {(entry.remarks || entry.remarksByProduction || entry.remarksByAccounts || entry.remarksByBilling || entry.remarksByInstallation || entry.verificationRemarks) && (
+          {(entry.remarks || entry.productRemarks || entry.remarksByProduction || entry.remarksByAccounts || entry.remarksByBilling || entry.remarksByInstallation || entry.verificationRemarks) && (
             <div className="pdf-section">
               <div className="pdf-section-title">Official Remarks</div>
               <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
                 {entry.remarks && <div className="pdf-item"><strong>General:</strong> {entry.remarks}</div>}
+                {entry.productRemarks && <div className="pdf-item"><strong>Product Remarks:</strong> {entry.productRemarks}</div>}
                 {entry.remarksByProduction && <div className="pdf-item"><strong>Production:</strong> {entry.remarksByProduction}</div>}
                 {entry.remarksByAccounts && <div className="pdf-item"><strong>Accounts:</strong> {entry.remarksByAccounts}</div>}
                 {entry.remarksByBilling && <div className="pdf-item"><strong>Billing:</strong> {entry.remarksByBilling}</div>}
@@ -929,6 +936,11 @@ Created By: ${getCreatedByName(entry.createdBy)}
                 ))
               ) : (
                 <p style={{ color: "#555" }}>No products available.</p>
+              )}
+              {entry.productRemarks && (
+                <div style={{ marginTop: "1rem", padding: "0.75rem 1rem", background: "#f1f5f9", borderRadius: "0.75rem", fontSize: "0.95rem", color: "#475569", borderLeft: "4px solid #6366f1" }}>
+                  <strong>Product Remarks:</strong> {entry.productRemarks}
+                </div>
               )}
             </Accordion.Body>
           </Accordion.Item>

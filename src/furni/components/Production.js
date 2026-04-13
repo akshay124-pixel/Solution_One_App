@@ -591,6 +591,11 @@ const Production = () => {
                           </Card.Body>
                         </Card>
                       )) : <p style={{ color: "#555" }}>No products available.</p>}
+                      {viewOrder.productRemarks && (
+                        <div style={{ margin: "0.75rem 0", padding: "0.75rem 1rem", background: "#f1f5f9", borderRadius: "0.75rem", fontSize: "0.95rem", color: "#475569", borderLeft: "4px solid #6366f1" }}>
+                          <strong>Product Remarks:</strong> {viewOrder.productRemarks}
+                        </div>
+                      )}
                       <div style={{ marginTop: "0.5rem" }}><strong>Total Unit Price:</strong> ₹{Array.isArray(viewOrder.products) ? viewOrder.products.reduce((sum, p) => sum + (p.unitPrice || 0) * (p.qty || 0), 0).toFixed(2) : "0.00"}</div>
                     </Accordion.Body>
                   </Accordion.Item>

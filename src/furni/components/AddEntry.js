@@ -20,7 +20,7 @@ function AddEntry({ onSubmit, onClose }) {
   const [formData, setFormData] = useState({
     soDate: new Date().toISOString().split("T")[0], name: "", city: "", state: "", pinCode: "", contactNo: "", alterno: "",
     customerEmail: "", customername: "", report: "", freightcs: "", freightstatus: "Extra", installchargesstatus: "Extra",
-    gstno: "", installation: "", remarks: "", salesPerson: "", company: "", shippingAddress: "", billingAddress: "",
+    gstno: "", installation: "", remarks: "", productRemarks: "", salesPerson: "", company: "", shippingAddress: "", billingAddress: "",
     sameAddress: false, orderType: "B2C", paymentCollected: "", paymentMethod: "", paymentDue: "", neftTransactionId: "",
     chequeId: "", gemOrderNumber: "", deliveryDate: "", demoDate: "", paymentTerms: "", dispatchFrom: "", fulfillingStatus: "Pending",
   });
@@ -382,6 +382,19 @@ function AddEntry({ onSubmit, onClose }) {
               <div style={{ alignSelf: "stretch", marginTop: "32px" }}>
                 <button type="button" onClick={addProduct} style={{ width: "100%", padding: "0.75rem", background: "linear-gradient(135deg, #7c3aed, #3b82f6)", color: "#ffffff", border: "none", borderRadius: "0.75rem", cursor: "pointer", fontSize: "calc(0.9rem + 0.2vw)", fontWeight: "600", transition: "transform 0.1s ease, background 0.2s ease" }} aria-label="Add Product">Add +</button>
               </div>
+            </div>
+            {/* Product Remarks — single shared field below all product inputs */}
+            <div style={{ marginTop: "0.75rem" }}>
+              <label style={{ fontSize: "calc(0.9rem + 0.2vw)", fontWeight: "600", color: "#475569", marginBottom: "0.5rem", display: "block" }}>Product Remarks</label>
+              <textarea
+                name="productRemarks"
+                value={formData.productRemarks}
+                onChange={handleChange}
+                placeholder="Enter product-related remarks (applies to all products in this order)"
+                rows={3}
+                style={{ width: "100%", padding: "0.75rem", border: "1px solid #e2e8f0", borderRadius: "0.75rem", backgroundColor: "#f8fafc", fontSize: "calc(0.9rem + 0.2vw)", color: "#1e293b", resize: "vertical", fontFamily: "inherit" }}
+                aria-label="Product Remarks"
+              />
             </div>
             {products.length > 0 && (
               <div style={{ marginTop: "1rem" }}>

@@ -56,7 +56,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
     salesPerson: "", report: "", company: "Promark", transporterDetails: "", receiptDate: "", shippingAddress: "", billingAddress: "",
     invoiceNo: "", invoiceDate: "", fulfillingStatus: "Pending", remarksByProduction: "", remarksByAccounts: "", paymentReceived: "Not Received",
     billNumber: "", piNumber: "", remarksByBilling: "", verificationRemarks: "", billStatus: "Pending", completionStatus: "In Progress",
-    fulfillmentDate: "", remarks: "", stamp: "Not Received", installationReport: "No", stockStatus: "In Stock", sostatus: "Pending for Approval", createdBy: "",
+    fulfillmentDate: "", remarks: "", productRemarks: "", stamp: "Not Received", installationReport: "No", stockStatus: "In Stock", sostatus: "Pending for Approval", createdBy: "",
   }), []);
 
   const initialUpdateData = useMemo(() => ({ sostatus: "Pending for Approval", remarks: "" }), []);
@@ -107,7 +107,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
         verificationRemarks: entryToEdit.verificationRemarks || "", billStatus: entryToEdit.billStatus || "Pending",
         stockStatus: entryToEdit.stockStatus || "In Stock", completionStatus: entryToEdit.completionStatus || "In Progress",
         fulfillmentDate: entryToEdit.fulfillmentDate ? new Date(entryToEdit.fulfillmentDate).toISOString().split("T")[0] : "",
-        remarks: entryToEdit.remarks || "", sostatus: entryToEdit.sostatus || "Pending for Approval",
+        remarks: entryToEdit.remarks || "", productRemarks: entryToEdit.productRemarks || "", sostatus: entryToEdit.sostatus || "Pending for Approval",
         createdBy: entryToEdit.createdBy && typeof entryToEdit.createdBy === "object" ? entryToEdit.createdBy.username || "Unknown" : typeof entryToEdit.createdBy === "string" ? entryToEdit.createdBy : "",
       };
       setFormData(newFormData);
@@ -409,6 +409,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
         <Form.Group controlId="remarksByBilling"><Form.Label>✏️ Remarks by Billing</Form.Label><Form.Control as="textarea" rows={2} {...register("remarksByBilling")} onChange={(e) => debouncedHandleInputChange("remarksByBilling", e.target.value)} placeholder="Enter billing remarks" /></Form.Group>
         <Form.Group controlId="verificationRemarks"><Form.Label>✏️ Verification Remarks</Form.Label><Form.Control as="textarea" rows={2} {...register("verificationRemarks")} onChange={(e) => debouncedHandleInputChange("verificationRemarks", e.target.value)} placeholder="Enter verification remarks" /></Form.Group>
         <Form.Group controlId="remarks"><Form.Label>✏️ Remarks</Form.Label><Form.Control as="textarea" rows={2} {...register("remarks")} onChange={(e) => debouncedHandleInputChange("remarks", e.target.value)} placeholder="Enter remarks" /></Form.Group>
+        <Form.Group controlId="productRemarks"><Form.Label>📝 Product Remarks</Form.Label><Form.Control as="textarea" rows={3} {...register("productRemarks")} onChange={(e) => debouncedHandleInputChange("productRemarks", e.target.value)} placeholder="Enter product-related remarks" /></Form.Group>
       </FormSection>
     </Form>
   );

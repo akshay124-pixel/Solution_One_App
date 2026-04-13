@@ -931,6 +931,7 @@ export const salesPersonlist = [
   "Gem Team",
   "Gurnam Bhullar",
   "Harish Kumar",
+  "Heena Mehra",
   "Heera Singh Daspa",
   "Himanshu Ghandhi",
   "Harpeet Singh",

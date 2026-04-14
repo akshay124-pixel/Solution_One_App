@@ -277,9 +277,22 @@ const Production = () => {
       if (!processedPath.includes("Uploads") && !processedPath.startsWith("http")) {
         processedPath = `/Uploads/${processedPath.startsWith("/") ? processedPath.slice(1) : processedPath}`;
       }
-      const FURNI_ORIGIN = (() => { try { return new URL(process.env.REACT_APP_FURNI_URL || "http://localhost:5050/api/furni").origin; } catch { return "http://localhost:5050"; } })();
-      const fileUrl = `${FURNI_ORIGIN}${processedPath.startsWith("/") ? "" : "/"}${processedPath}`;
-      const response = await fetch(fileUrl, { method: "GET" });
+      
+      const fileUrl = `${(process.env.REACT_APP_FURNI_URL || "http://localhost:5050/api/furni")}${processedPath.startsWith("/") ? "" : "/"}${processedPath}`;
+
+      // Validate file URL
+      if (!fileUrl || fileUrl === (process.env.REACT_APP_FURNI_URL || "http://localhost:5050/api/furni") + "/") {
+        toast.error("Invalid file path provided!");
+        return;
+      }
+
+      const response = await fetch(fileUrl, { 
+        method: "GET",
+        headers: {
+          Accept: "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        },
+      });
+
       if (!response.ok) throw new Error(`Server error: ${response.status}`);
       const blob = await response.blob();
       const fileName = filePath.split("/").pop() || `order_${viewOrder?.orderId || "unknown"}.file`;

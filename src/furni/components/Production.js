@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import furniApi from "../axiosSetup";
 import { toast } from "react-toastify";
 import { Button, Modal, Form, Spinner, Badge } from "react-bootstrap";
-import { Accordion, Card } from "react-bootstrap";import { FaEye } from "react-icons/fa";
+import { Accordion, Card } from "react-bootstrap"; import { FaEye } from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { exportToExcel } from "../../utils/excelHelper";
 import "../../App.css";
@@ -277,25 +277,20 @@ const Production = () => {
       if (!processedPath.includes("Uploads") && !processedPath.startsWith("http")) {
         processedPath = `/Uploads/${processedPath.startsWith("/") ? processedPath.slice(1) : processedPath}`;
       }
-      
-      const fileUrl = `${(process.env.REACT_APP_FURNI_URL || "http://localhost:5050/api/furni")}${processedPath.startsWith("/") ? "" : "/"}${processedPath}`;
 
-      // Validate file URL
-      if (!fileUrl || fileUrl === (process.env.REACT_APP_FURNI_URL || "http://localhost:5050/api/furni") + "/") {
-        toast.error("Invalid file path provided!");
-        return;
-      }
-
-      const response = await fetch(fileUrl, { 
-        method: "GET",
+      const endpoint = processedPath.startsWith("/") ? processedPath : `/${processedPath}`;
+      const response = await furniApi.get(endpoint, {
+        responseType: "blob",
         headers: {
           Accept: "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        },
+        }
       });
 
-      if (!response.ok) throw new Error(`Server error: ${response.status}`);
-      const blob = await response.blob();
-      const fileName = filePath.split("/").pop() || `order_${viewOrder?.orderId || "unknown"}.file`;
+      const blob = response.data;
+      const contentType = response.headers["content-type"] || "application/octet-stream";
+      const extension = contentType.split("/")[1] || "file";
+      const fileName = filePath.split("/").pop() || `order_${viewOrder?.orderId || "unknown"}.${extension}`;
+
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
       link.download = fileName;

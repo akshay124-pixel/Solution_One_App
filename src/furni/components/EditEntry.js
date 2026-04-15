@@ -382,7 +382,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
           {entryToEdit?.poFilePath && !poFile && (
             <div style={{ marginTop: "0.75rem", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <span style={{ color: "#64748b" }}>Current file:</span>
-              <button type="button" onClick={() => handleDownload(entryToEdit.poFilePath, "")} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "20px", background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", fontWeight: "600", fontSize: "0.85rem", border: "none", boxShadow: "0 2px 5px rgba(0,0,0,0.2)", cursor: "pointer" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}><FaDownload /> Download</button>
+              <button type="button" onClick={() => handleDownload(entryToEdit.poFilePath, "SalesOrder")} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "20px", background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", fontWeight: "600", fontSize: "0.85rem", border: "none", boxShadow: "0 2px 5px rgba(0,0,0,0.2)", cursor: "pointer" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}><FaDownload /> Download</button>
             </div>
           )}
           {poFileError && (<div style={{ color: "#ef4444", fontSize: "0.85rem", marginTop: "0.5rem", fontWeight: "500" }}>{poFileError}</div>)}

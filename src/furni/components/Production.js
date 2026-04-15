@@ -270,7 +270,7 @@ const Production = () => {
 
   const isValidPoFilePath = (filePath) => filePath && typeof filePath === "string" && filePath.trim() !== "" && filePath !== "N/A" && filePath !== "/";
 
-  const handleDownload = async (filePath) => {
+  const handleDownload = async (filePath, label = "SalesOrder_POFile") => {
     if (!isValidPoFilePath(filePath)) { toast.error("No valid file available to download!"); return; }
     try {
       const filename = filePath.split("/").pop();
@@ -281,10 +281,12 @@ const Production = () => {
       });
 
       const blob = response.data;
-      const fileName = filename;
+      const ext = filename.includes(".") ? "." + filename.split(".").pop() : "";
+      const orderSlug = viewOrder?.orderId ? `Order_${viewOrder.orderId}` : "Furni";
+      const downloadFilename = `${orderSlug}_Furni_${label}${ext}`;
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
-      link.download = fileName;
+      link.download = downloadFilename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -567,7 +569,7 @@ const Production = () => {
                       {viewOrder.poFilePath && (
                         <div style={{ marginTop: "1rem" }}>
                           <strong>📎 Attachment: </strong>
-                          <Button size="sm" onClick={() => handleDownload(viewOrder.poFilePath)} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px" }}>Download 📥</Button>
+                          <Button size="sm" onClick={() => handleDownload(viewOrder.poFilePath, "SalesOrder_POFile")} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px" }}>Download 📥</Button>
                         </div>
                       )}
                     </Accordion.Body>
@@ -614,7 +616,7 @@ const Production = () => {
                       {viewOrder.installationFile && (
                         <div style={{ marginTop: "1rem" }}>
                           <strong>Installation Report: </strong>
-                          <Button size="sm" onClick={() => handleDownload(viewOrder.installationFile)} style={{ background: "linear-gradient(135deg, #17a2b8, #138496)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px" }}>Download Report 📥</Button>
+                          <Button size="sm" onClick={() => handleDownload(viewOrder.installationFile, "SalesOrder_InstallationReport")} style={{ background: "linear-gradient(135deg, #17a2b8, #138496)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px" }}>Download Report 📥</Button>
                         </div>
                       )}
                     </Accordion.Body>

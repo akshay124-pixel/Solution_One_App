@@ -640,13 +640,11 @@ function ViewEntry({ isOpen, onClose, entry, role }) {
         );
 
         const blob = response.data;
-        const ext = filename.includes(".")
-          ? "." + filename.split(".").pop()
-          : "";
-        let downloadFilename = `${entry.customerName
+        const ext = filename.includes(".") ? "." + filename.split(".").pop() : "";
+        const customerSlug = entry.customerName
           ? entry.customerName.replace(/[^a-zA-Z0-9]/g, "_")
-          : "entry"
-          }_attachment${ext}`;
+          : "CRM";
+        const downloadFilename = `${customerSlug}_CRM_Attachment${ext}`;
 
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");

@@ -33,7 +33,7 @@ function ViewEntry({ isOpen, onClose, entry }) {
       filePath !== "/"
     );
   };
-  const handleDownload = async (filePath) => {
+  const handleDownload = async (filePath, label = "Attachment") => {
     const targetPath = filePath || entry?.poFilePath;
 
     if (!isValidPoFilePath(targetPath)) {
@@ -42,7 +42,6 @@ function ViewEntry({ isOpen, onClose, entry }) {
     }
 
     try {
-      // Extract just the filename from whatever path is stored
       const filename = targetPath.split("/").pop();
       if (!filename) {
         toast.error("Invalid file path provided!");
@@ -55,11 +54,13 @@ function ViewEntry({ isOpen, onClose, entry }) {
       );
 
       const blob = response.data;
-      const fileName = filename;
+      const ext = filename.includes(".") ? "." + filename.split(".").pop() : "";
+      const orderSlug = entry?.orderId ? `Order_${entry.orderId}` : "Furni";
+      const downloadFilename = `${orderSlug}_Furni_${label}${ext}`;
 
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
-      link.download = fileName;
+      link.download = downloadFilename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -1235,7 +1236,7 @@ Created By: ${getCreatedByName(entry.createdBy)}
                     <Button
                       variant="outline-primary"
                       size="sm"
-                      onClick={() => handleDownload(entry.installationFile)}
+                      onClick={() => handleDownload(entry.installationFile, "SalesOrder_InstallationReport")}
                       style={{
                         background: "linear-gradient(135deg, #2575fc, #6a11cb)",
                         padding: "6px 14px",
@@ -1312,7 +1313,7 @@ Created By: ${getCreatedByName(entry.createdBy)}
             <Button
               variant="outline-primary"
               size="sm"
-              onClick={() => handleDownload(entry.poFilePath)}
+              onClick={() => handleDownload(entry.poFilePath, "SalesOrder_POFile")}
               style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", padding: "6px 14px", borderRadius: "20px", display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", fontWeight: "600", color: "#ffffff", border: "none", boxShadow: "0 3px 8px rgba(0,0,0,0.2)", transition: "transform 0.2s ease, box-shadow 0.2s ease", cursor: "pointer" }}
               onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px) scale(1.02)"; e.currentTarget.style.boxShadow = "0 5px 12px rgba(0,0,0,0.3)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0) scale(1)"; e.currentTarget.style.boxShadow = "0 3px 8px rgba(0,0,0,0.2)"; }}

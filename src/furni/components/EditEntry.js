@@ -214,7 +214,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
     setFormData((prev) => ({ ...prev, products: final }));
   };
 
-  const handleDownload = async (filePath) => {
+  const handleDownload = async (filePath, label = "SalesOrder_Attachment") => {
     if (!filePath || typeof filePath !== "string") { toast.error("Invalid file path!"); return; }
     try {
       const filename = filePath.split("/").pop();
@@ -222,10 +222,12 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
 
       const response = await furniApi.get(`/api/download/${encodeURIComponent(filename)}`, { responseType: "blob" });
       const blob = response.data;
-      const fileName = filename;
+      const ext = filename.includes(".") ? "." + filename.split(".").pop() : "";
+      const orderSlug = entryToEdit?.orderId ? `Order_${entryToEdit.orderId}` : "Furni";
+      const downloadFilename = `${orderSlug}_Furni_${label}${ext}`;
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
-      link.download = fileName;
+      link.download = downloadFilename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -358,7 +360,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
           {entryToEdit?.installationFile && !installationFile && (
             <div style={{ marginTop: "0.75rem", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <span style={{ color: "#64748b" }}>Current file:</span>
-              <button type="button" onClick={() => handleDownload(entryToEdit.installationFile)} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "20px", background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", fontWeight: "600", fontSize: "0.85rem", border: "none", boxShadow: "0 2px 5px rgba(0,0,0,0.2)", cursor: "pointer" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}><FaDownload /> Download Report</button>
+              <button type="button" onClick={() => handleDownload(entryToEdit.installationFile, "SalesOrder_InstallationReport")} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "20px", background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", fontWeight: "600", fontSize: "0.85rem", border: "none", boxShadow: "0 2px 5px rgba(0,0,0,0.2)", cursor: "pointer" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}><FaDownload /> Download Report</button>
             </div>
           )}
           {installationFileError && (<div style={{ color: "#ef4444", fontSize: "0.85rem", marginTop: "0.5rem", fontWeight: "500" }}>{installationFileError}</div>)}
@@ -380,7 +382,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
           {entryToEdit?.poFilePath && !poFile && (
             <div style={{ marginTop: "0.75rem", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <span style={{ color: "#64748b" }}>Current file:</span>
-              <button type="button" onClick={() => handleDownload(entryToEdit.poFilePath)} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "20px", background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", fontWeight: "600", fontSize: "0.85rem", border: "none", boxShadow: "0 2px 5px rgba(0,0,0,0.2)", cursor: "pointer" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}><FaDownload /> Download</button>
+              <button type="button" onClick={() => handleDownload(entryToEdit.poFilePath, "SalesOrder_POFile")} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "20px", background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", fontWeight: "600", fontSize: "0.85rem", border: "none", boxShadow: "0 2px 5px rgba(0,0,0,0.2)", cursor: "pointer" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}><FaDownload /> Download</button>
             </div>
           )}
           {poFileError && (<div style={{ color: "#ef4444", fontSize: "0.85rem", marginTop: "0.5rem", fontWeight: "500" }}>{poFileError}</div>)}

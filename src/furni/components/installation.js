@@ -37,7 +37,7 @@ function Installation() {
   const [installPdfLoading, setInstallPdfLoading] = useState(false);
   const installPdfRef = useRef(null);
 
-  const handleDownload = async (filePath) => {
+  const handleDownload = async (filePath, label = "InstallationReport") => {
     if (!filePath || typeof filePath !== "string") { toast.error("Invalid file path!"); return; }
     try {
       const filename = filePath.split("/").pop();
@@ -45,10 +45,12 @@ function Installation() {
 
       const response = await furniApi.get(`/api/download/${encodeURIComponent(filename)}`, { responseType: "blob" });
       const blob = response.data;
-      const fileName = filename;
+      const ext = filename.includes(".") ? "." + filename.split(".").pop() : "";
+      const orderSlug = viewOrder?.orderId ? `Order_${viewOrder.orderId}` : "Furni";
+      const downloadFilename = `${orderSlug}_Furni_${label}${ext}`;
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
-      link.download = fileName;
+      link.download = downloadFilename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

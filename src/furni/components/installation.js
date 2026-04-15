@@ -47,7 +47,7 @@ function Installation() {
       const blob = response.data;
       const ext = filename.includes(".") ? "." + filename.split(".").pop() : "";
       const orderSlug = viewOrder?.orderId ? `Order_${viewOrder.orderId}` : "Furni";
-      const downloadFilename = `${orderSlug}_Furni${label ? "_" + label : ""}${ext}`;
+      const downloadFilename = `${orderSlug}_${label ? "_" + label : ""}${ext}`;
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
       link.download = downloadFilename;
@@ -426,7 +426,7 @@ function Installation() {
                     {viewOrder.installationFile && (
                       <div style={{ marginTop: "1rem", display: "flex", alignItems: "center", gap: "10px" }}>
                         <strong>Installation Report:</strong>
-                        <Button size="sm" onClick={() => handleDownload(viewOrder.installationFile)} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 14px", borderRadius: "20px", background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", fontWeight: "600", fontSize: "0.85rem", border: "none", boxShadow: "0 3px 8px rgba(0,0,0,0.2)" }}>
+                        <Button size="sm" onClick={() => handleDownload(viewOrder.installationFile)} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 14px", borderRadius: "20px", background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", fontWeight: "600", fontSize: "0.85rem", border: "none", boxShadow: "0 3px 8px rgba(37,117,252,0.35)", transition: "all 0.25s ease" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px) scale(1.04)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(37,117,252,0.5)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0) scale(1)"; e.currentTarget.style.boxShadow = "0 3px 8px rgba(37,117,252,0.35)"; }} onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.97)"; }} onMouseUp={(e) => { e.currentTarget.style.transform = "translateY(-2px) scale(1.04)"; }}>
                           <FaDownload size={12} /> Download Report
                         </Button>
                       </div>
@@ -525,7 +525,7 @@ function Installation() {
             {currentFile && (
               <div style={{ marginBottom: "20px", padding: "10px", background: "#eef2f7", borderRadius: "8px", borderLeft: "4px solid #2575fc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ fontWeight: "600", marginRight: "10px", color: "#333" }}>Current Report:</span>
-                <Button size="sm" onClick={() => handleDownload(currentFile)} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 14px", borderRadius: "20px", background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", fontWeight: "600", fontSize: "0.85rem", border: "none", boxShadow: "0 3px 8px rgba(0,0,0,0.2)", transition: "all 0.3s ease" }}>
+                <Button size="sm" onClick={() => handleDownload(currentFile)} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 14px", borderRadius: "20px", background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", fontWeight: "600", fontSize: "0.85rem", border: "none", boxShadow: "0 3px 8px rgba(37,117,252,0.35)", transition: "all 0.25s ease" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px) scale(1.04)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(37,117,252,0.5)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0) scale(1)"; e.currentTarget.style.boxShadow = "0 3px 8px rgba(37,117,252,0.35)"; }} onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.97)"; }} onMouseUp={(e) => { e.currentTarget.style.transform = "translateY(-2px) scale(1.04)"; }}>
                   <FaDownload size={12} />Download File
                 </Button>
               </div>

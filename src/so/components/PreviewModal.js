@@ -24,12 +24,10 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
       typeof filePath === "string" &&
       filePath.trim() !== "" &&
       filePath !== "N/A" &&
-      filePath !== "/" &&
-      filePath.includes("/Uploads/")
+      filePath !== "/"
     );
   };
-  const handleDownload = async (filePath) => {
-    // Determine path to use: passed arg or default to poFilePath if it's the specific PO check
+  const handleDownload = async (filePath, label = "SalesOrder_POFile") => {
     const targetPath = filePath || entry?.poFilePath;
 
     if (!isValidPoFilePath(targetPath)) {
@@ -38,53 +36,20 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
     }
 
     try {
-      // Extract filename from path
       const fileName = targetPath.split("/").pop();
       if (!fileName) {
         toast.error("Invalid file name!");
         return;
       }
 
-      // ✅ Use authenticated download endpoint with soApi
-      const fileUrl = `/api/download/${encodeURIComponent(fileName)}`;
-
-      const response = await soApi.get(fileUrl, {
+      const response = await soApi.get(`/api/download/${encodeURIComponent(fileName)}`, {
         responseType: "blob",
-        headers: {
-          Accept:
-            "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        },
       });
 
-      if (!response.status === 200) {
-        throw new Error(
-          `Server error: ${response.status} ${response.statusText}`,
-        );
-      }
-
-      const contentType = response.headers["content-type"];
-      const validTypes = [
-        "application/pdf",
-        "image/png",
-        "image/jpeg",
-        "image/jpg",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/vnd.ms-excel",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      ];
-
-      if (!contentType || !validTypes.includes(contentType)) {
-        throw new Error("Invalid file type returned from server!");
-      }
-
       const blob = response.data;
-
-      // ✅ FileName fix
-      const extension = contentType.split("/")[1] || "file";
-      const downloadFileName =
-        targetPath.split("/").pop() ||
-        `order_${entry.orderId || "unknown"}.${extension}`;
+      const ext = fileName.includes(".") ? "." + fileName.split(".").pop() : "";
+      const orderSlug = entry?.orderId ? `Order_${entry.orderId}` : "SO";
+      const downloadFileName = `${orderSlug}_SO_${label}${ext}`;
 
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
@@ -92,7 +57,7 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(link.href)
+      window.URL.revokeObjectURL(link.href);
 
       toast.success("File download started!");
     } catch (err) {

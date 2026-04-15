@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { Copy, Download, FileText } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import furniApi from "../axiosSetup";
 
 function ViewEntry({ isOpen, onClose, entry }) {
   const [copied, setCopied] = useState(false);
@@ -33,8 +34,6 @@ function ViewEntry({ isOpen, onClose, entry }) {
     );
   };
   const handleDownload = async (filePath) => {
-    // Determine path to use: passed arg or default to poFilePath if it's the specific PO check
-    // If filePath is passed (e.g. installation file), use it directly. Otherwise check poFilePath.
     const targetPath = filePath || entry?.poFilePath;
 
     if (!isValidPoFilePath(targetPath)) {
@@ -43,57 +42,20 @@ function ViewEntry({ isOpen, onClose, entry }) {
     }
 
     try {
-      // Ensure path points to Uploads directory if not already there
-      let processedPath = targetPath;
-      if (!processedPath.includes("Uploads") && !processedPath.startsWith("http")) {
-        processedPath = `/Uploads/${processedPath.startsWith("/") ? processedPath.slice(1) : processedPath}`;
-      }
-
-      const fileUrl = `${(process.env.REACT_APP_FURNI_URL || "http://localhost:5050/api/furni")}${processedPath.startsWith("/") ? "" : "/"}${processedPath}`;
-
-      // Validate file URL
-      if (!fileUrl || fileUrl === (process.env.REACT_APP_FURNI_URL || "http://localhost:5050/api/furni") + "/") {
+      // Extract just the filename from whatever path is stored
+      const filename = targetPath.split("/").pop();
+      if (!filename) {
         toast.error("Invalid file path provided!");
         return;
       }
 
-      const response = await fetch(fileUrl, {
-        method: "GET",
-        headers: {
-          Accept:
-            "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        },
-      });
+      const response = await furniApi.get(
+        `/api/download/${encodeURIComponent(filename)}`,
+        { responseType: "blob" }
+      );
 
-      if (!response.ok) {
-        throw new Error(
-          `Server error: ${response.status} ${response.statusText}`
-        );
-      }
-
-      const contentType = response.headers.get("content-type");
-      const validTypes = [
-        "application/pdf",
-        "image/png",
-        "image/jpeg",
-        "image/jpg",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/vnd.ms-excel",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      ];
-
-      if (!contentType || !validTypes.includes(contentType)) {
-        throw new Error("Invalid file type returned from server!");
-      }
-
-      const blob = await response.blob();
-
-      // ✅ FileName fix
-      const extension = contentType.split("/")[1] || "file";
-      const fileName =
-        targetPath.split("/").pop() ||
-        `order_${entry.orderId || "unknown"}.${extension}`;
+      const blob = response.data;
+      const fileName = filename;
 
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);

@@ -273,24 +273,15 @@ const Production = () => {
   const handleDownload = async (filePath) => {
     if (!isValidPoFilePath(filePath)) { toast.error("No valid file available to download!"); return; }
     try {
-      let processedPath = filePath;
-      if (!processedPath.includes("Uploads") && !processedPath.startsWith("http")) {
-        processedPath = `/Uploads/${processedPath.startsWith("/") ? processedPath.slice(1) : processedPath}`;
-      }
+      const filename = filePath.split("/").pop();
+      if (!filename) { toast.error("Invalid file path!"); return; }
 
-      const endpoint = processedPath.startsWith("/") ? processedPath : `/${processedPath}`;
-      const response = await furniApi.get(endpoint, {
+      const response = await furniApi.get(`/api/download/${encodeURIComponent(filename)}`, {
         responseType: "blob",
-        headers: {
-          Accept: "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        }
       });
 
       const blob = response.data;
-      const contentType = response.headers["content-type"] || "application/octet-stream";
-      const extension = contentType.split("/")[1] || "file";
-      const fileName = filePath.split("/").pop() || `order_${viewOrder?.orderId || "unknown"}.${extension}`;
-
+      const fileName = filename;
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
       link.download = fileName;

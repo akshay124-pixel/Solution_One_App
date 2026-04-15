@@ -569,7 +569,7 @@ const Production = () => {
                       {viewOrder.poFilePath && (
                         <div style={{ marginTop: "1rem" }}>
                           <strong>📎 Attachment: </strong>
-                          <Button size="sm" onClick={() => handleDownload(viewOrder.poFilePath, "SalesOrder")} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px" }}>Download 📥</Button>
+                          <Button size="sm" onClick={() => handleDownload(viewOrder.poFilePath, "SalesOrder")} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px", transition: "all 0.25s ease", boxShadow: "0 3px 8px rgba(37,117,252,0.35)" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px) scale(1.04)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(37,117,252,0.5)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0) scale(1)"; e.currentTarget.style.boxShadow = "0 3px 8px rgba(37,117,252,0.35)"; }} onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.97)"; }} onMouseUp={(e) => { e.currentTarget.style.transform = "translateY(-2px) scale(1.04)"; }}>Download 📥</Button>
                         </div>
                       )}
                     </Accordion.Body>
@@ -616,7 +616,7 @@ const Production = () => {
                       {viewOrder.installationFile && (
                         <div style={{ marginTop: "1rem" }}>
                           <strong>Installation Report: </strong>
-                          <Button size="sm" onClick={() => handleDownload(viewOrder.installationFile, "SalesOrder_InstallationReport")} style={{ background: "linear-gradient(135deg, #17a2b8, #138496)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px" }}>Download Report 📥</Button>
+                          <Button size="sm" onClick={() => handleDownload(viewOrder.installationFile, "SalesOrder_InstallationReport")} style={{ background: "linear-gradient(135deg, #17a2b8, #138496)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px", transition: "all 0.25s ease", boxShadow: "0 3px 8px rgba(23,162,184,0.35)" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px) scale(1.04)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(23,162,184,0.5)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0) scale(1)"; e.currentTarget.style.boxShadow = "0 3px 8px rgba(23,162,184,0.35)"; }} onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.97)"; }} onMouseUp={(e) => { e.currentTarget.style.transform = "translateY(-2px) scale(1.04)"; }}>Download Report 📥</Button>
                         </div>
                       )}
                     </Accordion.Body>

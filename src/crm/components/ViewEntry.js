@@ -644,7 +644,7 @@ function ViewEntry({ isOpen, onClose, entry, role }) {
         const customerSlug = entry.customerName
           ? entry.customerName.replace(/[^a-zA-Z0-9]/g, "_")
           : "CRM";
-        const downloadFilename = `${customerSlug}_CRM_Attachment${ext}`;
+        const downloadFilename = `${customerSlug}_Attachment${ext}`;
 
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");

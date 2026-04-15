@@ -140,7 +140,7 @@ function ViewEntry({ isOpen, onClose, entry }) {
       filePath !== "/"
     );
   };
-  const handleDownload = async (filePath, label = "SalesOrder_POFile") => {
+  const handleDownload = async (filePath, label = "AV_EdTech") => {
     const targetPath = filePath || entry?.poFilePath;
 
     if (!isValidPoFilePath(targetPath)) {
@@ -639,7 +639,7 @@ function ViewEntry({ isOpen, onClose, entry }) {
           <Button
             variant="outline-primary"
             size="sm"
-            onClick={() => handleDownload(entry.poFilePath, "SalesOrder_POFile")}
+            onClick={() => handleDownload(entry.poFilePath, "AV_EdTech")}
             style={{
               background: "linear-gradient(135deg, #2575fc, #6a11cb)",
               padding: "6px 12px",

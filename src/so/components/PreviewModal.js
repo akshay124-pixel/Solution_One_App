@@ -27,7 +27,7 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
       filePath !== "/"
     );
   };
-  const handleDownload = async (filePath, label = "SalesOrder_POFile") => {
+  const handleDownload = async (filePath, label = "AV_EdTech") => {
     const targetPath = filePath || entry?.poFilePath;
 
     if (!isValidPoFilePath(targetPath)) {

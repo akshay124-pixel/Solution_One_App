@@ -460,32 +460,20 @@ function Installation() {
     }
 
     try {
-      // Extract filename from path
       const fileName = filePath.split("/").pop();
       if (!fileName) {
         toast.error("Invalid file name!");
         return;
       }
 
-      // ✅ Use authenticated download endpoint with soApi
-      const fileUrl = `/api/download/${encodeURIComponent(fileName)}`;
-      const response = await soApi.get(fileUrl, {
+      const response = await soApi.get(`/api/download/${encodeURIComponent(fileName)}`, {
         responseType: "blob",
-        headers: {
-          Accept:
-            "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        },
       });
 
-      if (!response.status === 200) {
-        throw new Error("Failed to fetch file");
-      }
-
       const blob = response.data;
-      const contentType =
-        response.headers.get("content-type") || "application/octet-stream";
-      const extension = contentType.split("/")[1] || "file";
-      const downloadFileName = filePath.split("/").pop() || `download.${extension}`;
+      const ext = fileName.includes(".") ? "." + fileName.split(".").pop() : "";
+      const orderSlug = viewOrder?.orderId ? `Order_${viewOrder.orderId}` : "SO";
+      const downloadFileName = `${orderSlug}_SO_SalesOrder_InstallationReport${ext}`;
 
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
@@ -493,7 +481,7 @@ function Installation() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(link.href)
+      window.URL.revokeObjectURL(link.href);
 
       toast.success("Download started!");
     } catch (err) {

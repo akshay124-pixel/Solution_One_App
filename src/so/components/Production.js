@@ -321,7 +321,7 @@ const Production = () => {
     return acc;
   }, {});
 
-  // Download Po Fie
+  // Download Po File
   const handleDownload = useCallback(async () => {
     try {
       if (!viewOrder?.poFilePath) {
@@ -329,53 +329,20 @@ const Production = () => {
         return;
       }
 
-      // Extract filename from path
       const fileName = viewOrder.poFilePath.split("/").pop();
       if (!fileName) {
         toast.error("Invalid file name!");
         return;
       }
 
-      // ✅ Use authenticated download endpoint with soApi
-      const fileUrl = `/api/download/${encodeURIComponent(fileName)}`;
-
-      const response = await soApi.get(fileUrl, {
+      const response = await soApi.get(`/api/download/${encodeURIComponent(fileName)}`, {
         responseType: "blob",
-        headers: {
-          Accept:
-            "application/pdf,image/png,image/jpeg,image/jpg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        },
       });
 
-      if (!response.status === 200) {
-        throw new Error(
-          `Server error: ${response.status} ${response.statusText}`
-        );
-      }
-
-      const contentType = response.headers["content-type"];
-      const validTypes = [
-        "application/pdf",
-        "image/png",
-        "image/jpeg",
-        "image/jpg",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/vnd.ms-excel",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      ];
-
-      if (!contentType || !validTypes.includes(contentType)) {
-        throw new Error("Invalid file type returned from server!");
-      }
-
       const blob = response.data;
-
-      // ✅ FileName fix
-      const extension = contentType.split("/")[1] || "file";
-      const downloadFileName =
-        viewOrder.poFilePath.split("/").pop() ||
-        `order_${viewOrder.orderId || "unknown"}.${extension}`;
+      const ext = fileName.includes(".") ? "." + fileName.split(".").pop() : "";
+      const orderSlug = viewOrder?.orderId ? `Order_${viewOrder.orderId}` : "SO";
+      const downloadFileName = `${orderSlug}_SO_AV_EdTech${ext}`;
 
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
@@ -383,7 +350,7 @@ const Production = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(link.href)
+      window.URL.revokeObjectURL(link.href);
 
       toast.success("File download started!");
     } catch (err) {

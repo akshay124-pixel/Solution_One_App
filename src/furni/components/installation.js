@@ -47,7 +47,7 @@ function Installation() {
       const blob = response.data;
       const ext = filename.includes(".") ? "." + filename.split(".").pop() : "";
       const orderSlug = viewOrder?.orderId ? `Order_${viewOrder.orderId}` : "Furni";
-      const downloadFilename = `${orderSlug}_Furni_${label}${ext}`;
+      const downloadFilename = `${orderSlug}_Furni${label ? "_" + label : ""}${ext}`;
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
       link.download = downloadFilename;

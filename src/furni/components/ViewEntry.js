@@ -33,7 +33,7 @@ function ViewEntry({ isOpen, onClose, entry }) {
       filePath !== "/"
     );
   };
-  const handleDownload = async (filePath, label = "AV_EdTech") => {
+  const handleDownload = async (filePath, label = "") => {
     const targetPath = filePath || entry?.poFilePath;
 
     if (!isValidPoFilePath(targetPath)) {
@@ -56,7 +56,7 @@ function ViewEntry({ isOpen, onClose, entry }) {
       const blob = response.data;
       const ext = filename.includes(".") ? "." + filename.split(".").pop() : "";
       const orderSlug = entry?.orderId ? `Order_${entry.orderId}` : "Furni";
-      const downloadFilename = `${orderSlug}_Furni_${label}${ext}`;
+      const downloadFilename = `${orderSlug}_Furni${label ? "_" + label : ""}${ext}`;
 
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
@@ -1313,7 +1313,7 @@ Created By: ${getCreatedByName(entry.createdBy)}
             <Button
               variant="outline-primary"
               size="sm"
-              onClick={() => handleDownload(entry.poFilePath, "AV_EdTech")}
+              onClick={() => handleDownload(entry.poFilePath, "")}
               style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", padding: "6px 14px", borderRadius: "20px", display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", fontWeight: "600", color: "#ffffff", border: "none", boxShadow: "0 3px 8px rgba(0,0,0,0.2)", transition: "transform 0.2s ease, box-shadow 0.2s ease", cursor: "pointer" }}
               onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px) scale(1.02)"; e.currentTarget.style.boxShadow = "0 5px 12px rgba(0,0,0,0.3)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0) scale(1)"; e.currentTarget.style.boxShadow = "0 3px 8px rgba(0,0,0,0.2)"; }}

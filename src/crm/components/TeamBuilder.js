@@ -305,11 +305,11 @@ function TeamBuilder({ isOpen, onClose, userRole, userId }) {
                       user.assignedAdmins?.includes(userId);
                     const isAssignedToOthers =
                       user.assignedAdmins?.length > 0 && !isAssignedToCurrent;
-                    const isSuperAdmin = user.role === "superadmin";
+                    const isSuperAdmin = user.role === "superadmin" || user.role === "globaladmin";
                     const isAssignedBySuperAdmin = user.assignedAdmins?.some(
                       (adminId) => {
                         const admin = users.find((u) => u._id === adminId);
-                        return admin?.role === "superadmin";
+                        return admin?.role === "superadmin" || admin?.role === "globaladmin";
                       }
                     );
 
@@ -380,7 +380,7 @@ function TeamBuilder({ isOpen, onClose, userRole, userId }) {
                                     fontStyle: "italic",
                                   }}
                                 >
-                                  Superadmin (No Actions)
+                                  {user.role === "globaladmin" ? "Global Admin (No Actions)" : "Superadmin (No Actions)"}
                                 </Typography>
                               ) : isAssignedToCurrent ? (
                                 <motion.button

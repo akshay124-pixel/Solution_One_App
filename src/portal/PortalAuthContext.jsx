@@ -3,6 +3,7 @@ import React, {
   useContext, useMemo, useCallback, useRef,
 } from "react";
 import axios from "axios";
+import { fetchCSRFToken, clearCSRFToken, getCSRFToken, ensureCSRFToken } from "../utils/csrfService";
 
 const PORTAL_URL = process.env.REACT_APP_PORTAL_URL || "http://localhost:5050";
 
@@ -20,8 +21,21 @@ export const portalApi = axios.create({
   withCredentials: true,
 });
 
-portalApi.interceptors.request.use((config) => {
+portalApi.interceptors.request.use(async (config) => {
   if (_accessToken) config.headers.Authorization = `Bearer ${_accessToken}`;
+  
+  // Ensure CSRF token is available for state-changing requests
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(config.method?.toUpperCase())) {
+    try {
+      const csrfToken = getCSRFToken() || await ensureCSRFToken();
+      if (csrfToken) {
+        config.headers["X-CSRF-Token"] = csrfToken;
+      }
+    } catch (err) {
+      console.error("Failed to get CSRF token:", err);
+    }
+  }
+  
   return config;
 });
 
@@ -171,6 +185,9 @@ export const PortalAuthProvider = ({ children }) => {
 
     const initSession = async () => {
       try {
+        // Fetch CSRF token on app initialization
+        await fetchCSRFToken();
+        
         const result = await refreshPortalToken();
         if (result.success) {
           setUser(result.user);
@@ -196,6 +213,9 @@ export const PortalAuthProvider = ({ children }) => {
 
   const login = useCallback(async (email, password) => {
     try {
+      // Ensure CSRF token is available before login
+      await fetchCSRFToken();
+      
       const res = await portalApi.post("/api/auth/login", { email, password });
       if (res.data.success) {
         setPortalAccessToken(res.data.accessToken);
@@ -228,6 +248,10 @@ export const PortalAuthProvider = ({ children }) => {
     try {
       await portalApi.post("/api/auth/logout");
     } catch (_) {}
+    
+    // Clear CSRF token on logout
+    clearCSRFToken();
+    
     setPortalAccessToken(null);
     setUser(null);
     setIsAuthenticated(false);

@@ -198,7 +198,9 @@ const Production = () => {
   // Filter orders based on search query, status, and order type
   useEffect(() => {
     let filtered = orders.filter(
-      (order) => order.fulfillingStatus !== "Fulfilled"
+      (order) =>
+        order.fulfillingStatus !== "Fulfilled" &&
+        order.sostatus !== "Order on Hold Due to Low Price"
     );
     // Apply date range filter
     if (startDate || endDate) {

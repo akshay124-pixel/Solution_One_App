@@ -560,7 +560,7 @@ function Finish() {
       `${viewOrder.city || ""}, ${viewOrder.state || ""}` ||
       "N/A"
       }
-      Dispatch Status: ${viewOrder.dispatchStatus || "Not Dispatched"}
+      Dispatch Status: ${viewOrder.dispatchStatus === "Not Dispatched" ? "Pending Dispatched" : viewOrder.dispatchStatus || "Pending Dispatched"}
     `.trim();
     navigator.clipboard.writeText(orderText);
     setCopied(true);
@@ -968,7 +968,7 @@ function Finish() {
                 }}
               >
                 <option value="">All</option>
-                <option value="Not Dispatched">Not Dispatched</option>
+                <option value="Not Dispatched">Pending Dispatched</option>
                 <option value="Partially Shipped">Partially Shipped</option>
                 <option value="Dispatched">Dispatched</option>
                 <option value="Docket Awaited Dispatched">
@@ -1714,7 +1714,7 @@ function Finish() {
                     <div className="info-item">
                       <span className="info-label">Dispatch Status</span>
                       <div className="info-value">
-                        <InstallStatusBadge status={viewOrder.dispatchStatus || "Not Dispatched"} />
+                        <InstallStatusBadge status={viewOrder.dispatchStatus === "Not Dispatched" ? "Pending Dispatched" : viewOrder.dispatchStatus || "Pending Dispatched"} />
                       </div>
                     </div>
                     <InfoItem label="Dispatch From" value={viewOrder.dispatchFrom || "N/A"} />

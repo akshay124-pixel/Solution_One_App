@@ -436,7 +436,7 @@ const FilterSection = ({
         </StyledFormSelect>
         <Dropdown>
           <StyledDropdownToggle aria-controls={tableId}>
-            {approvalFilter === "All" ? "Approval Status" : approvalFilter}
+            {approvalFilter === "All" ? "Approval Status" : approvalFilter === "Order on Hold Due to Low Price" ? "On Hold" : approvalFilter}
           </StyledDropdownToggle>
           <StyledDropdownMenu>
             {[
@@ -451,7 +451,7 @@ const FilterSection = ({
                 key={option}
                 onClick={() => setApprovalFilter(option)}
               >
-                {option}
+                {option === "Order on Hold Due to Low Price" ? "On Hold" : option}
               </StyledDropdownItem>
             ))}
           </StyledDropdownMenu>
@@ -474,14 +474,14 @@ const FilterSection = ({
                 key={option}
                 onClick={() => setOrderTypeFilter(option)}
               >
-                {option}
+                {option === "Stock Out" ? "Stock" : option}
               </StyledDropdownItem>
             ))}
           </StyledDropdownMenu>
         </Dropdown>
         <Dropdown>
           <StyledDropdownToggle aria-controls={tableId}>
-            {dispatchFilter === "All" ? "Dispatch Status" : dispatchFilter}
+            {dispatchFilter === "All" ? "Dispatch Status" : dispatchFilter === "Not Dispatched" ? "Pending Dispatched" : dispatchFilter}
           </StyledDropdownToggle>
           <StyledDropdownMenu>
             {[
@@ -497,7 +497,7 @@ const FilterSection = ({
                 key={option}
                 onClick={() => setDispatchFilter(option)}
               >
-                {option}
+                {option === "Not Dispatched" ? "Pending Dispatched" : option}
               </StyledDropdownItem>
             ))}
           </StyledDropdownMenu>

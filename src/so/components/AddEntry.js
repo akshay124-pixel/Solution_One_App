@@ -25,6 +25,7 @@ function AddEntry({ onSubmit, onClose }) {
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState([]);
   const [poFile, setPoFile] = useState(null);
+  const [pwcFile, setPwcFile] = useState(null);
   const [fileError, setFileError] = useState("");
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -35,7 +36,7 @@ function AddEntry({ onSubmit, onClose }) {
     spec: "",
     qty: "",
     unitPrice: "",
-    gst: "",
+    gst: "18",
     modelNos: "",
     productCode: "",
     brand: "",
@@ -75,6 +76,7 @@ function AddEntry({ onSubmit, onClose }) {
     demoDate: "",
     paymentTerms: "",
     creditDays: "",
+    pwc: "",
     dispatchFrom: "",
     fulfillingStatus: "Pending",
   });
@@ -276,7 +278,7 @@ function AddEntry({ onSubmit, onClose }) {
           productType: "", // Set to empty for input
           size: "",
           spec: "",
-          gst: "",
+          gst: "18",
           modelNos: "",
           brand: "",
           warranty: formData.orderType === "B2G" ? "As Per Tender" : "1 Year",
@@ -295,7 +297,7 @@ function AddEntry({ onSubmit, onClose }) {
           ? {
             size: "",
             spec: "",
-            gst: "",
+            gst: "18",
             modelNos: "",
             brand: "",
             warranty:
@@ -347,11 +349,10 @@ function AddEntry({ onSubmit, onClose }) {
       !currentProduct.productType ||
       !currentProduct.qty ||
       !currentProduct.unitPrice ||
-      currentProduct.gst === "" ||
       !currentProduct.warranty
     ) {
       toast.error(
-        "Please fill all required product fields including GST and Warranty"
+        "Please fill all required product fields including Warranty"
       );
       return;
     }
@@ -373,13 +374,6 @@ function AddEntry({ onSubmit, onClose }) {
       toast.error("Quantity must be a positive number");
       return;
     }
-    if (
-      isNaN(Number(currentProduct.gst)) &&
-      currentProduct.gst !== "including"
-    ) {
-      toast.error("GST must be a valid number or 'including'");
-      return;
-    }
     setProducts([
       ...products,
       { ...currentProduct, modelNos: currentProduct.modelNos },
@@ -390,7 +384,7 @@ function AddEntry({ onSubmit, onClose }) {
       spec: "",
       qty: "",
       unitPrice: "",
-      gst: "",
+      gst: "18",
       modelNos: "",
       productCode: "",
       brand: "",
@@ -461,7 +455,7 @@ function AddEntry({ onSubmit, onClose }) {
       ...prev,
       paymentDue: calculatePaymentDue(Number(prev.paymentCollected) || 0),
     }));
-  }, [products]);
+  }, [products, formData.freightcs, formData.installation]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -474,6 +468,15 @@ function AddEntry({ onSubmit, onClose }) {
 
     if (formData.orderType === "B2G" && !formData.gemOrderNumber) {
       toast.error("Please provide GEM Order Number for B2G orders");
+      return;
+    }
+
+    if (formData.paymentTerms === "Credit" && !formData.pwc) {
+      toast.error("Please select PWC option for Credit payment terms");
+      return;
+    }
+    if (formData.paymentTerms === "Credit" && formData.pwc === "Yes" && !pwcFile) {
+      toast.error("Please upload the PWC document");
       return;
     }
 
@@ -527,6 +530,9 @@ function AddEntry({ onSubmit, onClose }) {
     }
     if (poFile) {
       formDataToSend.append("poFile", poFile);
+    }
+    if (pwcFile) {
+      formDataToSend.append("pwcFile", pwcFile);
     }
 
     try {
@@ -610,8 +616,7 @@ function AddEntry({ onSubmit, onClose }) {
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          background: "linear-gradient(145deg, #ffffff, #f8fafc)",
-          padding: "2rem",
+          background: "#ffffff",
           borderRadius: "1.25rem",
           boxShadow:
             "0 15px 40px rgba(0, 0, 0, 0.25), 0 5px 15px rgba(0, 0, 0, 0.1)",
@@ -622,9 +627,20 @@ function AddEntry({ onSubmit, onClose }) {
           fontFamily: "'Poppins', sans-serif",
           opacity: 0,
           animation: "slideUp 0.4s ease forwards",
-          overflowY: "auto",
+          overflow: "visible",
         }}
       >
+        <div
+          className="modal-scroll-inner"
+          style={{
+            overflowY: "auto",
+            overflowX: "visible",
+            maxHeight: "85vh",
+            padding: "2rem",
+            borderRadius: "1.25rem",
+            background: "#ffffff",
+          }}
+        >
         <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
           <h2
             style={{
@@ -1486,27 +1502,22 @@ function AddEntry({ onSubmit, onClose }) {
                     color: "#475569",
                   }}
                 >
-                  GST *
+                  GST
                 </label>
-                <select
-                  name="gst"
-                  value={currentProduct.gst}
-                  onChange={handleProductChange}
+                <input
+                  type="text"
+                  value="18%"
+                  disabled
                   style={{
                     width: "100%",
                     padding: "0.75rem",
                     border: "1px solid #e2e8f0",
                     borderRadius: "0.75rem",
-                    backgroundColor: "#f8fafc",
+                    backgroundColor: "#e5e7eb",
+                    cursor: "not-allowed",
                   }}
-                >
-                  <option value="">Select GST</option>
-                  {gstOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                  aria-label="GST Rate"
+                />
               </div>
               <div>
                 <label
@@ -1821,6 +1832,20 @@ function AddEntry({ onSubmit, onClose }) {
             >
               {[
                 {
+                  label: "Freight Status",
+                  name: "freightstatus",
+                  type: "select",
+                  options: ["Self-Pickup", "To Pay", "Including", "Extra"],
+                  placeholder: "Select status",
+                },
+                {
+                  label: "Installation Charges Status",
+                  name: "installchargesstatus",
+                  type: "select",
+                  options: ["To Pay", "Including", "Extra", "Not in Scope"],
+                  placeholder: "Select status",
+                },
+                {
                   label: "Freight Charges",
                   name: "freightcs",
                   type: "tel",
@@ -1837,20 +1862,6 @@ function AddEntry({ onSubmit, onClose }) {
                   pattern: "[0-9]*",
                   placeholder: "e.g. 1000",
                   disabled: formData.installchargesstatus !== "Extra",
-                },
-                {
-                  label: "Freight Status",
-                  name: "freightstatus",
-                  type: "select",
-                  options: ["Self-Pickup", "To Pay", "Including", "Extra"],
-                  placeholder: "Select status",
-                },
-                {
-                  label: "Installation Charges Status",
-                  name: "installchargesstatus",
-                  type: "select",
-                  options: ["To Pay", "Including", "Extra", "Not in Scope"],
-                  placeholder: "Select status",
                 },
               ].map((field) => (
                 <div
@@ -1894,17 +1905,6 @@ function AddEntry({ onSubmit, onClose }) {
                       value={formData[field.name] || ""}
                       onChange={(e) => {
                         handleChange(e);
-                        if (
-                          field.name === "freightcs" ||
-                          field.name === "installation"
-                        ) {
-                          setFormData((prev) => ({
-                            ...prev,
-                            paymentDue: calculatePaymentDue(
-                              Number(prev.paymentCollected) || 0
-                            ),
-                          }));
-                        }
                       }}
                       onKeyPress={(e) => {
                         if (!/[0-9]/.test(e.key)) {
@@ -2080,40 +2080,6 @@ function AddEntry({ onSubmit, onClose }) {
                       marginBottom: "0.5rem",
                     }}
                   >
-                    Payment Method
-                  </label>
-                  <select
-                    name="paymentMethod"
-                    value={formData.paymentMethod}
-                    onChange={handleChange}
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: "0.75rem",
-                      backgroundColor: "#f8fafc",
-                      fontSize: "1rem",
-                      color: "#1e293b",
-                      appearance: "auto",
-                    }}
-                  >
-                    <option value="">Select Method</option>
-                    {paymentMethodOptions.map((method) => (
-                      <option key={method} value={method}>
-                        {method}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label
-                    style={{
-                      fontSize: "0.9rem",
-                      fontWeight: "600",
-                      color: "#475569",
-                      marginBottom: "0.5rem",
-                    }}
-                  >
                     Payment Terms{" "}
                     {formData.orderType !== "Demo" && (
                       <span style={{ color: "#dc2626" }}>*</span>
@@ -2141,6 +2107,42 @@ function AddEntry({ onSubmit, onClose }) {
                     {paymentTermsOptions.map((term) => (
                       <option key={term} value={term}>
                         {term}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: "0.9rem",
+                      fontWeight: "600",
+                      color: "#475569",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    Payment Method
+                  </label>
+                  <select
+                    name="paymentMethod"
+                    value={formData.paymentMethod}
+                    onChange={handleChange}
+                    disabled={formData.paymentTerms === "Credit"}
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "0.75rem",
+                      backgroundColor: formData.paymentTerms === "Credit" ? "#e5e7eb" : "#f8fafc",
+                      fontSize: "1rem",
+                      color: "#1e293b",
+                      appearance: "auto",
+                      cursor: formData.paymentTerms === "Credit" ? "not-allowed" : "auto",
+                    }}
+                  >
+                    <option value="">Select Method</option>
+                    {paymentMethodOptions.map((method) => (
+                      <option key={method} value={method}>
+                        {method}
                       </option>
                     ))}
                   </select>
@@ -2185,14 +2187,14 @@ function AddEntry({ onSubmit, onClose }) {
                         marginBottom: "0.5rem",
                       }}
                     >
-                      Cheque ID
+                      Cheque Number
                     </label>
                     <input
                       type="text"
                       name="chequeId"
                       value={formData.chequeId}
                       onChange={handleChange}
-                      placeholder="Enter Cheque ID"
+                      placeholder="Enter Cheque Number"
                       style={{
                         width: "100%",
                         padding: "0.75rem",
@@ -2244,6 +2246,43 @@ function AddEntry({ onSubmit, onClose }) {
                       </select>
                     </div>
                   )}
+                {formData.paymentTerms === "Credit" && (
+                  <div>
+                    <label style={{ fontSize: "0.9rem", fontWeight: "600", color: "#475569", marginBottom: "0.5rem", display: "block" }}>
+                      PWC <span style={{ color: "#dc2626" }}>*</span>
+                    </label>
+                    <select
+                      name="pwc"
+                      value={formData.pwc}
+                      onChange={handleChange}
+                      style={{ width: "100%", padding: "0.75rem", border: "1px solid #e2e8f0", borderRadius: "0.75rem", backgroundColor: "#f8fafc", fontSize: "1rem", color: "#1e293b", appearance: "auto" }}
+                    >
+                      <option value="">Select</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                    </select>
+                  </div>
+                )}
+                {formData.paymentTerms === "Credit" && formData.pwc === "Yes" && (
+                  <div>
+                    <label style={{ fontSize: "0.9rem", fontWeight: "600", color: "#475569", marginBottom: "0.5rem", display: "block" }}>
+                      Upload PWC Document <span style={{ color: "#dc2626" }}>*</span>
+                    </label>
+                    <div style={{ display: "flex", alignItems: "center", border: `1px solid ${pwcFile ? "#22c55e" : "#e2e8f0"}`, borderRadius: "0.75rem", backgroundColor: "#f8fafc", padding: "0.5rem", width: "100%", height: "2.75rem", boxSizing: "border-box", overflow: "hidden" }}>
+                      <label htmlFor="soPwcFile" style={{ flex: 1, padding: "0.5rem 0.75rem", background: "linear-gradient(135deg, #e2e8f0, #f8fafc)", borderRadius: "0.5rem", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.95rem", color: "#475569", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", height: "100%" }}>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                          {pwcFile ? pwcFile.name : "Upload PWC (PDF, PNG, JPG, DOCX)"}
+                        </span>
+                      </label>
+                      <input id="soPwcFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.xls" onChange={(e) => setPwcFile(e.target.files[0] || null)} style={{ display: "none" }} />
+                      {pwcFile && (
+                        <button type="button" onClick={() => { setPwcFile(null); document.getElementById("soPwcFile").value = null; }} style={{ padding: "0.5rem", background: "none", border: "none", color: "#ef4444", cursor: "pointer", display: "flex", alignItems: "center", flexShrink: 0 }} title="Remove File">
+                          <svg style={{ width: "1.25rem", height: "1.25rem" }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -2273,6 +2312,7 @@ function AddEntry({ onSubmit, onClose }) {
             >
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <div
+                  className="file-upload-box"
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -2445,108 +2485,115 @@ function AddEntry({ onSubmit, onClose }) {
             </button>
           </div>
         </form>
+        </div>
       </div>
 
       <style jsx>{`
         @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
+          from { opacity: 0; }
+          to   { opacity: 1; }
         }
         @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translate(-50%, -40%);
-          }
-          to {
-            opacity: 1;
-            transform: translate(-50%, -50%);
-          }
+          from { opacity: 0; transform: translate(-50%, -40%); }
+          to   { opacity: 1; transform: translate(-50%, -50%); }
         }
 
-        /* Mobile styles */
-        @media (max-width: 768px) {
-          .modal-container {
-            width: 95%;
-            max-width: 100%;
-            padding: 1rem;
-            max-height: 90vh;
-          }
+        /* ── Scrollbar (on inner scroll wrapper) ── */
+        .modal-scroll-inner::-webkit-scrollbar { width: 6px; }
+        .modal-scroll-inner::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        .modal-scroll-inner::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        .modal-scroll-inner::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
-          .form-container {
-            grid-template-columns: 1fr;
-            gap: 1.5rem;
-          }
+        /* ── Base (all sizes) ── */
+        .modal-container *,
+        .modal-container *::before,
+        .modal-container *::after { box-sizing: border-box; }
 
-          .grid-section {
-            grid-template-columns: 1fr !important;
-            gap: 1rem;
-          }
+        .modal-container input,
+        .modal-container select,
+        .modal-container textarea { max-width: 100%; }
 
-          .product-grid {
-            grid-template-columns: 1fr !important;
-            gap: 1rem;
-          }
+        /* ── Overflow: outer clips nothing, inner scrolls ── */
+        .modal-container { overflow: visible; }
+        .modal-scroll-inner { overflow-x: visible; overflow-y: auto; }
+        .form-container { overflow: visible; }
+        .grid-section { overflow: visible; padding-bottom: 4px; }
+        .form-container > div { overflow: visible; }
 
-          .product-grid button {
-            align-self: center;
-            width: 100%;
-            max-width: 200px;
-          }
+        /* ── Large screens ≥ 1400px ── */
+        @media (min-width: 1400px) {
+          .modal-container { max-width: 1200px !important; }
+          .modal-scroll-inner { padding: 2.5rem !important; }
+          .grid-section { grid-template-columns: 1fr 1fr !important; gap: 1.75rem !important; }
+        }
 
-          input,
-          select,
-          .product-grid div {
-            width: 100% !important;
-            box-sizing: border-box;
-          }
+        /* ── Desktop 1024px – 1399px ── */
+        @media (min-width: 1024px) and (max-width: 1399px) {
+          .modal-container { max-width: 1100px !important; width: 92% !important; }
+          .modal-scroll-inner { padding: 2rem !important; }
+          .grid-section { grid-template-columns: 1fr 1fr !important; gap: 1.5rem !important; }
+          .product-grid { gap: 0.85rem !important; }
+        }
 
-          h2 {
-            font-size: 1.8rem;
-          }
+        /* ── Tablet landscape 768px – 1023px ── */
+        @media (min-width: 768px) and (max-width: 1023px) {
+          .modal-container { width: 96% !important; max-width: 960px !important; max-height: 88vh !important; }
+          .modal-scroll-inner { padding: 1.5rem !important; max-height: 88vh !important; }
+          .grid-section { grid-template-columns: 1fr 1fr !important; gap: 1.25rem !important; }
+          .product-grid { grid-template-columns: 1fr 1fr 1fr !important; gap: 0.85rem !important; }
+          .product-grid > div:last-child, .product-grid > button { grid-column: span 1; }
+          .modal-container h2 { font-size: 1.9rem !important; }
+          .modal-container h3 { font-size: 1.3rem !important; }
+          .modal-container input, .modal-container select { font-size: 0.95rem !important; padding: 0.7rem !important; }
+        }
 
-          h3 {
-            font-size: 1.2rem;
-          }
+        /* ── Tablet portrait 480px – 767px ── */
+        @media (min-width: 480px) and (max-width: 767px) {
+          .modal-container { width: 97% !important; max-width: 100% !important; max-height: 92vh !important; border-radius: 1rem !important; }
+          .modal-scroll-inner { padding: 1.25rem !important; max-height: 92vh !important; border-radius: 1rem !important; }
+          .form-container { gap: 1.5rem !important; }
+          .grid-section { grid-template-columns: 1fr 1fr !important; gap: 1rem !important; }
+          .product-grid { grid-template-columns: 1fr 1fr !important; gap: 0.75rem !important; }
+          .product-grid > button { grid-column: span 2; width: 100% !important; }
+          .modal-container h2 { font-size: 1.6rem !important; }
+          .modal-container h3 { font-size: 1.15rem !important; }
+          .modal-container label { font-size: 0.85rem !important; }
+          .modal-container input, .modal-container select { font-size: 0.9rem !important; padding: 0.65rem !important; }
+          .modal-container button[type="button"], .modal-container button[type="submit"] { padding: 0.65rem 1.25rem !important; font-size: 0.9rem !important; }
+        }
 
-          label {
-            font-size: 0.85rem;
-          }
+        /* ── Mobile ≤ 479px ── */
+        @media (max-width: 479px) {
+          .modal-container { width: 100% !important; max-width: 100% !important; max-height: 95vh !important; border-radius: 0.875rem !important; }
+          .modal-scroll-inner { padding: 1rem 0.875rem !important; max-height: 95vh !important; border-radius: 0.875rem !important; }
+          .form-container { gap: 1.25rem !important; }
+          .grid-section { grid-template-columns: 1fr !important; gap: 0.875rem !important; }
+          .product-grid { grid-template-columns: 1fr 1fr !important; gap: 0.75rem !important; }
+          .product-grid > button { grid-column: span 2; width: 100% !important; align-self: center !important; }
+          .modal-container h2 { font-size: 1.4rem !important; letter-spacing: 0.5px !important; }
+          .modal-container h3 { font-size: 1.05rem !important; letter-spacing: 0.5px !important; }
+          .modal-container label { font-size: 0.82rem !important; }
+          .modal-container input, .modal-container select { font-size: 0.875rem !important; padding: 0.6rem 0.75rem !important; border-radius: 0.625rem !important; }
+          .modal-container button[type="button"], .modal-container button[type="submit"] { padding: 0.6rem 1rem !important; font-size: 0.875rem !important; }
+          .modal-container [style*="flexWrap: nowrap"] { flex-wrap: wrap !important; }
+          .file-upload-box { max-width: 100% !important; }
+          .modal-scroll-inner > form > div:last-child { flex-direction: column-reverse !important; align-items: stretch !important; }
+          .modal-scroll-inner > form > div:last-child button { width: 100% !important; text-align: center !important; }
+        }
 
-          input,
-          select {
-            font-size: 0.9rem;
-            padding: 0.6rem;
-          }
+        /* ── Very small phones ≤ 360px ── */
+        @media (max-width: 360px) {
+          .modal-scroll-inner { padding: 0.875rem 0.75rem !important; }
+          .modal-container h2 { font-size: 1.25rem !important; }
+          .modal-container h3 { font-size: 1rem !important; }
+          .modal-container input, .modal-container select { font-size: 0.82rem !important; padding: 0.55rem 0.65rem !important; }
+          .product-grid { grid-template-columns: 1fr !important; }
+          .product-grid > button { grid-column: span 1 !important; }
+        }
 
-          button {
-            padding: 0.6rem 1.2rem;
-            font-size: 0.9rem;
-          }
-
-          .modal-container::-webkit-scrollbar {
-            width: 8px;
-          }
-
-          .modal-container::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 10px;
-          }
-
-          .modal-container::-webkit-scrollbar-thumb {
-            background: #64748b;
-            border-radius: 10px;
-          }
-
-          .modal-container,
-          .form-container,
-          .grid-section,
-          .product-grid {
-            overflow-x: hidden;
-          }
+        /* ── File upload box full-width on small screens ── */
+        @media (max-width: 767px) {
+          .file-upload-box { max-width: 100% !important; }
         }
       `}</style>
     </>

@@ -31,6 +31,7 @@ const OutFinishedGoodModal = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [stampReportFile, setStampReportFile] = useState(null);
 
   useEffect(() => {
     if (initialData && entryToEdit) {
@@ -120,6 +121,11 @@ const OutFinishedGoodModal = ({
         toast.error("Billing Status must be Billing Complete before Dispatching!");
         return;
       }
+      // Require stampReport when stamp is Received
+      if (formData.stamp === "Received" && !stampReportFile && !entryToEdit?.stampReport) {
+        toast.error("Please upload the Stamp Signed Report before saving.");
+        return;
+      }
       setShowConfirm(true);
       return;
     }
@@ -130,20 +136,20 @@ const OutFinishedGoodModal = ({
     try {
       const dirtyValues = getDirtyValues(originalFormData, formData);
 
-      if (Object.keys(dirtyValues).length === 0) {
+      if (Object.keys(dirtyValues).length === 0 && !stampReportFile) {
         toast.info("No changes to save.");
         setLoading(false);
         setShowConfirm(false);
         return;
       }
 
-      const finalPayload = {};
+      // Use FormData to support file upload
+      const payload = new FormData();
 
       Object.keys(dirtyValues).forEach((key) => {
         const value = formData[key];
-
         if (key === "products") {
-          finalPayload.products = value.map((p) => ({
+          payload.append("products", JSON.stringify(value.map((p) => ({
             productType: p.productType || undefined,
             qty: Number(p.qty) || 1,
             unitPrice: p.unitPrice !== "" ? Number(p.unitPrice) : 0,
@@ -154,21 +160,23 @@ const OutFinishedGoodModal = ({
             size: p.size && p.size !== "N/A" ? p.size : undefined,
             spec: p.spec && p.spec !== "N/A" ? p.spec : undefined,
             brand: p.brand || undefined,
-          }));
+          }))));
         } else if (key === "actualFreight") {
-          finalPayload.actualFreight = value !== "" ? Number(value) : undefined;
+          if (value !== "") payload.append(key, Number(value));
         } else if (key.endsWith("Date")) {
-          finalPayload[key] = value ? new Date(value).toISOString() : undefined;
+          if (value) payload.append(key, new Date(value).toISOString());
         } else {
-          // General field: Omit if empty to prevent DB overwrite with ""
           if (value !== "" && value !== null && value !== undefined) {
-            finalPayload[key] = value;
+            payload.append(key, value);
           }
         }
       });
 
-      // Avoid sending empty payload after sanitization
-      if (Object.keys(finalPayload).length === 0) {
+      if (stampReportFile) {
+        payload.append("stampReport", stampReportFile);
+      }
+
+      if ([...payload.keys()].length === 0) {
         toast.info("No modifications detected.");
         setLoading(false);
         setShowConfirm(false);
@@ -177,17 +185,14 @@ const OutFinishedGoodModal = ({
 
       const response = await soApi.patch(
         `/api/edit/${entryToEdit._id}`,
-        finalPayload,
-        {
-          headers: { "Content-Type": "application/json" },
-        }
+        payload,
+        { headers: { "Content-Type": "multipart/form-data" } }
       );
 
       if (!response.data.success) {
         throw new Error(response.data.message || "Failed to update dispatch");
       }
 
-      // toast.success("Dispatch updated successfully!");
       onSubmit(response.data.data);
       onClose();
     } catch (err) {
@@ -286,7 +291,7 @@ const OutFinishedGoodModal = ({
             style={{ width: "100%", borderRadius: "8px" }}
             disabled={loading}
           >
-            <Option value="Not Dispatched">Not Dispatched</Option>
+            <Option value="Not Dispatched">Pending Dispatched</Option>
             <Option value="Docket Awaited Dispatched">Docket-Awaited-Dispatched</Option>
             <Option value="Hold by Salesperson">Hold by Salesperson</Option>
             <Option value="Hold by Customer">Hold by Customer</Option>
@@ -314,6 +319,47 @@ const OutFinishedGoodModal = ({
               <Option value="Not Received">Not Received</Option>
               <Option value="Received">Received</Option>
             </Select>
+          </div>
+        )}
+
+        {formData.dispatchStatus === "Delivered" && formData.stamp === "Received" && (
+          <div>
+            <label style={{ fontSize: "1rem", fontWeight: "600", color: "#333", marginBottom: "5px", display: "block" }}>
+              Stamp Signed Report <span style={{ color: "red" }}>*</span>
+            </label>
+            {entryToEdit?.stampReport && !stampReportFile && (
+              <div style={{ marginBottom: "6px", fontSize: "0.85rem", color: "#555" }}>
+                Current:{" "}
+                <a
+                  href={`${soApi.defaults.baseURL}/download/${entryToEdit.stampReport.split("/").pop()}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "#2575fc" }}
+                >
+                  View uploaded report
+                </a>
+              </div>
+            )}
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+              disabled={loading}
+              onChange={(e) => setStampReportFile(e.target.files[0] || null)}
+              style={{
+                width: "100%",
+                padding: "8px",
+                border: "1px solid #d9d9d9",
+                borderRadius: "8px",
+                fontSize: "0.95rem",
+                background: "#fafafa",
+                cursor: "pointer",
+              }}
+            />
+            {stampReportFile && (
+              <div style={{ marginTop: "4px", fontSize: "0.82rem", color: "#52c41a" }}>
+                Selected: {stampReportFile.name}
+              </div>
+            )}
           </div>
         )}
 

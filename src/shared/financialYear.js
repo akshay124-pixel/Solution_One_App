@@ -1,11 +1,8 @@
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export const FINANCIAL_YEAR_OPTIONS = [
-  "2023-2024",
-  "2024-2025",
   "2025-2026",
-  "2026-2027",
-  "2027-2028",
+  "2026-2027",  
 ];
 
 export const normalizeOrderDate = (value) => {
@@ -39,4 +36,9 @@ export const getFinancialYear = (value) => {
   const startYear = month >= 4 ? year : year - 1;
 
   return `${startYear}-${startYear + 1}`;
+};
+
+/** Returns the current financial year string, e.g. "2025-2026" */
+export const getCurrentFinancialYear = () => {
+  return getFinancialYear(new Date());
 };

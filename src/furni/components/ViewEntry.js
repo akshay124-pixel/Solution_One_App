@@ -438,7 +438,7 @@ Created By: ${getCreatedByName(entry.createdBy)}
               <div className="pdf-item"><strong>Reporting Person:</strong> {entry.report || "N/A"}</div>
               <div className="pdf-item"><strong>Company:</strong> {entry.company || "N/A"}</div>
               <div className="pdf-item"><strong>Created By:</strong> {getCreatedByName(entry.createdBy)}</div>
-              <div className="pdf-item"><strong>SO Status:</strong> {entry.sostatus || "N/A"}</div>
+              <div className="pdf-item"><strong>SO Status:</strong> {entry.sostatus === "Hold By Production" ? "On Hold" : entry.sostatus || "N/A"}</div>
               <div className="pdf-item"><strong>Dispatch Status:</strong> {entry.dispatchStatus || "N/A"}</div>
               <div className="pdf-item"><strong>PI Number:</strong> {entry.piNumber || "N/A"}</div>
               <div className="pdf-item"><strong>Bill Number:</strong> {entry.billNumber || "N/A"}</div>
@@ -529,7 +529,7 @@ Created By: ${getCreatedByName(entry.createdBy)}
           <div className="pdf-section">
             <div className="pdf-section-title">Production, Logistics & Installation</div>
             <div className="pdf-grid">
-              <div className="pdf-item"><strong>Production Status:</strong> {entry.fulfillingStatus || "N/A"}</div>
+              <div className="pdf-item"><strong>Production Status:</strong> {entry.fulfillingStatus === "Order Cancel" ? "Order Cancelled" : entry.fulfillingStatus || "N/A"}</div>
               <div className="pdf-item"><strong>Fulfillment Date:</strong> {entry.fulfillmentDate ? new Date(entry.fulfillmentDate).toLocaleDateString("en-GB") : "N/A"}</div>
               <div className="pdf-item"><strong>Dispatch Date:</strong> {entry.dispatchDate ? new Date(entry.dispatchDate).toLocaleDateString("en-GB") : "N/A"}</div>
               <div className="pdf-item"><strong>Transporter Details:</strong> {entry.transporterDetails || "N/A"}</div>
@@ -635,6 +635,36 @@ Created By: ${getCreatedByName(entry.createdBy)}
                   {entry.stamp || "Not Received"}
                 </div>
 
+                {entry.stampReport && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <strong>Stamp Signed Report:</strong>
+                    <Button
+                      variant="outline-primary"
+                      size="sm"
+                      onClick={() => handleDownload(entry.stampReport, "StampSignedReport")}
+                      style={{
+                        background: "linear-gradient(135deg, #2575fc, #6a11cb)",
+                        padding: "6px 14px",
+                        borderRadius: "20px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        fontSize: "0.85rem",
+                        fontWeight: "600",
+                        color: "#ffffff",
+                        border: "none",
+                        boxShadow: "0 3px 8px rgba(0,0,0,0.2)",
+                        cursor: "pointer",
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px) scale(1.02)"; e.currentTarget.style.boxShadow = "0 5px 12px rgba(0,0,0,0.3)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0) scale(1)"; e.currentTarget.style.boxShadow = "0 3px 8px rgba(0,0,0,0.2)"; }}
+                    >
+                      <Download size={14} />
+                      Download Report
+                    </Button>
+                  </div>
+                )}
+
                 <div>
                   <strong>Dispatch Date:</strong>{" "}
                   {entry.dispatchDate
@@ -669,7 +699,7 @@ Created By: ${getCreatedByName(entry.createdBy)}
                             : "secondary"
                     }
                   >
-                    {entry.sostatus || "N/A"}
+                    {entry.sostatus === "Hold By Production" ? "On Hold" : entry.sostatus || "N/A"}
                   </Badge>
                 </div>
                 <div>
@@ -687,7 +717,7 @@ Created By: ${getCreatedByName(entry.createdBy)}
                               : "secondary"
                     }
                   >
-                    {entry.dispatchStatus || "N/A"}
+                    {entry.dispatchStatus === "Not Dispatched" ? "Pending Dispatched" : entry.dispatchStatus || "N/A"}
                   </Badge>
                 </div>
                 {/* <div>
@@ -1048,6 +1078,51 @@ Created By: ${getCreatedByName(entry.createdBy)}
                   </Badge>
                 </div>
 
+                {entry.creditDays && (
+                  <div>
+                    <strong>Credit Days:</strong>{" "}
+                    {entry.creditDays} Days
+                  </div>
+                )}
+
+                {entry.pwc && (
+                  <div>
+                    <strong>PWC:</strong>{" "}
+                    <Badge bg={entry.pwc === "Yes" ? "success" : "secondary"}>
+                      {entry.pwc}
+                    </Badge>
+                  </div>
+                )}
+                {entry.pwcFile && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <strong>PWC Document:</strong>
+                    <Button
+                      variant="outline-primary"
+                      size="sm"
+                      onClick={() => handleDownload(entry.pwcFile, "PWC_Document")}
+                      style={{
+                        background: "linear-gradient(135deg, #2575fc, #6a11cb)",
+                        padding: "6px 14px",
+                        borderRadius: "20px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        fontSize: "0.85rem",
+                        fontWeight: "600",
+                        color: "#ffffff",
+                        border: "none",
+                        boxShadow: "0 3px 8px rgba(0,0,0,0.2)",
+                        cursor: "pointer",
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px) scale(1.02)"; e.currentTarget.style.boxShadow = "0 5px 12px rgba(0,0,0,0.3)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0) scale(1)"; e.currentTarget.style.boxShadow = "0 3px 8px rgba(0,0,0,0.2)"; }}
+                    >
+                      <Download size={14} />
+                      Download PWC
+                    </Button>
+                  </div>
+                )}
+
                 <div>
                   <strong>Payment Received:</strong>{" "}
                   <Badge
@@ -1156,7 +1231,7 @@ Created By: ${getCreatedByName(entry.createdBy)}
                       fontWeight: "500",
                     }}
                   >
-                    {entry.fulfillingStatus || "Pending"}
+                    {entry.fulfillingStatus === "Order Cancel" ? "Order Cancelled" : entry.fulfillingStatus === "Partial Dispatch" ? "Partial Dispatched" : entry.fulfillingStatus === "Fulfilled" ? "Completed" : entry.fulfillingStatus || "Pending"}
                   </Badge>
                 </div>
                 <div>

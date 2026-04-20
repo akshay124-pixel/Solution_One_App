@@ -400,7 +400,7 @@ const OrderRow = React.memo(({
                     whiteSpace: "nowrap",
                     maxWidth: "150px",
                 }}
-                title={order.dispatchStatus || "Not Dispatched"}
+                title={order.dispatchStatus === "Not Dispatched" ? "Pending Dispatched" : order.dispatchStatus || "Pending Dispatched"}
             >
                 <Badge
                     style={{
@@ -432,7 +432,7 @@ const OrderRow = React.memo(({
                         whiteSpace: "nowrap",
                     }}
                 >
-                    {order.dispatchStatus || "Not Dispatched"}
+                    {order.dispatchStatus === "Not Dispatched" ? "Pending Dispatched" : order.dispatchStatus || "Pending Dispatched"}
                 </Badge>
             </td>
             <td

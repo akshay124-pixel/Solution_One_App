@@ -2058,7 +2058,6 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
                         }}
                       >
                         <option value="18">18%</option>
-                        <option value="28">28%</option>
                         <option value="including">Including</option>
                       </Form.Select>
                       <Form.Control.Feedback type="invalid">
@@ -2683,8 +2682,11 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
               >
                 <option value="Pending">Pending</option>
                 <option value="In Progress">In Progress</option>
+                <option value="Hold">Hold</option>
+                <option value="Site Not Ready">Site Not Ready</option>
+                <option value="Hold by Salesperson">Hold by Salesperson</option>
+                <option value="Hold by Customer">Hold by Customer</option>
                 <option value="Completed">Completed</option>
-                <option value="Failed">Failed</option>
               </Form.Select>
             )}
           />
@@ -2950,7 +2952,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
                 }}
                 isInvalid={!!errors.dispatchStatus}
               >
-                <option value="Not Dispatched">Not Dispatched</option>
+                <option value="Not Dispatched">Pending Dispatched</option>
                 <option value="Docket Awaited Dispatched">
                   Docket Awaited Dispatched
                 </option>
@@ -3327,7 +3329,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
             <option value="Accounts Approved">Accounts Approved</option>
             <option value="Approved">Approved</option>
             <option value="Order on Hold Due to Low Price">
-              Order on Hold Due to Low Price
+              On Hold
             </option>
             <option value="Order Cancelled">Order Cancelled</option>
           </Form.Select>

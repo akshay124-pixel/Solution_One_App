@@ -21,6 +21,7 @@ import SalesDashboardDrawer from "./Dashbords/SalesDashboardDrawer";
 import TeamBuilder from "./TeamBuilder";
 import { isOrderComplete } from "../utils/orderUtils";
 import { FINANCIAL_YEAR_OPTIONS } from "../../shared/financialYear";
+import { getCurrentFinancialYear } from "../../shared/financialYear";
 const ViewEntry = React.lazy(() => import("./ViewEntry"));
 const DeleteModal = React.lazy(() => import("./Delete"));
 const EditEntry = React.lazy(() => import("./EditEntry"));
@@ -30,27 +31,35 @@ const FURNI_BASE = process.env.REACT_APP_FURNI_URL || "http://localhost:5050/api
 const socketOrigin = (() => { try { return new URL(FURNI_BASE).origin; } catch { return FURNI_BASE; } })();
 
 const NotificationPopover = styled(Popover)`
-  min-width: 300px; max-height: 400px; overflow-y: auto; border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2); background: #fff; border: none;
+  width: 400px;
+  min-width: 400px;
+  max-width: 400px;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(37, 117, 252, 0.12);
+  background: #fff; border: none; overflow: hidden;
 `;
 const NotificationItem = styled.div`
-  padding: 12px 16px; border-bottom: 1px solid #e6f0fa; display: flex;
-  justify-content: space-between; align-items: center;
-  background: ${(props) => (props.isRead ? "#f9f9f9" : "#e6f0fa")};
-  transition: background 0.3s ease; &:hover { background: #d1e7ff; }
+  padding: 14px 16px; border-bottom: 1px solid #f1f5f9; display: flex;
+  justify-content: space-between; align-items: flex-start;
+  background: ${(props) => (props.isRead ? "#ffffff" : "linear-gradient(135deg, #f0f7ff, #f5f0ff)")};
+  transition: all 0.2s ease; position: relative;
+  &::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: ${(props) => props.action === "created" ? "#22c55e" : props.action === "deleted" ? "#ef4444" : "#2575fc"};
+    opacity: ${(props) => props.isRead ? "0.3" : "1"}; }
+  &:hover { background: #f8faff; }
 `;
 const NotificationText = styled.div`
-  font-size: 0.9rem; color: #1e3a8a;
-  font-weight: ${(props) => (props.isRead ? "normal" : "600")}; flex: 1;
+  font-size: 0.82rem; color: #1e293b;
+  font-weight: ${(props) => (props.isRead ? "400" : "600")}; flex: 1; line-height: 1.4;
 `;
-const NotificationTime = styled.div`font-size: 0.75rem; color: #6b7280; margin-left: 10px;`;
+const NotificationTime = styled.div`font-size: 0.72rem; color: #94a3b8; margin-left: 10px; white-space: nowrap; margin-top: 2px;`;
 const NotificationActions = styled.div`
-  display: flex; gap: 10px; padding: 10px; border-top: 1px solid #e6f0fa; justify-content: space-between;
+  display: flex; gap: 8px; padding: 10px 16px; border-top: 1px solid #f1f5f9; background: #fafafa;
 `;
-const ClearButton = styled(Button)`background: #dc3545; border: none; padding: 6px 12px; font-size: 0.85rem; border-radius: 8px; &:hover { background: #b02a37; }`;
-const MarkReadButton = styled(Button)`background: #28a745; border: none; padding: 6px 12px; font-size: 0.85rem; border-radius: 8px; &:hover { background: #218838; }`;
+const ClearButton = styled(Button)`background: #dc3545; border: none; padding: 6px 12px; font-size: 0.78rem; border-radius: 8px; flex: 1; &:hover { background: #b02a37; }`;
+const MarkReadButton = styled(Button)`background: #28a745; border: none; padding: 6px 12px; font-size: 0.78rem; border-radius: 8px; flex: 1; &:hover { background: #218838; }`;
 
-const columnWidths = [60,120,160,140,180,180,140,200,140,150,120,120,120,100,140,250,250,250,150,100,100,80,120,100,120,140,140,140,140,140,120,120,120,140,200,140,140,140,120,120,120,140,120,120,140,140,140,200];
+const columnWidths = [60,120,160,140,180,180,140,200,140,150,120,120,120,100,140,250,250,250,150,100,100,80,120,100,120,140,140,140,140,140,120,120,120,140,200,140,140,140,150,120,120,120,140,120,120,140,140,140,200];
 const totalTableWidth = columnWidths.reduce((sum, width) => sum + width, 0);
 const normalizeTableText = (value) =>
   typeof value === "string" ? value.replace(/^\s*[��]\s*/, "").trim() : value;
@@ -140,19 +149,22 @@ const Row = React.memo(({ index, style, data }) => {
         { width: columnWidths[5], content: order.name || "-", title: order.name || "-", className: "contact-person-name" },
         { width: columnWidths[6], content: order.contactNo || "-", title: order.contactNo || "-" },
         { width: columnWidths[7], content: order.customerEmail || "-", title: order.customerEmail || "-" },
-        { width: columnWidths[8], content: (<Badge bg={order.sostatus === "Pending for Approval" ? "warning" : order.sostatus === "Accounts Approved" ? "info" : order.sostatus === "Approved" ? "success" : order.sostatus === "Order Cancelled" ? "danger" : order.sostatus === "Hold By Production" ? "dark" : "secondary"}>{order.sostatus || "-"}</Badge>), title: order.sostatus || "-" },
+        { width: columnWidths[8], content: (<Badge bg={order.sostatus === "Pending for Approval" ? "warning" : order.sostatus === "Accounts Approved" ? "info" : order.sostatus === "Approved" ? "success" : order.sostatus === "Order Cancelled" ? "danger" : order.sostatus === "Hold By Production" ? "dark" : "secondary"}>{order.sostatus === "Hold By Production" ? "On Hold" : order.sostatus || "-"}</Badge>), title: order.sostatus === "Hold By Production" ? "On Hold" : order.sostatus || "-" },
         { width: columnWidths[9], content: (
           <div className="actions-cell">
             <Button variant="primary" onClick={() => handleViewClick(order)} style={{ width: "40px", height: "40px", borderRadius: "50%", padding: "0", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "50px" }}><FaEye /></Button>
-            {(userRole === "SuperAdmin" || userRole === "GlobalAdmin") && (<>
+            {(userRole === "SuperAdmin" || userRole === "GlobalAdmin" || userRole === "Admin" || userRole === "salesperson") && 
+              (userRole === "SuperAdmin" || userRole === "GlobalAdmin" || (order.sostatus !== "Approved" && order.sostatus !== "Accounts Approved")) && (<>
               <button className="editBtn" onClick={() => handleEditClick(order)} style={{ width: "40px", height: "40px", borderRadius: "50%", padding: "0", background: "#6b7280", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: "1", marginBottom: "50px" }}>
                 <svg height="1em" viewBox="0 0 512 512" fill="#ffffff"><path d="M410.3 231l11.3-11.3-33.9-33.9-62.1-62.1L291.7 89.8l-11.3 11.3-22.6 22.6L58.6 322.9c-10.4 10.4-18 23.3-22.2 37.4L1 480.7c-2.5 8.4-.2 17.5 6.1 23.7s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L387.7 253.7 410.3 231zM160 399.4l-9.1 22.7c-4 3.1-8.5 5.4-13.3 6.9L59.4 452l23-78.1c1.4-4.9 3.8-9.4 6.9-13.3l22.7-9.1v32c0 8.8 7.2 16 16 16h32zM362.7 18.7L348.3 33.2 325.7 55.8 314.3 67.1l33.9 33.9 62.1 62.1 33.9 33.9 11.3-11.3 22.6-22.6 14.5-14.5c25-25 25-65.5 0-90.5L453.3 18.7c-25-25-65.5-25-90.5 0zm-47.4 168l-144 144c-6.2 6.2-16.4 6.2-22.6 0s-6.2-16.4 0-22.6l144-144c6.2-6.2 16.4-6.2 22.6 0s6.2 16.4 0 22.6z" /></svg>
               </button>
+            </>)}
+            {(userRole === "SuperAdmin" || userRole === "GlobalAdmin") && (
               <button className="bin-button" onClick={() => handleDeleteClick(order)} style={{ width: "40px", height: "40px", borderRadius: "50%", padding: "0", background: "#ef4444", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "50px" }}>
                 <svg className="bin-top" viewBox="0 0 39 7" fill="none" style={{ width: "20px", height: "5px" }}><line y1="5" x2="39" y2="5" stroke="white" strokeWidth="4" /><line x1="12" y1="1.5" x2="26.0357" y2="1.5" stroke="white" strokeWidth="3" /></svg>
                 <svg className="bin-bottom" viewBox="0 0 33 39" fill="none" style={{ width: "20px", height: "20px" }}><mask id="path-1-inside-1_8_19" fill="white"><path d="M0 0H33V35C33 37.2091 31.2091 39 29 39H4C1.79086 39 0 37.2091 0 35V0Z" /></mask><path d="M0 0H33H0ZM37 35C37 39.4183 33.4183 43 29 43H4C-0.418278 43 -4 39.4183 -4 35H4H29H37ZM4 43C-0.418278 43 -4 39.4183 -4 35V0H4V35V43ZM37 0V35C37 39.4183 33.4183 43 29 43V35V0H37Z" fill="white" mask="url(#path-1-inside-1_8_19)" /><path d="M12 6L12 29" stroke="white" strokeWidth="4" /><path d="M21 6V29" stroke="white" strokeWidth="4" /></svg>
               </button>
-            </>)}
+            )}
           </div>), title: "" },
         { width: columnWidths[10], content: order.alterno || "-", title: order.alterno || "-" },
         { width: columnWidths[11], content: order.city || "-", title: order.city || "-" },
@@ -180,18 +192,19 @@ const Row = React.memo(({ index, style, data }) => {
         { width: columnWidths[33], content: (<Badge bg={order.installationReport === "Yes" ? "success" : "warning"}>{order.installationReport || "-"}</Badge>), title: order.installationReport || "-" },
         { width: columnWidths[34], content: order.transporterDetails || "-", title: order.transporterDetails || "-" },
         { width: columnWidths[35], content: order.dispatchFrom || "-", title: order.dispatchFrom || "-" },
-        { width: columnWidths[36], content: (<Badge bg={order.dispatchStatus === "Not Dispatched" ? "warning" : order.dispatchStatus === "Docket Awaited Dispatched" ? "info" : order.dispatchStatus === "Dispatched" ? "primary" : order.dispatchStatus === "Delivered" ? "success" : order.dispatchStatus === "Hold by Salesperson" ? "dark" : order.dispatchStatus === "Hold by Customer" ? "light" : order.dispatchStatus === "Order Cancelled" ? "danger" : "secondary"}>{order.dispatchStatus || "-"}</Badge>), title: order.dispatchStatus || "-" },
+        { width: columnWidths[36], content: (<Badge bg={order.dispatchStatus === "Not Dispatched" ? "warning" : order.dispatchStatus === "Docket Awaited Dispatched" ? "info" : order.dispatchStatus === "Dispatched" ? "primary" : order.dispatchStatus === "Delivered" ? "success" : order.dispatchStatus === "Hold by Salesperson" ? "dark" : order.dispatchStatus === "Hold by Customer" ? "light" : order.dispatchStatus === "Order Cancelled" ? "danger" : "secondary"}>{order.dispatchStatus === "Not Dispatched" ? "Pending Dispatched" : order.dispatchStatus || "-"}</Badge>), title: order.dispatchStatus === "Not Dispatched" ? "Pending Dispatched" : order.dispatchStatus || "-" },
         { width: columnWidths[37], content: (<Badge bg={order.stamp === "Received" ? "success" : "warning"}>{order.stamp || "-"}</Badge>), title: order.stamp || "-" },
-        { width: columnWidths[38], content: order.orderType || "-", title: order.orderType || "-" },
-        { width: columnWidths[39], content: order.report || "-", title: order.report || "-" },
-        { width: columnWidths[40], content: (<Badge bg={order.billStatus === "Pending" ? "warning" : order.billStatus === "Under Billing" ? "info" : order.billStatus === "Billing Complete" ? "success" : "secondary"}>{order.billStatus || "-"}</Badge>), title: order.billStatus || "-" },
-        { width: columnWidths[41], content: (<Badge style={{ background: order.fulfillingStatus === "Under Process" ? "linear-gradient(135deg, #f39c12, #f7c200)" : order.fulfillingStatus === "Pending" ? "linear-gradient(135deg, #ff6b6b, #ff8787)" : order.fulfillingStatus === "Partial Dispatch" ? "linear-gradient(135deg, #00c6ff, #0072ff)" : order.fulfillingStatus === "Fulfilled" ? "linear-gradient(135deg, #28a745, #4cd964)" : order.fulfillingStatus === "Order Cancel" ? "linear-gradient(135deg, #8e0e00, #e52d27)" : order.fulfillingStatus === "Hold" ? "linear-gradient(135deg, #6a11cb, #2575fc)" : "linear-gradient(135deg, #6c757d, #a9a9a9)" }}>{order.fulfillingStatus || "Pending"}</Badge>), title: order.fulfillingStatus || "Pending" },
-        { width: columnWidths[42], content: order.billNumber || "-", title: order.billNumber || "-" },
-        { width: columnWidths[43], content: order.piNumber || "-", title: order.piNumber || "-" },
-        { width: columnWidths[44], content: order.salesPerson || "-", title: order.salesPerson || "-" },
-        { width: columnWidths[45], content: order.company || "-", title: order.company || "-" },
-        { width: columnWidths[46], content: order.createdBy && typeof order.createdBy === "object" ? order.createdBy.username || "Unknown" : typeof order.createdBy === "string" ? order.createdBy : "-", title: order.createdBy && typeof order.createdBy === "object" ? order.createdBy.username || "Unknown" : typeof order.createdBy === "string" ? order.createdBy : "-" },
-        { width: columnWidths[47], content: order.remarks || "-", title: order.remarks || "-" },
+        { width: columnWidths[38], content: (<Badge bg={order.stampReport ? "success" : "danger"}>{order.stampReport ? "Attached" : "Not Attached"}</Badge>), title: order.stampReport ? "Attached" : "Not Attached" },
+        { width: columnWidths[39], content: order.orderType === "Stock Out" ? "Stock" : order.orderType || "-", title: order.orderType === "Stock Out" ? "Stock" : order.orderType || "-" },
+        { width: columnWidths[40], content: order.report || "-", title: order.report || "-" },
+        { width: columnWidths[41], content: (<Badge bg={order.billStatus === "Pending" ? "warning" : order.billStatus === "Under Billing" ? "info" : order.billStatus === "Billing Complete" ? "success" : "secondary"}>{order.billStatus || "-"}</Badge>), title: order.billStatus || "-" },
+        { width: columnWidths[42], content: (<Badge style={{ background: order.fulfillingStatus === "Under Process" ? "linear-gradient(135deg, #f39c12, #f7c200)" : order.fulfillingStatus === "Pending" ? "linear-gradient(135deg, #ff6b6b, #ff8787)" : order.fulfillingStatus === "Partial Dispatch" ? "linear-gradient(135deg, #00c6ff, #0072ff)" : order.fulfillingStatus === "Fulfilled" ? "linear-gradient(135deg, #28a745, #4cd964)" : order.fulfillingStatus === "Order Cancel" ? "linear-gradient(135deg, #8e0e00, #e52d27)" : order.fulfillingStatus === "Hold" ? "linear-gradient(135deg, #6a11cb, #2575fc)" : "linear-gradient(135deg, #6c757d, #a9a9a9)" }}>{order.fulfillingStatus === "Order Cancel" ? "Order Cancelled" : order.fulfillingStatus === "Partial Dispatch" ? "Partial Dispatched" : order.fulfillingStatus === "Fulfilled" ? "Completed" : order.fulfillingStatus || "Pending"}</Badge>), title: order.fulfillingStatus === "Order Cancel" ? "Order Cancelled" : order.fulfillingStatus === "Partial Dispatch" ? "Partial Dispatched" : order.fulfillingStatus === "Fulfilled" ? "Completed" : order.fulfillingStatus || "Pending" },
+        { width: columnWidths[43], content: order.billNumber || "-", title: order.billNumber || "-" },
+        { width: columnWidths[44], content: order.piNumber || "-", title: order.piNumber || "-" },
+        { width: columnWidths[45], content: order.salesPerson || "-", title: order.salesPerson || "-" },
+        { width: columnWidths[46], content: order.company || "-", title: order.company || "-" },
+        { width: columnWidths[47], content: order.createdBy && typeof order.createdBy === "object" ? order.createdBy.username || "Unknown" : typeof order.createdBy === "string" ? order.createdBy : "-", title: order.createdBy && typeof order.createdBy === "object" ? order.createdBy.username || "Unknown" : typeof order.createdBy === "string" ? order.createdBy : "-" },
+        { width: columnWidths[48], content: order.remarks || "-", title: order.remarks || "-" },
       ].map((cell, idx) => (
         <OverlayTrigger key={idx} trigger="click" placement="top"
           show={openTooltipId === `cell-${index}-${idx}`}
@@ -259,6 +272,7 @@ const Sales = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
+  const [allOrdersCount, setAllOrdersCount] = useState(0); // persists when other trackers selected
   const [totalProductQty, setTotalProductQty] = useState(0);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -274,7 +288,7 @@ const Sales = () => {
   const [productStatus, setProductStatusFilter] = useState("All");
   const [accountsStatusFilter, setAccountsStatusFilter] = useState("All");
   const [dispatchFilter, setDispatchFilter] = useState("All");
-  const [financialYearFilter, setFinancialYearFilter] = useState("All");
+  const [financialYearFilter, setFinancialYearFilter] = useState(() => getCurrentFinancialYear());
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [notifications, setNotifications] = useState([]);
@@ -338,6 +352,10 @@ const Sales = () => {
       setOrders(data);
       setFilteredOrders(data);
       setTotalOrders(total);
+      // Only update All Orders count when viewing all orders (not filtered by tracker)
+      if (!queryParams.dashboardFilter || queryParams.dashboardFilter === "all") {
+        setAllOrdersCount(total);
+      }
       setTotalPages(pages);
       setTotalProductQty(totalProductQty || 0);
       setCurrentPage(currentPageRes);
@@ -349,14 +367,17 @@ const Sales = () => {
     }
   }, []);
 
-  const fetchDashboardCounts = useCallback(async () => {
+  const fetchDashboardCounts = useCallback(async (fy) => {
     try {
-      const response = await furniApi.get("/api/dashboard-counts");
+      const financialYear = fy ?? financialYearFilter;
+      const response = await furniApi.get("/api/dashboard-counts",
+        { params: financialYear && financialYear !== "All" ? { financialYear } : {} }
+      );
       setDashboardCounts(response.data || { all: 0, installation: 0, production: 0, dispatch: 0 });
     } catch (error) {
       console.error("Error fetching dashboard counts:", error);
     }
-  }, []);
+  }, [financialYearFilter]);
 
   useEffect(() => {
     const socket = io(`${socketOrigin}`, { path: "/furni/socket.io", transports: ["websocket", "polling"], reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 1000, withCredentials: true });
@@ -373,12 +394,16 @@ const Sales = () => {
       if (!owners.includes(userId)) return;
       setOrders((prev) => prev.filter((o) => o._id !== _id));
       fetchDashboardCounts();
-    });
-    socket.on("notification", (notif) => {
+    });    socket.on("notification", (notif) => {
       setNotifications((prev) => {
         if (notif?._id && prev.some((n) => n._id === notif._id)) return prev;
         const next = [notif, ...prev].slice(0, 50);
-        if (notif?.message) toast.info(notif.message);
+        if (notif?.message) {
+          const toastMsg = notif.changes && notif.changes.length > 0
+            ? `Order ${notif.orderId || ""}: ${notif.changes[0].label} changed to ${notif.changes[0].newValue}`
+            : notif.message;
+          toast.info(toastMsg, { autoClose: 4000 });
+        }
         return next;
       });
     });
@@ -396,7 +421,14 @@ const Sales = () => {
       }
     });
     (async () => {
-      try { await Promise.all([fetchPaginatedOrders(), fetchNotifications(), fetchDashboardCounts()]); }
+      try {
+        const initFY = getCurrentFinancialYear();
+        await Promise.all([
+          fetchPaginatedOrders({ page: 1, financialYear: initFY, dashboardFilter: "all" }),
+          fetchNotifications(),
+          fetchDashboardCounts(initFY),
+        ]);
+      }
       finally { setIsLoading(false); }
     })();
     return () => {
@@ -408,15 +440,23 @@ const Sales = () => {
 
   const calculateTotalResults = useMemo(() => totalProductQty, [totalProductQty]);
 
+  const filterEffectMounted = React.useRef(false);
+
   useEffect(() => {
-    fetchPaginatedOrders({ page: currentPage, search: searchTerm, approval: productionStatusFilter, orderType: productStatus, dispatch: dispatchFilter, salesPerson: "All", dispatchFrom: "All", financialYear: financialYearFilter, startDate, endDate, dashboardFilter: trackerFilter, accountsStatus: accountsStatusFilter, installationStatus: installStatusFilter });
-  }, [currentPage, searchTerm, productionStatusFilter, productStatus, dispatchFilter, financialYearFilter, startDate, endDate, trackerFilter, accountsStatusFilter, installStatusFilter, fetchPaginatedOrders]);
+    // Skip on first render — mount effect already fetched with correct initial params
+    if (!filterEffectMounted.current) {
+      filterEffectMounted.current = true;
+      return;
+    }
+    fetchPaginatedOrders({ page: currentPage, search: searchTerm, approval: productionStatusFilter, orderType: productStatus, dispatch: dispatchFilter, salesPerson: "All", dispatchFrom: "All", financialYear: trackerFilter === "all" ? financialYearFilter : "All", startDate, endDate, dashboardFilter: trackerFilter, accountsStatus: accountsStatusFilter, installationStatus: installStatusFilter });
+    fetchDashboardCounts(financialYearFilter);
+  }, [currentPage, searchTerm, productionStatusFilter, productStatus, dispatchFilter, financialYearFilter, startDate, endDate, trackerFilter, accountsStatusFilter, installStatusFilter, fetchPaginatedOrders, fetchDashboardCounts]);
 
   const handleReset = useCallback(() => {
     setProductionStatusFilter("All"); setInstallStatusFilter("All"); setProductStatusFilter("All");
-    setAccountsStatusFilter("All"); setDispatchFilter("All"); setFinancialYearFilter("All"); setTrackerFilter("all");
+    setAccountsStatusFilter("All"); setDispatchFilter("All"); setFinancialYearFilter(getCurrentFinancialYear()); setTrackerFilter("all");
     setSearchTerm(""); setStartDate(null); setEndDate(null); setCurrentPage(1);
-    fetchPaginatedOrders({ page: 1, search: "", approval: "All", orderType: "All", dispatch: "All", salesPerson: "All", dispatchFrom: "All", financialYear: "All", startDate: null, endDate: null, dashboardFilter: "all" });
+    fetchPaginatedOrders({ page: 1, search: "", approval: "All", orderType: "All", dispatch: "All", salesPerson: "All", dispatchFrom: "All", financialYear: getCurrentFinancialYear(), startDate: null, endDate: null, dashboardFilter: "all" });
     toast.info("Filters reset!");
   }, [fetchPaginatedOrders]);
 
@@ -538,31 +578,81 @@ const Sales = () => {
     return date.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
   }, []);
 
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
   const notificationPopover = (
     <NotificationPopover id="notification-popover">
-      <Popover.Header style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "white", borderRadius: "12px 12px 0 0", fontWeight: "600" }}>Notifications</Popover.Header>
-      <Popover.Body>
+      {/* Header */}
+      <div style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <span style={{ fontSize: "1.2rem" }}>🔔</span>
+          <span style={{ color: "white", fontWeight: "700", fontSize: "1rem" }}>Notifications</span>
+          {unreadCount > 0 && (
+            <span style={{ background: "#ef4444", color: "white", borderRadius: "20px", padding: "1px 8px", fontSize: "0.72rem", fontWeight: "700" }}>{unreadCount}</span>
+          )}
+        </div>
+        <span style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.75rem" }}>{notifications.length} total</span>
+      </div>
+
+      {/* Body */}
+      <div style={{ maxHeight: "400px", overflowY: "auto" }}>
         {notifications.length > 0 ? (
-          notifications.map((notif) => (
-            <NotificationItem key={notif._id} isRead={notif.isRead}>
-              <NotificationText isRead={notif.isRead}>{notif.message}</NotificationText>
-              <NotificationTime>{formatTimestamp(notif.timestamp)}</NotificationTime>
-            </NotificationItem>
-          ))
+          notifications.map((notif) => {
+            const actionIcon = notif.action === "created" ? "✨" : notif.action === "deleted" ? "🗑️" : "✏️";
+            const actionColor = notif.action === "created" ? "#22c55e" : notif.action === "deleted" ? "#ef4444" : "#2575fc";
+            return (
+              <NotificationItem key={notif._id} isRead={notif.isRead} action={notif.action}>
+                <div style={{ flex: 1, paddingLeft: "8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                    <span style={{ background: `${actionColor}18`, color: actionColor, borderRadius: "6px", padding: "1px 7px", fontSize: "0.7rem", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      {actionIcon} {notif.action || "updated"}
+                    </span>
+                    {notif.orderId && (
+                      <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: "600" }}>#{notif.orderId}</span>
+                    )}
+                  </div>
+                  <NotificationText isRead={notif.isRead}>{notif.message.split(" — ")[0]}</NotificationText>
+                  {notif.changes && notif.changes.length > 0 && (
+                    <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "3px" }}>
+                      {notif.changes.slice(0, 4).map((ch, idx) => (
+                        <div key={idx} style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.75rem", background: "#f8fafc", borderRadius: "6px", padding: "3px 8px", border: "1px solid #e2e8f0" }}>
+                          <span style={{ color: "#64748b", fontWeight: "600" }}>{ch.label}</span>
+                          <span style={{ color: "#94a3b8", fontSize: "0.7rem" }}>·</span>
+                          <span style={{ background: "#fee2e2", color: "#dc2626", borderRadius: "4px", padding: "0 5px", textDecoration: "line-through", fontSize: "0.7rem" }}>{ch.oldValue}</span>
+                          <span style={{ color: "#94a3b8" }}>→</span>
+                          <span style={{ background: "#dcfce7", color: "#16a34a", borderRadius: "4px", padding: "0 5px", fontWeight: "600", fontSize: "0.7rem" }}>{ch.newValue}</span>
+                        </div>
+                      ))}
+                      {notif.changes.length > 4 && (
+                        <span style={{ fontSize: "0.7rem", color: "#94a3b8", paddingLeft: "4px" }}>+{notif.changes.length - 4} more changes</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <NotificationTime>{formatTimestamp(notif.timestamp)}</NotificationTime>
+              </NotificationItem>
+            );
+          })
         ) : (
-          <div style={{ textAlign: "center", color: "#6b7280", padding: "20px" }}>No notifications</div>
+          <div style={{ textAlign: "center", padding: "40px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+            <div style={{ fontSize: "3rem", opacity: 0.4 }}>🔕</div>
+            <div style={{ color: "#94a3b8", fontWeight: "600", fontSize: "0.9rem" }}>All caught up!</div>
+            <div style={{ color: "#cbd5e1", fontSize: "0.8rem" }}>No new notifications</div>
+          </div>
         )}
-        {notifications.length > 0 && (
-          <NotificationActions>
-            <MarkReadButton onClick={markAllRead}>Mark All Read</MarkReadButton>
-            <ClearButton onClick={clearNotifications}>Clear All</ClearButton>
-          </NotificationActions>
-        )}
-      </Popover.Body>
+      </div>
+
+      {/* Footer */}
+      {notifications.length > 0 && (
+        <NotificationActions>
+          <MarkReadButton onClick={markAllRead}>✓ Mark All Read</MarkReadButton>
+          <ClearButton onClick={clearNotifications}>🗑 Clear All</ClearButton>
+        </NotificationActions>
+      )}
     </NotificationPopover>
   );
 
-  const tableHeaders = ["Seq No","Order ID","SO Date","Financial Year","Customer Name","Contact Person Name","Contact No","Customer Email","SO Status","Actions","Alternate No","City","State","Pin Code","GST No","Shipping Address","Billing Address","Description of Goods","Product Category","Size","Spec","Qty","Unit Price","GST","Total","Payment Collected","Payment Method","Payment Due","Payment Terms","Payment Received","Freight Charges","Actual Freight","Installation Status","Installation Report","Transporter Details","Dispatch From","Dispatch Status","Signed Stamp Receiving","Order Type","Report","Bill Status","Production Status","Bill Number","PI Number","Sales Person","Company","Created By","Remarks"];
+  const tableHeaders = ["Seq No","Order ID","SO Date","Financial Year","Customer Name","Contact Person Name","Contact No","Customer Email","SO Status","Actions","Alternate No","City","State","Pin Code","GST No","Shipping Address","Billing Address","Description of Goods","Product Category","Size","Spec","Qty","Unit Price","GST","Total","Payment Collected","Payment Method","Payment Due","Payment Terms","Payment Received","Freight Charges","Actual Freight","Installation Status","Installation Report","Transporter Details","Dispatch From","Dispatch Status","Signed Stamp Receiving","Stamp Attach","Order Type","Report","Bill Status","Production Status","Bill Number","PI Number","Sales Person","Company","Created By","Remarks"];
 
   return (
     <>
@@ -584,7 +674,7 @@ const Sales = () => {
       </div>
       <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #e6f0fa, #f3e8ff)", padding: "30px", fontFamily: "'Poppins', sans-serif" }}>
         {(userRole === "SuperAdmin" || userRole === "GlobalAdmin" || userRole === "Admin" || userRole === "salesperson") && (
-          <OrderTracker userRole={userRole} onFilterChange={setTrackerFilter} initialFilter={trackerFilter} counts={dashboardCounts} />
+          <OrderTracker userRole={userRole} onFilterChange={setTrackerFilter} initialFilter={trackerFilter} counts={{ ...dashboardCounts, all: allOrdersCount }} />
         )}
         <div className="my-4" style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", borderRadius: "20px", padding: "10px 16px", boxShadow: "0 4px 12px rgba(0, 0, 0, 0.18)", display: "inline-flex", alignItems: "center", transition: "all 0.3s ease" }}>
           <h4 style={{ color: "#ffffff", fontWeight: "700", fontSize: "0.85rem", margin: 0, letterSpacing: "0.4px" }} title="Total number of entries">Total Results: {totalOrders}</h4>

@@ -388,10 +388,10 @@ const NotificationBadge = styled.span`
 `;
 
 // Reusable Dropdown Component
-const FilterDropdown = ({ id, label, value, onChange, options, tableId }) => (
+const FilterDropdown = ({ id, label, value, onChange, options, tableId, displayMap = {} }) => (
   <Dropdown>
     <StyledDropdownToggle id={id} aria-controls={tableId}>
-      {value === "All" ? label : value}
+      {value === "All" ? label : (displayMap[value] || value)}
     </StyledDropdownToggle>
     <StyledDropdownMenu>
       {options.map((option) => (
@@ -400,7 +400,7 @@ const FilterDropdown = ({ id, label, value, onChange, options, tableId }) => (
           onClick={() => onChange(option)}
           aria-label={`Select ${label} filter: ${option}`}
         >
-          {option}
+          {displayMap[option] || option}
         </StyledDropdownItem>
       ))}
     </StyledDropdownMenu>
@@ -508,6 +508,7 @@ const FilterSection = ({
             "Partial Dispatch",
             "Fulfilled",
           ]}
+          displayMap={{ "Order Cancel": "Order Cancelled", "Partial Dispatch": "Partial Dispatched", "Fulfilled": "Completed" }}
           tableId={tableId}
         />
         <FilterDropdown

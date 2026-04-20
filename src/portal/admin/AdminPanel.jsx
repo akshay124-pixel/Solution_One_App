@@ -780,6 +780,7 @@ const TABS = [
   { key:"overview",  label:"Overview",       icon:"📊" },
   { key:"users",     label:"Users",          icon:"👥" },
   { key:"create",    label:"Create User",    icon:"➕" },
+  { key:"email-maps", label:"Email Maps",    icon:"📧" },
   { key:"identity",  label:"Identity Links", icon:"🔗" },
 ];
 
@@ -790,11 +791,15 @@ const AdminPanel = () => {
 
   // Lazy-load IdentityManager only when needed
   const [IdentityManager, setIM] = useState(null);
+  const [EmailMapManager, setEMM] = useState(null);
   useEffect(() => {
     if (activeTab === "identity" && !IdentityManager) {
       import("./IdentityManager").then(m => setIM(() => m.default));
     }
-  }, [activeTab, IdentityManager]);
+    if (activeTab === "email-maps" && !EmailMapManager) {
+      import("./EmailMapManager").then(m => setEMM(() => m.default));
+    }
+  }, [activeTab, IdentityManager, EmailMapManager]);
 
   return (
     <div style={{ minHeight:"100vh", background:"#f1f5f9", fontFamily:FONT }}>
@@ -854,6 +859,11 @@ const AdminPanel = () => {
         {activeTab === "overview"  && <OverviewTab onTabChange={k => setActiveTab(k)} />}
         {activeTab === "users"     && <UsersTab />}
         {activeTab === "create"    && <CreateUserTab onCreated={() => setActiveTab("users")} />}
+        {activeTab === "email-maps" && (
+          EmailMapManager
+            ? <EmailMapManager />
+            : <PageSpinner />
+        )}
         {activeTab === "identity"  && (
           IdentityManager
             ? <IdentityManager embedded />

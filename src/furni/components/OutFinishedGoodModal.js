@@ -27,6 +27,7 @@ const OutFinishedGoodModal = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [stampReportFile, setStampReportFile] = useState(null);
 
   useEffect(() => {
     if (initialData && entryToEdit) {
@@ -121,6 +122,11 @@ const OutFinishedGoodModal = ({
         toast.error("Billing Status must be Billing Complete!");
         return;
       }
+      // Require stampReport when stamp is Received
+      if (formData.stamp === "Received" && !stampReportFile && !entryToEdit?.stampReport) {
+        toast.error("Please upload the Stamp Signed Report before saving.");
+        return;
+      }
       if (formData.dispatchFrom !== "Morinda") {
         for (const product of formData.products) {
           if (!product.productType || !product.modelNos.length || !product.unitPrice || !product.qty || !product.gst || !product.size || !product.spec) {
@@ -148,28 +154,33 @@ const OutFinishedGoodModal = ({
     setError(null);
 
     try {
-      const submissionData = {
-        dispatchFrom: formData.dispatchFrom,
-        transporterDetails: formData.transporterDetails || undefined,
-        billNumber: formData.billNumber || undefined,
-        dispatchDate: new Date(formData.dispatchDate).toISOString(),
-        actualFreight: formData.actualFreight !== "" ? Number(formData.actualFreight) : undefined,
-        dispatchStatus: formData.dispatchStatus,
-        remarksBydispatch: formData.remarksBydispatch || undefined,
-        installationReport: formData.installationReport,
-        stamp: formData.stamp,
-        products: formData.products.map((product) => ({
-          productType: product.productType,
-          modelNos: product.modelNos,
-          unitPrice: Number(product.unitPrice) || undefined,
-          qty: Number(product.qty) || undefined,
-          gst: product.gst || undefined,
-          size: product.size,
-          spec: product.spec,
-        })),
-      };
+      const payload = new FormData();
+      payload.append("dispatchFrom", formData.dispatchFrom);
+      if (formData.transporterDetails) payload.append("transporterDetails", formData.transporterDetails);
+      if (formData.billNumber) payload.append("billNumber", formData.billNumber);
+      payload.append("dispatchDate", new Date(formData.dispatchDate).toISOString());
+      if (formData.actualFreight !== "") payload.append("actualFreight", Number(formData.actualFreight));
+      payload.append("dispatchStatus", formData.dispatchStatus);
+      if (formData.remarksBydispatch) payload.append("remarksBydispatch", formData.remarksBydispatch);
+      payload.append("installationReport", formData.installationReport);
+      payload.append("stamp", formData.stamp);
+      payload.append("products", JSON.stringify(formData.products.map((product) => ({
+        productType: product.productType,
+        modelNos: product.modelNos,
+        unitPrice: Number(product.unitPrice) || undefined,
+        qty: Number(product.qty) || undefined,
+        gst: product.gst || undefined,
+        size: product.size,
+        spec: product.spec,
+      }))));
 
-      const response = await furniApi.put(`/api/edit/${entryToEdit._id}`, submissionData);
+      if (stampReportFile) {
+        payload.append("stampReport", stampReportFile);
+      }
+
+      const response = await furniApi.put(`/api/edit/${entryToEdit._id}`, payload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       if (!response.data.success) {
         throw new Error(response.data.message || "Failed to update dispatch");
@@ -186,17 +197,11 @@ const OutFinishedGoodModal = ({
       console.error("Dispatch submission error:", err);
       let userFriendlyMessage = "Something went wrong while updating dispatch.";
       if (err.response) {
-        if (err.response.status === 400) {
-          userFriendlyMessage = "Some details are missing or invalid. Please check and try again.";
-        } else if (err.response.status === 401) {
-          userFriendlyMessage = "Your session has expired. Please log in again.";
-        } else if (err.response.status === 404) {
-          userFriendlyMessage = "The dispatch record could not be found.";
-        } else if (err.response.status === 500) {
-          userFriendlyMessage = "The server is having issues. Please try again later.";
-        } else {
-          userFriendlyMessage = err.response.data?.message || userFriendlyMessage;
-        }
+        if (err.response.status === 400) userFriendlyMessage = "Some details are missing or invalid. Please check and try again.";
+        else if (err.response.status === 401) userFriendlyMessage = "Your session has expired. Please log in again.";
+        else if (err.response.status === 404) userFriendlyMessage = "The dispatch record could not be found.";
+        else if (err.response.status === 500) userFriendlyMessage = "The server is having issues. Please try again later.";
+        else userFriendlyMessage = err.response.data?.message || userFriendlyMessage;
       } else if (err.request) {
         userFriendlyMessage = "Cannot connect to the server. Please check your internet connection.";
       }
@@ -253,7 +258,7 @@ const OutFinishedGoodModal = ({
         <div>
           <label style={{ fontSize: "1rem", fontWeight: "600", color: "#333", marginBottom: "5px", display: "block" }}>Dispatch Status</label>
           <Select key={(entryToEdit?.billStatus || "Pending") + formData.dispatchStatus} value={formData.dispatchStatus || "Not Dispatched"} onChange={handleDispatchStatusChange} style={{ width: "100%", borderRadius: "8px" }} disabled={loading}>
-            <Option value="Not Dispatched">Not Dispatched</Option>
+            <Option value="Not Dispatched">Pending Dispatched</Option>
             <Option value="Hold by Salesperson">Hold by Salesperson</Option>
             <Option value="Hold by Customer">Hold by Customer</Option>
             <Option value="Order Cancelled">Order Cancelled</Option>
@@ -270,6 +275,46 @@ const OutFinishedGoodModal = ({
               <Option value="Not Received">Not Received</Option>
               <Option value="Received">Received</Option>
             </Select>
+          </div>
+        )}
+        {formData.dispatchStatus === "Delivered" && formData.stamp === "Received" && (
+          <div>
+            <label style={{ fontSize: "1rem", fontWeight: "600", color: "#333", marginBottom: "5px", display: "block" }}>
+              Stamp Signed Report <span style={{ color: "red" }}>*</span>
+            </label>
+            {entryToEdit?.stampReport && !stampReportFile && (
+              <div style={{ marginBottom: "6px", fontSize: "0.85rem", color: "#555" }}>
+                Current:{" "}
+                <a
+                  href={`${furniApi.defaults.baseURL}/download/${entryToEdit.stampReport.split("/").pop()}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "#2575fc" }}
+                >
+                  View uploaded report
+                </a>
+              </div>
+            )}
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+              disabled={loading}
+              onChange={(e) => setStampReportFile(e.target.files[0] || null)}
+              style={{
+                width: "100%",
+                padding: "8px",
+                border: "1px solid #d9d9d9",
+                borderRadius: "8px",
+                fontSize: "0.95rem",
+                background: "#fafafa",
+                cursor: "pointer",
+              }}
+            />
+            {stampReportFile && (
+              <div style={{ marginTop: "4px", fontSize: "0.82rem", color: "#52c41a" }}>
+                Selected: {stampReportFile.name}
+              </div>
+            )}
           </div>
         )}
         {showProductFields && (

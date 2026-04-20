@@ -332,13 +332,13 @@ const Production = () => {
           <Form.Group style={{ flex: "0 1 200px" }}>
             <FilterLabel><span style={{ marginRight: "5px" }}>📊</span> Production Status<span className="underline" /></FilterLabel>
             <Form.Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ borderRadius: "20px", padding: "10px", border: "1px solid #ced4da", fontSize: "1rem", boxShadow: "0 2px 5px rgba(0,0,0,0.1)", background: "#fff" }}>
-              {uniqueStatuses.map((status) => (<option key={status} value={status}>{status}</option>))}
+              {uniqueStatuses.map((status) => (<option key={status} value={status}>{status === "Partial Dispatch" ? "Partial Dispatched" : status === "Fulfilled" ? "Completed" : status === "Order Cancel" ? "Order Cancelled" : status}</option>))}
             </Form.Select>
           </Form.Group>
           <Form.Group style={{ flex: "0 1 200px" }}>
             <FilterLabel><span style={{ marginRight: "5px" }}>📋</span> Order Type<span className="underline" /></FilterLabel>
             <Form.Select value={orderTypeFilter} onChange={(e) => setOrderTypeFilter(e.target.value)} style={{ borderRadius: "20px", padding: "10px", border: "1px solid #ced4da", fontSize: "1rem", boxShadow: "0 2px 5px rgba(0,0,0,0.1)", background: "#fff" }}>
-              {uniqueOrderTypes.map((orderType) => (<option key={orderType} value={orderType}>{orderType}</option>))}
+              {uniqueOrderTypes.map((orderType) => (<option key={orderType} value={orderType}>{orderType === "Stock Out" ? "Stock" : orderType}</option>))}
             </Form.Select>
           </Form.Group>
           <Button onClick={handleExportExcel} style={{ background: "linear-gradient(135deg, #28a745, #4cd964)", border: "none", padding: "10px 20px", borderRadius: "20px", color: "#fff", fontWeight: "600", marginBottom: "-45px", fontSize: "1rem", alignSelf: "center" }}
@@ -405,7 +405,7 @@ const Production = () => {
                           <td style={tdStyle} title={order.remarks || "N/A"}>{order.remarks || "N/A"}</td>
                           <td style={tdStyle} title={order.fulfillingStatus || "Pending"}>
                             <Badge style={{ background: order.fulfillingStatus === "Under Process" ? "linear-gradient(135deg, #f39c12, #f7c200)" : order.fulfillingStatus === "Pending" ? "linear-gradient(135deg, #ff6b6b, #ff8787)" : order.fulfillingStatus === "Partial Dispatch" ? "linear-gradient(135deg, #00c6ff, #0072ff)" : order.fulfillingStatus === "Fulfilled" ? "linear-gradient(135deg, #28a745, #4cd964)" : order.fulfillingStatus === "Order Cancel" ? "linear-gradient(135deg, #8e0e00, #e52d27)" : order.fulfillingStatus === "Hold" ? "linear-gradient(135deg, #2e2e2e, #4a4a4a)" : "linear-gradient(135deg, #6c757d, #a9a9a9)", color: "#fff", padding: "5px 10px", borderRadius: "12px", display: "inline-block", width: "100%", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
-                              {order.fulfillingStatus || "Pending"}
+                              {order.fulfillingStatus === "Order Cancel" ? "Order Cancelled" : order.fulfillingStatus === "Partial Dispatch" ? "Partial Dispatched" : order.fulfillingStatus === "Fulfilled" ? "Completed" : order.fulfillingStatus || "Pending"}
                             </Badge>
                           </td>
                           <td style={{ ...tdStyle, maxWidth: "100px" }} title={totalQty}>{totalQty}</td>
@@ -438,9 +438,9 @@ const Production = () => {
                 <Form.Select value={formData.fulfillingStatus || ""} onChange={(e) => setFormData({ ...formData, fulfillingStatus: e.target.value })} style={{ borderRadius: "10px", border: "1px solid #ced4da", padding: "12px", fontSize: "1rem" }}>
                   <option value="Under Process">Under Process</option>
                   <option value="Pending">Pending</option>
-                  <option value="Partial Dispatch">Partial Dispatch</option>
+                  <option value="Partial Dispatch">Partial Dispatched</option>
                   <option value="Hold">Hold</option>
-                  <option value="Order Cancel">Order Cancel</option>
+                  <option value="Order Cancel">Order Cancelled</option>
                   <option value="Fulfilled">Completed</option>
                 </Form.Select>
               </Form.Group>
@@ -542,7 +542,7 @@ const Production = () => {
                   <div style={{ marginBottom: "12px" }}>
                     <div style={{ background: "#f8f9fa", padding: "6px 10px", borderLeft: "4px solid #6a11cb", fontWeight: "bold", textTransform: "uppercase", marginBottom: "10px", fontSize: "15px" }}>Production Information</div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                      {[["Production Status", viewOrder.fulfillingStatus || "Pending"], ["Total Quantity", Array.isArray(viewOrder.products) ? viewOrder.products.reduce((s, p) => s + (p.qty || 0), 0) : "N/A"], ["Remarks (Production)", viewOrder.remarksByProduction || "N/A"]].map(([label, val]) => (
+                      {[["Production Status", viewOrder.fulfillingStatus === "Order Cancel" ? "Order Cancelled" : viewOrder.fulfillingStatus || "Pending"], ["Total Quantity", Array.isArray(viewOrder.products) ? viewOrder.products.reduce((s, p) => s + (p.qty || 0), 0) : "N/A"], ["Remarks (Production)", viewOrder.remarksByProduction || "N/A"]].map(([label, val]) => (
                         <div key={label} style={{ fontSize: "13px" }}><strong style={{ color: "#444" }}>{label}:</strong> {val}</div>
                       ))}
                     </div>
@@ -606,7 +606,7 @@ const Production = () => {
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem" }}>
                         <div><strong>Production Status:</strong>{" "}
                           <Badge style={{ background: viewOrder.fulfillingStatus === "Under Process" ? "linear-gradient(135deg, #f39c12, #f7c200)" : viewOrder.fulfillingStatus === "Pending" ? "linear-gradient(135deg, #ff6b6b, #ff8787)" : viewOrder.fulfillingStatus === "Fulfilled" ? "linear-gradient(135deg, #28a745, #4cd964)" : "linear-gradient(135deg, #6c757d, #a9a9a9)", color: "#fff", padding: "5px 10px", borderRadius: "12px" }}>
-                            {viewOrder.fulfillingStatus || "Pending"}
+                            {viewOrder.fulfillingStatus === "Order Cancel" ? "Order Cancelled" : viewOrder.fulfillingStatus === "Partial Dispatch" ? "Partial Dispatched" : viewOrder.fulfillingStatus === "Fulfilled" ? "Completed" : viewOrder.fulfillingStatus || "Pending"}
                           </Badge>
                         </div>
                         <div><strong>Total Quantity:</strong> {Array.isArray(viewOrder.products) ? viewOrder.products.reduce((sum, p) => sum + (p.qty || 0), 0) : "N/A"}</div>

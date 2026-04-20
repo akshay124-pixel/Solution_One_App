@@ -67,10 +67,15 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [userRole, setUserRole] = useState(localStorage.getItem("role") || "");
   const [installationFile, setInstallationFile] = useState(null);
   const [installationFileError, setInstallationFileError] = useState("");
   const [poFile, setPoFile] = useState(null);
   const [poFileError, setPoFileError] = useState("");
+
+  useEffect(() => {
+    setUserRole(localStorage.getItem("role") || "");
+  }, [isOpen]);
 
   const { register, handleSubmit, control, formState: { errors }, reset, watch, setValue } = useForm({ mode: "onChange", defaultValues: initialFormData });
   const selectedState = watch("state");
@@ -261,7 +266,9 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   const renderOptions = () => (
     <div style={{ display: "flex", justifyContent: "space-around", padding: "1rem" }}>
       <StyledButton variant="primary" onClick={() => setView("edit")}>Edit Full Details</StyledButton>
-      <StyledButton variant="info" onClick={() => setView("update")}>Update Approvals</StyledButton>
+      {(userRole === "SuperAdmin" || userRole === "GlobalAdmin") && (
+        <StyledButton variant="info" onClick={() => setView("update")}>Update Approvals</StyledButton>
+      )}
     </div>
   );
 
@@ -294,7 +301,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
         <Form.Group controlId="pinCode"><Form.Label>📮 Pin Code</Form.Label><Form.Control {...register("pinCode", { pattern: { value: /^\d{6}$/, message: "Pin Code must be exactly 6 digits" }, maxLength: { value: 6, message: "Pin Code must be exactly 6 digits" } })} onChange={(e) => { const value = e.target.value.replace(/\D/g, "").slice(0, 6); e.target.value = value; debouncedHandleInputChange("pinCode", value); }} onKeyDown={(e) => { if (e.key === " " || (!/\d/.test(e.key) && !["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab"].includes(e.key))) e.preventDefault(); }} maxLength={6} isInvalid={!!errors.pinCode} placeholder="Enter 6 digit pin code" /><Form.Control.Feedback type="invalid">{errors.pinCode?.message}</Form.Control.Feedback></Form.Group>
         <Form.Group controlId="shippingAddress"><Form.Label>📦 Shipping Address</Form.Label><Form.Control as="textarea" rows={2} {...register("shippingAddress")} onChange={(e) => debouncedHandleInputChange("shippingAddress", e.target.value)} placeholder="Enter shipping address" /></Form.Group>
         <Form.Group controlId="billingAddress"><Form.Label>🏠 Billing Address</Form.Label><Form.Control as="textarea" rows={2} {...register("billingAddress")} onChange={(e) => debouncedHandleInputChange("billingAddress", e.target.value)} placeholder="Enter billing address" /></Form.Group>
-        <Form.Group controlId="orderType"><Form.Label>📦 Order Type</Form.Label><Controller name="orderType" control={control} render={({ field }) => (<Form.Select {...field} onChange={(e) => { field.onChange(e); debouncedHandleInputChange("orderType", e.target.value); }}><option value="B2G">B2G</option><option value="B2C">B2C</option><option value="B2B">B2B</option><option value="Demo">Demo</option><option value="Replacement">Replacement</option></Form.Select>)} /></Form.Group>
+        <Form.Group controlId="orderType"><Form.Label>📦 Order Type</Form.Label><Controller name="orderType" control={control} render={({ field }) => (<Form.Select {...field} onChange={(e) => { field.onChange(e); debouncedHandleInputChange("orderType", e.target.value); }}><option value="B2G">B2G</option><option value="B2C">B2C</option><option value="B2B">B2B</option><option value="Demo">Demo</option><option value="Replacement">Replacement</option><option value="Stock Out">Stock</option></Form.Select>)} /></Form.Group>
         <Form.Group controlId="stockStatus"><Form.Label>📦 Stock Status</Form.Label><Controller name="stockStatus" control={control} render={({ field }) => (<Form.Select {...field} onChange={(e) => { field.onChange(e); debouncedHandleInputChange("stockStatus", e.target.value); }}><option value="">-- Select Stock Status --</option><option value="In Stock">In Stock</option><option value="Not in Stock">Not in Stock</option></Form.Select>)} /></Form.Group>
         <Form.Group controlId="gemOrderNumber"><Form.Label>📄 GEM Order Number</Form.Label><Form.Control {...register("gemOrderNumber")} onChange={(e) => debouncedHandleInputChange("gemOrderNumber", e.target.value)} placeholder="Enter GEM order number" /></Form.Group>
         {/* Products */}
@@ -320,7 +327,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
                   <Form.Group controlId={`products.${index}.gst`}>
                     <Form.Label style={{ fontSize: "1rem", fontWeight: "600", color: "#475569", marginBottom: "0.5rem", display: "block" }}>GST * <span style={{ color: "#f43f5e" }}>*</span></Form.Label>
                     <Form.Select {...register(`products.${index}.gst`, { required: "GST is required" })} onChange={(e) => debouncedHandleInputChange(`products.${index}.gst`, e.target.value, index)} isInvalid={!!errors.products?.[index]?.gst} style={{ width: "100%", padding: "0.75rem", border: "1px solid #e2e8f0", borderRadius: "0.75rem", backgroundColor: "#f8fafc", fontSize: "1rem", color: "#1e293b" }}>
-                      <option value="18">18%</option><option value="28">28%</option><option value="including">Including</option>
+                      <option value="18">18%</option><option value="including">Including</option>
                     </Form.Select>
                     <Form.Control.Feedback type="invalid">{errors.products?.[index]?.gst?.message}</Form.Control.Feedback>
                   </Form.Group>
@@ -388,7 +395,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
           {poFileError && (<div style={{ color: "#ef4444", fontSize: "0.85rem", marginTop: "0.5rem", fontWeight: "500" }}>{poFileError}</div>)}
         </div>
         <Form.Group controlId="remarksByInstallation"><Form.Label>✏️ Remarks by Installation</Form.Label><Form.Control as="textarea" rows={2} {...register("remarksByInstallation")} onChange={(e) => debouncedHandleInputChange("remarksByInstallation", e.target.value)} placeholder="Enter installation remarks" /></Form.Group>
-        <Form.Group controlId="dispatchStatus"><Form.Label>🚚 Dispatch Status</Form.Label><Controller name="dispatchStatus" control={control} render={({ field }) => (<Form.Select {...field} onChange={(e) => { field.onChange(e); debouncedHandleInputChange("dispatchStatus", e.target.value); }}><option value="Not Dispatched">Not Dispatched</option><option value="Hold by Salesperson">Hold by Salesperson</option><option value="Hold by Customer">Hold by Customer</option><option value="Order Cancelled">Order Cancelled</option><option value="Dispatched">Dispatched</option><option value="Delivered">Delivered</option></Form.Select>)} /></Form.Group>
+        <Form.Group controlId="dispatchStatus"><Form.Label>🚚 Dispatch Status</Form.Label><Controller name="dispatchStatus" control={control} render={({ field }) => (<Form.Select {...field} onChange={(e) => { field.onChange(e); debouncedHandleInputChange("dispatchStatus", e.target.value); }}><option value="Not Dispatched">Pending Dispatched</option><option value="Hold by Salesperson">Hold by Salesperson</option><option value="Hold by Customer">Hold by Customer</option><option value="Order Cancelled">Order Cancelled</option><option value="Dispatched">Dispatched</option><option value="Delivered">Delivered</option></Form.Select>)} /></Form.Group>
         <Form.Group controlId="stamp"><Form.Label>📦 Signed Stamp Receiving</Form.Label><Form.Select {...register("stamp")} onChange={(e) => debouncedHandleInputChange("stamp", e.target.value)} defaultValue="Not Received"><option value="Received">Received</option><option value="Not Received">Not Received</option></Form.Select></Form.Group>
         <Form.Group controlId="salesPerson"><Form.Label>👤 Sales Person</Form.Label><Form.Control as="select" {...register("salesPerson")} onChange={(e) => debouncedHandleInputChange("salesPerson", e.target.value)}><option value="">Select Sales Person</option>{salesPersonlist.map((person) => <option key={person} value={person}>{person}</option>)}</Form.Control></Form.Group>
         <Form.Group controlId="report"><Form.Label>👤 Reporting Manager</Form.Label><Form.Control as="select" {...register("report")} onChange={(e) => debouncedHandleInputChange("report", e.target.value)}><option value="">Select Reporting Manager</option>{Reportinglist.map((manager) => <option key={manager} value={manager}>{manager}</option>)}</Form.Control></Form.Group>
@@ -400,7 +407,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
         <Form.Group controlId="billNumber"><Form.Label>📄 Bill Number</Form.Label><Form.Control {...register("billNumber")} onChange={(e) => debouncedHandleInputChange("billNumber", e.target.value)} placeholder="Enter bill number" /></Form.Group>
         <Form.Group controlId="billStatus"><Form.Label>📋 Bill Status</Form.Label><Controller name="billStatus" control={control} render={({ field }) => (<Form.Select {...field} onChange={(e) => { field.onChange(e); debouncedHandleInputChange("billStatus", e.target.value); }}><option value="Pending">Pending</option><option value="Under Billing">Under Billing</option><option value="Billing Complete">Billing Complete</option></Form.Select>)} /></Form.Group>
         <Form.Group controlId="paymentReceived"><Form.Label>💰 Payment Received</Form.Label><Controller name="paymentReceived" control={control} render={({ field }) => (<Form.Select {...field} onChange={(e) => { field.onChange(e); debouncedHandleInputChange("paymentReceived", e.target.value); }}><option value="Not Received">Not Received</option><option value="Received">Received</option></Form.Select>)} /></Form.Group>
-        <Form.Group controlId="fulfillingStatus"><Form.Label>📋 Production Status</Form.Label><Controller name="fulfillingStatus" control={control} render={({ field }) => (<Form.Select {...field} disabled={isProductionStatusDisabled(dispatchFrom)} onChange={(e) => { field.onChange(e); debouncedHandleInputChange("fulfillingStatus", e.target.value); }}><option value="Pending">Pending</option><option value="Under Process">Under Process</option><option value="Order Cancel">Order Cancel</option><option value="Partial Dispatch">Partial Dispatch</option><option value="Fulfilled">Fulfilled</option></Form.Select>)} /></Form.Group>
+        <Form.Group controlId="fulfillingStatus"><Form.Label>📋 Production Status</Form.Label><Controller name="fulfillingStatus" control={control} render={({ field }) => (<Form.Select {...field} disabled={isProductionStatusDisabled(dispatchFrom)} onChange={(e) => { field.onChange(e); debouncedHandleInputChange("fulfillingStatus", e.target.value); }}><option value="Pending">Pending</option><option value="Under Process">Under Process</option><option value="Order Cancel">Order Cancelled</option><option value="Partial Dispatch">Partial Dispatched</option><option value="Fulfilled">Completed</option></Form.Select>)} /></Form.Group>
         <Form.Group controlId="fulfillmentDate"><Form.Label>📅 Production Date</Form.Label><Form.Control type="date" {...register("fulfillmentDate")} onChange={(e) => debouncedHandleInputChange("fulfillmentDate", e.target.value)} /></Form.Group>
         <Form.Group controlId="remarksByProduction"><Form.Label>✏️ Remarks by Production</Form.Label><Form.Control as="textarea" rows={2} {...register("remarksByProduction")} onChange={(e) => debouncedHandleInputChange("remarksByProduction", e.target.value)} placeholder="Enter production remarks" /></Form.Group>
         <Form.Group controlId="remarksByAccounts"><Form.Label>✏️ Remarks by Accounts</Form.Label><Form.Control as="textarea" rows={2} {...register("remarksByAccounts")} onChange={(e) => debouncedHandleInputChange("remarksByAccounts", e.target.value)} placeholder="Enter accounts remarks" /></Form.Group>
@@ -415,7 +422,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   const renderUpdateForm = () => (
     <Form onSubmit={handleSubmit(onUpdateSubmit)}>
       <FormSection>
-        <Form.Group controlId="sostatus"><Form.Label>📋 SO Status</Form.Label><Form.Select value={updateData.sostatus} onChange={handleUpdateInputChange} name="sostatus"><option value="Pending for Approval">Pending for Approval</option><option value="Order Cancelled">Order Cancel</option><option value="Accounts Approved">Accounts Approved</option><option value="Approved">Approved</option></Form.Select></Form.Group>
+        <Form.Group controlId="sostatus"><Form.Label>📋 SO Status</Form.Label><Form.Select value={updateData.sostatus} onChange={handleUpdateInputChange} name="sostatus"><option value="Pending for Approval">Pending for Approval</option><option value="Order Cancelled">Order Cancel</option><option value="Accounts Approved">Accounts Approved</option><option value="Approved">Approved</option><option value="Hold By Production">On Hold</option></Form.Select></Form.Group>
         <Form.Group controlId="remarks"><Form.Label>✏️ Remarks</Form.Label><Form.Control as="textarea" rows={3} value={updateData.remarks} onChange={handleUpdateInputChange} name="remarks" maxLength={500} placeholder="Enter your remarks here..." /><Form.Text>{updateData.remarks.length}/500</Form.Text></Form.Group>
       </FormSection>
     </Form>

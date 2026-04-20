@@ -264,11 +264,35 @@ function AddEntry({ isOpen, onClose, onEntryAdded }) {
 
   const handleProductInput = (e) => {
     const { name, value } = e.target;
-    setProductInput((prev) => ({
-      ...prev,
-      [name]: name === "quantity" ? value.replace(/\D/g, "") : value,
-      ...(name === "name" ? { specification: "", size: "" } : {}),
-    }));
+    
+    // When product name is selected, auto-fill ONLY for "No Requirement"
+    if (name === "name") {
+      if (value === "No Requirement") {
+        const selectedProduct = productOptions.find((p) => p.name === value);
+        const firstSpec = selectedProduct?.specifications?.[0] || "";
+        const firstSize = selectedProduct?.sizes?.[0] || "";
+        
+        setProductInput((prev) => ({
+          ...prev,
+          [name]: value,
+          specification: firstSpec,
+          size: firstSize,
+        }));
+      } else {
+        // For other products, clear specification and size
+        setProductInput((prev) => ({
+          ...prev,
+          [name]: value,
+          specification: "",
+          size: "",
+        }));
+      }
+    } else {
+      setProductInput((prev) => ({
+        ...prev,
+        [name]: name === "quantity" ? value.replace(/\D/g, "") : value,
+      }));
+    }
   };
 
   const addProduct = () => {

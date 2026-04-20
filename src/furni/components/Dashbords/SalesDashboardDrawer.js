@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 import { exportToExcel } from "../../../utils/excelHelper";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { FINANCIAL_YEAR_OPTIONS, getCurrentFinancialYear } from "../../../shared/financialYear";
 
 const FURNI_BASE = process.env.REACT_APP_FURNI_URL || "http://localhost:5050/api/furni";
 const socketOrigin = (() => {
@@ -40,6 +41,7 @@ const DrawerHeader = styled.div`
   display: flex; justify-content: space-between; align-items: center;
   padding: 10px 20px; background: linear-gradient(135deg, #2575fc, #6a11cb);
   border-radius: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;
+  position: relative; z-index: 1001;
   @media (max-width: 768px) { flex-direction: column; align-items: flex-start; padding: 8px; gap: 8px; }
 `;
 const DrawerTitle = styled.h3`
@@ -48,6 +50,7 @@ const DrawerTitle = styled.h3`
 `;
 const ButtonContainer = styled.div`
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  position: relative; z-index: 1001;
   @media (max-width: 768px) { flex-direction: column; width: 100%; gap: 8px; }
 `;
 const CloseButton = styled(Button)`
@@ -106,6 +109,7 @@ const StyledDropdownToggle = styled(Dropdown.Toggle)`
 const StyledDropdownMenu = styled(Dropdown.Menu)`
   border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   background: white; border: none; padding: 0.5rem; min-width: 180px;
+  z-index: 9999 !important; position: fixed !important;
   @media (max-width: 768px) { min-width: 100%; }
 `;
 const StyledDropdownItem = styled(Dropdown.Item)`
@@ -117,6 +121,7 @@ const StyledDropdownItem = styled(Dropdown.Item)`
 const TableContainer = styled.div`
   flex: 1; overflow-y: auto; border-radius: 12px; background: white;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); max-height: calc(80vh - 100px);
+  position: relative; z-index: 1;
   @media (max-width: 768px) { max-height: calc(90vh - 120px); overflow-x: auto; }
 `;
 const DashboardTable = styled.table`
@@ -170,6 +175,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose, userRole }) => {
   const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  const [financialYear, setFinancialYear] = useState(getCurrentFinancialYear());
   const [productionStatusFilter, setProductionStatusFilter] = useState("All");
   const [productStatus, setProductStatusFilter] = useState("All");
   const [installStatusFilter, setInstallStatusFilter] = useState("All");
@@ -181,6 +187,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose, userRole }) => {
     try {
       setLoading(true);
       const params = {};
+      if (financialYear) params.financialYear = financialYear;
       if (startDate) params.startDate = startDate.toISOString();
       if (endDate) params.endDate = endDate.toISOString();
       if (productionStatusFilter && productionStatusFilter !== "All") params.productionStatus = productionStatusFilter;
@@ -198,7 +205,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose, userRole }) => {
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate, productionStatusFilter, productStatus, installStatusFilter, accountsStatusFilter, dispatchFilter]);
+  }, [startDate, endDate, financialYear, productionStatusFilter, productStatus, installStatusFilter, accountsStatusFilter, dispatchFilter]);
 
   const overallTotals = useMemo(() => {
     return orders.reduce(
@@ -220,6 +227,23 @@ const SalesDashboardDrawer = ({ isOpen, onClose, userRole }) => {
   useEffect(() => {
     if (isOpen) {
       fetchOrders();
+      
+      // Get access token from localStorage
+      let accessToken = localStorage.getItem("accessToken");
+      
+      // If no token, try to get it from session or other sources
+      if (!accessToken) {
+        console.warn("[Furni Socket] No access token found in localStorage, attempting to retrieve...");
+        // Try to get from sessionStorage as fallback
+        accessToken = sessionStorage.getItem("accessToken");
+      }
+      
+      // If still no token, don't connect yet - wait for user to be authenticated
+      if (!accessToken) {
+        console.warn("[Furni Socket] No access token available, skipping Socket.IO connection");
+        return;
+      }
+      
       const socket = io(socketOrigin, {
         path: "/furni/socket.io",
         reconnection: true,
@@ -227,6 +251,9 @@ const SalesDashboardDrawer = ({ isOpen, onClose, userRole }) => {
         reconnectionDelay: 1000,
         withCredentials: true,
         transports: ["websocket", "polling"],
+        auth: {
+          token: `Bearer ${accessToken}`,
+        },
       });
 
       socket.on("connect", () => {
@@ -265,7 +292,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose, userRole }) => {
 
   useEffect(() => {
     if (isOpen) fetchOrders();
-  }, [productionStatusFilter, productStatus, installStatusFilter, accountsStatusFilter, dispatchFilter, startDate, endDate, isOpen, fetchOrders]);
+  }, [productionStatusFilter, productStatus, installStatusFilter, accountsStatusFilter, dispatchFilter, startDate, endDate, financialYear, isOpen, fetchOrders]);
 
   const handleExportToExcel = async () => {
     try {
@@ -302,6 +329,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose, userRole }) => {
   const handleReset = useCallback(() => {
     setStartDate(null);
     setEndDate(null);
+    setFinancialYear(getCurrentFinancialYear());
     setProductionStatusFilter("All");
     setProductStatusFilter("All");
     setInstallStatusFilter("All");
@@ -321,6 +349,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose, userRole }) => {
             <FilterDropdown id="installation-status-filter" label="Installation Status" value={installStatusFilter} onChange={setInstallStatusFilter} options={["All", "Pending", "In Progress", "Completed"]} tableId="sales-analytics-table" />
             <FilterDropdown id="dispatch-status-filter" label="Dispatch Status" value={dispatchFilter} onChange={setDispatchFilter} options={["All", "Not Dispatched", "Dispatched", "Delivered"]} tableId="sales-analytics-table" />
             <FilterDropdown id="accounts-status-filter" label="Accounts Status" value={accountsStatusFilter} onChange={setAccountsStatusFilter} options={["All", "Not Received", "Received"]} tableId="sales-analytics-table" />
+            <FilterDropdown id="financial-year-filter" label="Financial Year" value={financialYear} onChange={setFinancialYear} options={FINANCIAL_YEAR_OPTIONS} tableId="sales-analytics-table" />
             <DatePickerPopup>
               <DatePickerContainer>
                 <StyledDatePicker selected={startDate} onChange={(date) => setStartDate(date)} selectsStart startDate={startDate} endDate={endDate} placeholderText="Start Date" dateFormat="dd/MM/yyyy" isClearable aria-label="Select start date" />

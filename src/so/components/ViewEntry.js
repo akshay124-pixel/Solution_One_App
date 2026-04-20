@@ -292,8 +292,8 @@ function ViewEntry({ isOpen, onClose, entry }) {
       { key: "billStatus", label: "Bill Status" },
       { key: "paymentReceived", label: "Payment Received" },
       { key: "fulfillingStatus", label: "Production Fulfilling Status" },
-      { key: "sostatus", label: "SO Status" },
-      { key: "dispatchStatus", label: "Dispatch Status" },
+      { key: "sostatus", label: "SO Status", formatter: (v) => v === "Order on Hold Due to Low Price" ? "On Hold" : v },
+      { key: "dispatchStatus", label: "Dispatch Status", formatter: (v) => v === "Not Dispatched" ? "Pending Dispatched" : v },
       { key: "fStatus", label: "Installation Status" },
 
       { key: "completionStatus", label: "Production Status" },
@@ -596,8 +596,8 @@ function ViewEntry({ isOpen, onClose, entry }) {
     { key: "dispatchDate", label: "Dispatch Date", formatter: formatDate },
     { key: "deliveryDate", label: "Delivery Date", formatter: formatDate },
     { key: "receiptDate", label: "Receipt Date", formatter: formatDate },
-    { key: "sostatus", label: "SO Status" },
-    { key: "dispatchStatus", label: "Dispatch Status" },
+    { key: "sostatus", label: "SO Status", formatter: (v) => v === "Order on Hold Due to Low Price" ? "On Hold" : v },
+    { key: "dispatchStatus", label: "Dispatch Status", formatter: (v) => v === "Not Dispatched" ? "Pending Dispatched" : v },
     // { key: "completionStatus", label: "Completion Status" },
     { key: "stockStatus", label: "Stock Status" },
     { key: "demoDate", label: "Demo Date", formatter: formatDate },
@@ -736,6 +736,43 @@ function ViewEntry({ isOpen, onClose, entry }) {
     { key: "paymentTerms", label: "Payment Terms" },
     { key: "creditDays", label: "Credit Days" },
     {
+      key: "pwc",
+      label: "PWC",
+      condition: !!entry.pwc,
+    },
+    {
+      key: "pwcFile",
+      label: "PWC Document",
+      condition: !!entry.pwcFile,
+      renderer: () =>
+        entry.pwcFile ? (
+          <Button
+            variant="outline-primary"
+            size="sm"
+            onClick={() => handleDownload(entry.pwcFile, "PWC_Document")}
+            style={{
+              background: "linear-gradient(135deg, #2575fc, #6a11cb)",
+              padding: "6px 14px",
+              borderRadius: "20px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "0.85rem",
+              fontWeight: "600",
+              color: "#ffffff",
+              border: "none",
+              boxShadow: "0 3px 8px rgba(0,0,0,0.2)",
+              cursor: "pointer",
+            }}
+            onMouseEnter={(e) => { e.target.style.transform = "translateY(-1px) scale(1.02)"; e.target.style.boxShadow = "0 5px 12px rgba(0,0,0,0.3)"; }}
+            onMouseLeave={(e) => { e.target.style.transform = "translateY(0) scale(1)"; e.target.style.boxShadow = "0 3px 8px rgba(0,0,0,0.2)"; }}
+          >
+            <Download size={14} />
+            Download PWC
+          </Button>
+        ) : null,
+    },
+    {
       key: "paymentReceived",
       label: "Payment Received",
       condition: entry.paymentReceived === "Received",
@@ -766,6 +803,45 @@ function ViewEntry({ isOpen, onClose, entry }) {
     { key: "transporterDetails", label: "Transporter Details" },
     { key: "docketNo", label: "Docket Number", condition: isValidField(entry.docketNo) },
     { key: "stamp", label: "Stamp Signed Received" },
+    {
+      key: "stampReport",
+      label: "Stamp Signed Report",
+      condition: !!entry.stampReport,
+      renderer: () =>
+        entry.stampReport ? (
+          <Button
+            variant="outline-primary"
+            size="sm"
+            onClick={() => handleDownload(entry.stampReport, "StampSignedReport")}
+            style={{
+              background: "linear-gradient(135deg, #2575fc, #6a11cb)",
+              padding: "6px 14px",
+              borderRadius: "20px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "0.85rem",
+              fontWeight: "600",
+              color: "#ffffff",
+              border: "none",
+              boxShadow: "0 3px 8px rgba(0,0,0,0.2)",
+              transition: "transform 0.2s ease, box-shadow 0.2s ease",
+              cursor: "pointer",
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = "translateY(-1px) scale(1.02)";
+              e.target.style.boxShadow = "0 5px 12px rgba(0,0,0,0.3)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = "translateY(0) scale(1)";
+              e.target.style.boxShadow = "0 3px 8px rgba(0,0,0,0.2)";
+            }}
+          >
+            <Download size={14} />
+            Download Report
+          </Button>
+        ) : null,
+    },
     { key: "installationReport", label: "Installation Report" },
     {
       key: "installationFile",
@@ -1117,11 +1193,11 @@ function ViewEntry({ isOpen, onClose, entry }) {
                 <strong>Stock Status:</strong> {entry.stockStatus || "N/A"}
               </div>
               <div className="pdf-item">
-                <strong>SO Status:</strong> {entry.sostatus || "N/A"}
+                <strong>SO Status:</strong> {entry.sostatus === "Order on Hold Due to Low Price" ? "On Hold" : entry.sostatus || "N/A"}
               </div>
               <div className="pdf-item">
                 <strong>Dispatch Status:</strong>{" "}
-                {entry.dispatchStatus || "N/A"}
+                {entry.dispatchStatus === "Not Dispatched" ? "Pending Dispatched" : entry.dispatchStatus || "N/A"}
               </div>
               <div className="pdf-item">
                 <strong>PI Number:</strong> {entry.piNumber || "N/A"}

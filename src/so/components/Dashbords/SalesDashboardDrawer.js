@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 import { exportToExcel } from "../../../utils/excelHelper";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { FINANCIAL_YEAR_OPTIONS, getCurrentFinancialYear } from "../../../shared/financialYear";
 
 // Styled Components
 const DrawerOverlay = styled.div`
@@ -58,6 +59,8 @@ const DrawerHeader = styled.div`
   margin-bottom: 20px;
   flex-wrap: wrap;
   gap: 10px;
+  position: relative;
+  z-index: 1001;
 
   @media (max-width: 768px) {
     flex-direction: column;
@@ -83,6 +86,8 @@ const ButtonContainer = styled.div`
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 1001;
 
   @media (max-width: 768px) {
     flex-direction: column;
@@ -253,6 +258,8 @@ const SalesPersonSelectContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 5px;
+  position: relative;
+  z-index: 1001;
 
   @media (max-width: 768px) {
     width: 100%;
@@ -288,6 +295,8 @@ const TableContainer = styled.div`
   background: white;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   max-height: calc(80vh - 100px);
+  position: relative;
+  z-index: 1;
 
   @media (max-width: 768px) {
     max-height: calc(90vh - 120px);
@@ -461,6 +470,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [selectedSalesPerson, setSelectedSalesPerson] = useState("All");
+  const [financialYear, setFinancialYear] = useState(getCurrentFinancialYear());
   const userId = localStorage.getItem("userId");
   const userRole = localStorage.getItem("role");
   const [currentUser, setCurrentUser] = useState(null);
@@ -537,6 +547,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
 
       // Pass date filters to backend
       const params = {};
+      if (financialYear) params.financialYear = financialYear;
       if (startDate) params.startDate = startDate.toISOString();
       if (endDate) params.endDate = endDate.toISOString();
 
@@ -553,7 +564,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, financialYear]);
 
   // Stable ref for Socket.IO listener to avoid closure issues
   const fetchOrdersRef = useRef(fetchOrders);
@@ -566,7 +577,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
     if (isOpen) {
       fetchOrders();
     }
-  }, [startDate, endDate, isOpen]);
+  }, [startDate, endDate, financialYear, isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -602,6 +613,23 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
           return process.env.REACT_APP_SO_URL;
         }
       })();
+      
+      // Get access token from localStorage
+      let accessToken = localStorage.getItem("accessToken");
+      
+      // If no token, try to get it from session or other sources
+      if (!accessToken) {
+        console.warn("[SO Socket] No access token found in localStorage, attempting to retrieve...");
+        // Try to get from sessionStorage as fallback
+        accessToken = sessionStorage.getItem("accessToken");
+      }
+      
+      // If still no token, don't connect yet - wait for user to be authenticated
+      if (!accessToken) {
+        console.warn("[SO Socket] No access token available, skipping Socket.IO connection");
+        return;
+      }
+      
       const socket = io(baseOrigin, {
         path: "/sales/socket.io",
         reconnection: true,
@@ -609,6 +637,9 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
         reconnectionDelay: 1000,
         withCredentials: true,
         transports: ["websocket", "polling"],
+        auth: {
+          token: `Bearer ${accessToken}`,
+        },
       });
 
       socket.on("connect", () => {
@@ -808,6 +839,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
     setStartDate(null);
     setEndDate(null);
     setSelectedSalesPerson("All");
+    setFinancialYear(getCurrentFinancialYear());
   }, []);
 
   return (
@@ -848,6 +880,19 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
                 <DatePickerIcon size={18} />
               </DatePickerContainer>
             </DatePickerPopup>
+            <SalesPersonSelectContainer>
+              <StyledFormSelect
+                value={financialYear}
+                onChange={(e) => setFinancialYear(e.target.value)}
+                aria-label="Select Financial Year"
+              >
+                {FINANCIAL_YEAR_OPTIONS.map((fy) => (
+                  <option key={fy} value={fy}>
+                    {fy}
+                  </option>
+                ))}
+              </StyledFormSelect>
+            </SalesPersonSelectContainer>
             <SalesPersonSelectContainer>
               <StyledFormSelect
                 value={selectedSalesPerson}

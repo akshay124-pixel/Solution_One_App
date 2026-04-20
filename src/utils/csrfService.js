@@ -25,7 +25,7 @@ export const fetchCSRFToken = async () => {
   csrfTokenPromise = (async () => {
     try {
       const response = await fetch(
-        (process.env.REACT_APP_PORTAL_URL || "http://localhost:5050") + "/api/auth/csrf-token",
+        (process.env.REACT_APP_PORTAL_URL) + "/api/auth/csrf-token",
         {
           method: "GET",
           credentials: "include",

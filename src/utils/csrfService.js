@@ -81,6 +81,7 @@ export const clearCSRFToken = () => {
  * Ensure CSRF token is available
  * Fetches if not already cached
  * Retries up to 3 times on failure
+ * Returns null on failure instead of throwing (graceful degradation)
  */
 export const ensureCSRFToken = async (retries = 3) => {
   if (csrfToken) {
@@ -95,12 +96,14 @@ export const ensureCSRFToken = async (retries = 3) => {
       }
     } catch (err) {
       if (i === retries - 1) {
-        throw err;
+        // Return null instead of throwing - allows requests to proceed without CSRF
+        console.warn("CSRF token unavailable - proceeding without CSRF protection");
+        return null;
       }
       // Wait before retry
       await new Promise(resolve => setTimeout(resolve, 100 * (i + 1)));
     }
   }
 
-  throw new Error("Failed to fetch CSRF token after retries");
+  return null;
 };

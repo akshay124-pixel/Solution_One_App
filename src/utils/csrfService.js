@@ -24,16 +24,34 @@ export const fetchCSRFToken = async () => {
 
   csrfTokenPromise = (async () => {
     try {
-      const response = await fetch(
-        (process.env.REACT_APP_PORTAL_URL) + "/api/auth/csrf-token",
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      // Use REACT_APP_PORTAL_URL — must be set in production (e.g. https://srv988392.hstgr.cloud).
+      // Fallback to empty string so the URL is always relative-safe; never use localhost in production.
+      const portalBase =
+        process.env.REACT_APP_PORTAL_URL ||
+        (typeof window !== "undefined"
+          ? window.location.origin  // relative fallback: same origin as the app
+          : "");
+
+      const csrfUrl = `${portalBase}/api/auth/csrf-token`;
+
+      const response = await fetch(csrfUrl, {
+        method: "GET",
+        credentials: "include",
+        // "manual" prevents fetch from silently following a 301/302 redirect to
+        // a different origin (e.g. localhost:5050) which would cause a CORS failure.
+        redirect: "manual",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      // A redirect (opaqueredirect type) means the server is misconfigured —
+      // surface a clear error instead of a confusing CORS failure.
+      if (response.type === "opaqueredirect") {
+        throw new Error(
+          `CSRF endpoint returned a redirect. Check that ${csrfUrl} is served directly and not redirected by nginx/proxy.`
+        );
+      }
 
       if (!response.ok) {
         throw new Error(`Failed to fetch CSRF token: ${response.status}`);

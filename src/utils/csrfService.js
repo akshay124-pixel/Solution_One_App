@@ -4,8 +4,6 @@
  * Handles fetching, storing, and providing CSRF tokens to API calls
  */
 
-import axios from "axios";
-
 let csrfToken = null;
 let csrfTokenPromise = null;
 
@@ -26,23 +24,27 @@ export const fetchCSRFToken = async () => {
 
   csrfTokenPromise = (async () => {
     try {
-      const portalUrl = process.env.REACT_APP_PORTAL_URL || "http://localhost:5050";
-
-      const response = await axios.get(
-        `${portalUrl}/api/auth/csrf-token`,
+      const response = await fetch(
+        (process.env.REACT_APP_PORTAL_URL || "http://localhost:5050") + "/api/auth/csrf-token",
         {
-          withCredentials: true,
+          method: "GET",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
         }
       );
 
-      if (!response.data.csrfToken) {
-        throw new Error("No CSRF token in response");
+      if (!response.ok) {
+        throw new Error(`Failed to fetch CSRF token: ${response.status}`);
       }
 
-      csrfToken = response.data.csrfToken;
+      const data = await response.json();
+      if (!data.csrfToken) {
+        throw new Error("No CSRF token in response");
+      }
+      
+      csrfToken = data.csrfToken;
       return csrfToken;
     } catch (error) {
       console.error("Error fetching CSRF token:", error);
@@ -81,7 +83,6 @@ export const clearCSRFToken = () => {
  * Ensure CSRF token is available
  * Fetches if not already cached
  * Retries up to 3 times on failure
- * Returns null on failure instead of throwing (graceful degradation)
  */
 export const ensureCSRFToken = async (retries = 3) => {
   if (csrfToken) {
@@ -96,14 +97,12 @@ export const ensureCSRFToken = async (retries = 3) => {
       }
     } catch (err) {
       if (i === retries - 1) {
-        // Return null instead of throwing - allows requests to proceed without CSRF
-        console.warn("CSRF token unavailable - proceeding without CSRF protection");
-        return null;
+        throw err;
       }
       // Wait before retry
       await new Promise(resolve => setTimeout(resolve, 100 * (i + 1)));
     }
   }
 
-  return null;
+  throw new Error("Failed to fetch CSRF token after retries");
 };

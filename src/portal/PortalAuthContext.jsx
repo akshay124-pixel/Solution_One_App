@@ -185,12 +185,8 @@ export const PortalAuthProvider = ({ children }) => {
 
     const initSession = async () => {
       try {
-        // Try to fetch CSRF token but don't block session init if it fails
-        try {
-          await fetchCSRFToken();
-        } catch (csrfError) {
-          console.warn("CSRF token fetch failed during init, proceeding without CSRF:", csrfError);
-        }
+        // Fetch CSRF token on app initialization
+        await fetchCSRFToken();
         
         const result = await refreshPortalToken();
         if (result.success) {
@@ -217,12 +213,8 @@ export const PortalAuthProvider = ({ children }) => {
 
   const login = useCallback(async (email, password) => {
     try {
-      // Try to fetch CSRF token but don't block login if it fails
-      try {
-        await fetchCSRFToken();
-      } catch (csrfError) {
-        console.warn("CSRF token fetch failed, proceeding without CSRF:", csrfError);
-      }
+      // Ensure CSRF token is available before login
+      await fetchCSRFToken();
       
       const res = await portalApi.post("/api/auth/login", { email, password });
       if (res.data.success) {

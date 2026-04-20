@@ -24,27 +24,24 @@ export const fetchCSRFToken = async () => {
 
   csrfTokenPromise = (async () => {
     try {
-      const response = await fetch(
-        (process.env.REACT_APP_PORTAL_URL || "http://localhost:5050") + "/api/auth/csrf-token",
+      const axios = require("axios");
+      const portalUrl = process.env.REACT_APP_PORTAL_URL || "http://localhost:5050";
+      
+      const response = await axios.get(
+        `${portalUrl}/api/auth/csrf-token`,
         {
-          method: "GET",
-          credentials: "include",
+          withCredentials: true,
           headers: {
             "Content-Type": "application/json",
           },
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch CSRF token: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (!data.csrfToken) {
+      if (!response.data.csrfToken) {
         throw new Error("No CSRF token in response");
       }
       
-      csrfToken = data.csrfToken;
+      csrfToken = response.data.csrfToken;
       return csrfToken;
     } catch (error) {
       console.error("Error fetching CSRF token:", error);

@@ -4,6 +4,8 @@
  * Handles fetching, storing, and providing CSRF tokens to API calls
  */
 
+import axios from "axios";
+
 let csrfToken = null;
 let csrfTokenPromise = null;
 
@@ -24,9 +26,8 @@ export const fetchCSRFToken = async () => {
 
   csrfTokenPromise = (async () => {
     try {
-      const axios = require("axios");
       const portalUrl = process.env.REACT_APP_PORTAL_URL || "http://localhost:5050";
-      
+
       const response = await axios.get(
         `${portalUrl}/api/auth/csrf-token`,
         {
@@ -40,7 +41,7 @@ export const fetchCSRFToken = async () => {
       if (!response.data.csrfToken) {
         throw new Error("No CSRF token in response");
       }
-      
+
       csrfToken = response.data.csrfToken;
       return csrfToken;
     } catch (error) {

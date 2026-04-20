@@ -1,6 +1,6 @@
 import axios from "axios";
 import { toast } from "react-toastify";
-import { getCSRFToken, ensureCSRFToken } from "../../utils/csrfService";
+
 
 // Create Axios instance
 const api = axios.create({
@@ -60,19 +60,6 @@ api.interceptors.request.use(
         if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`;
         }
-        
-        // Ensure CSRF token is available for state-changing requests
-        if (["POST", "PUT", "PATCH", "DELETE"].includes(config.method?.toUpperCase())) {
-            try {
-                const csrfToken = getCSRFToken() || await ensureCSRFToken();
-                if (csrfToken) {
-                    config.headers["X-CSRF-Token"] = csrfToken;
-                }
-            } catch (err) {
-                console.error("Failed to get CSRF token:", err);
-            }
-        }
-        
         return config;
     },
     (error) => Promise.reject(error)

@@ -1,7 +1,6 @@
 /**
  * Furni Axios Setup — dedicated instance (does NOT mutate global axios).
  * Token is read from in-memory PortalAuthContext, never from localStorage.
- * CSRF token is automatically included in all state-changing requests.
  * Mirrors the SO axiosSetup pattern exactly.
  */
 import axios from "axios";
@@ -11,7 +10,7 @@ import {
   setPortalAccessToken,
   getPortalAccessToken,
 } from "../portal/PortalAuthContext";
-import { getCSRFToken, ensureCSRFToken } from "../utils/csrfService";
+
 
 export const BASE_URL =
   process.env.REACT_APP_FURNI_URL || "http://localhost:5050/api/furni";
@@ -22,7 +21,7 @@ const furniApi = axios.create({
   withCredentials: true,
 });
 
-// ── Request interceptor: attach in-memory portal token + CSRF token ────────────────────────
+// ── Request interceptor: attach in-memory portal token ────────────────────────────────────
 furniApi.interceptors.request.use(
   async (config) => {
     const token = getPortalAccessToken();
@@ -30,20 +29,6 @@ furniApi.interceptors.request.use(
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    // Ensure CSRF token is available for state-changing requests
-    if (["POST", "PUT", "PATCH", "DELETE"].includes(config.method?.toUpperCase())) {
-      try {
-        const csrfToken = getCSRFToken() || await ensureCSRFToken();
-        if (csrfToken) {
-          config.headers = config.headers || {};
-          config.headers["X-CSRF-Token"] = csrfToken;
-        }
-      } catch (err) {
-        console.error("Failed to get CSRF token:", err);
-      }
-    }
-    
     return config;
   },
   (error) => Promise.reject(error)

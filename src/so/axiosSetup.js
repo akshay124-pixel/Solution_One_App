@@ -1,7 +1,6 @@
 /**
  * SO Axios Setup — dedicated instance (does NOT mutate global axios).
  * Token is read from in-memory PortalAuthContext, never from localStorage.
- * CSRF token is automatically included in all state-changing requests.
  */
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -10,7 +9,7 @@ import {
   setPortalAccessToken,
   getPortalAccessToken,
 } from "../portal/PortalAuthContext";
-import { getCSRFToken, ensureCSRFToken } from "../utils/csrfService";
+
 
 export const BASE_URL =
   process.env.REACT_APP_SO_URL || "http://localhost:5050/api/so";
@@ -21,29 +20,14 @@ const soApi = axios.create({
   withCredentials: true,
 });
 
-// ── Request interceptor: attach in-memory portal token + CSRF token ────────────────────────
+// ── Request interceptor: attach in-memory portal token ────────────────────────────────────
 soApi.interceptors.request.use(
   async (config) => {
     const token = getPortalAccessToken();
     if (token) {
-      // Always overwrite — ensures stale localStorage-based headers are replaced
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    // Ensure CSRF token is available for state-changing requests
-    if (["POST", "PUT", "PATCH", "DELETE"].includes(config.method?.toUpperCase())) {
-      try {
-        const csrfToken = getCSRFToken() || await ensureCSRFToken();
-        if (csrfToken) {
-          config.headers = config.headers || {};
-          config.headers["X-CSRF-Token"] = csrfToken;
-        }
-      } catch (err) {
-        console.error("Failed to get CSRF token:", err);
-      }
-    }
-    
     return config;
   },
   (error) => Promise.reject(error)

@@ -2,11 +2,10 @@
  * DMS API — unified portal version
  * Uses the portal access token from PortalAuthContext instead of DMS localStorage auth.
  * Base URL points to /api/dms on the unified server.
- * CSRF token is automatically included in all state-changing requests.
  */
 import axios from "axios";
 import { getPortalAccessToken, setPortalAccessToken } from "../../portal/PortalAuthContext";
-import { getCSRFToken, ensureCSRFToken } from "../../utils/csrfService";
+
 
 const BASE_URL = (process.env.REACT_APP_PORTAL_URL || "http://localhost:5050") + "/api/dms";
 
@@ -28,19 +27,6 @@ const processQueue = (error, token = null) => {
 api.interceptors.request.use(async (config) => {
   const token = getPortalAccessToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
-  
-  // Ensure CSRF token is available for state-changing requests
-  if (["POST", "PUT", "PATCH", "DELETE"].includes(config.method?.toUpperCase())) {
-    try {
-      const csrfToken = getCSRFToken() || await ensureCSRFToken();
-      if (csrfToken) {
-        config.headers["X-CSRF-Token"] = csrfToken;
-      }
-    } catch (err) {
-      console.error("Failed to get CSRF token:", err);
-    }
-  }
-  
   return config;
 }, (error) => Promise.reject(error));
 

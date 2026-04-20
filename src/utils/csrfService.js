@@ -2,72 +2,66 @@
  * CSRF Token Service
  * Centralized CSRF token management for all modules
  * Handles fetching, storing, and providing CSRF tokens to API calls
+ *
+ * NOTE: CSRF fetch failures are non-fatal — login and API calls proceed
+ * without the token if the endpoint is unreachable or redirected.
+ * The backend must also treat a missing CSRF header as acceptable when
+ * the request is authenticated via httpOnly cookie + Bearer token.
  */
 
 let csrfToken = null;
 let csrfTokenPromise = null;
 
+// Build the CSRF endpoint URL once
+const getCSRFUrl = () => {
+  const base = process.env.REACT_APP_PORTAL_URL || "";
+  return `${base}/api/auth/csrf-token`;
+};
+
 /**
- * Fetch CSRF token from backend
- * Uses caching to avoid multiple requests
+ * Fetch CSRF token from backend.
+ * Returns the token string on success, or null on any failure (non-fatal).
  */
 export const fetchCSRFToken = async () => {
-  // If already fetching, return existing promise
-  if (csrfTokenPromise) {
-    return csrfTokenPromise;
-  }
+  // Return cached promise if already in-flight
+  if (csrfTokenPromise) return csrfTokenPromise;
 
-  // If already have token, return it
-  if (csrfToken) {
-    return csrfToken;
-  }
+  // Return cached token if already fetched
+  if (csrfToken) return csrfToken;
 
   csrfTokenPromise = (async () => {
     try {
-      // Use REACT_APP_PORTAL_URL — must be set in production (e.g. https://srv988392.hstgr.cloud).
-      // Fallback to empty string so the URL is always relative-safe; never use localhost in production.
-      const portalBase =
-        process.env.REACT_APP_PORTAL_URL ||
-        (typeof window !== "undefined"
-          ? window.location.origin  // relative fallback: same origin as the app
-          : "");
-
-      const csrfUrl = `${portalBase}/api/auth/csrf-token`;
+      const csrfUrl = getCSRFUrl();
 
       const response = await fetch(csrfUrl, {
         method: "GET",
         credentials: "include",
-        // "manual" prevents fetch from silently following a 301/302 redirect to
-        // a different origin (e.g. localhost:5050) which would cause a CORS failure.
-        redirect: "manual",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        redirect: "follow", // follow redirects normally
+        headers: { "Accept": "application/json" },
       });
 
-      // A redirect (opaqueredirect type) means the server is misconfigured —
-      // surface a clear error instead of a confusing CORS failure.
-      if (response.type === "opaqueredirect") {
-        throw new Error(
-          `CSRF endpoint returned a redirect. Check that ${csrfUrl} is served directly and not redirected by nginx/proxy.`
-        );
-      }
-
+      // Non-2xx — log and return null (non-fatal)
       if (!response.ok) {
-        throw new Error(`Failed to fetch CSRF token: ${response.status}`);
+        console.warn(`CSRF token fetch returned ${response.status} — proceeding without CSRF token.`);
+        return null;
       }
 
       const data = await response.json();
       if (!data.csrfToken) {
-        throw new Error("No CSRF token in response");
+        console.warn("CSRF response missing csrfToken field — proceeding without CSRF token.");
+        return null;
       }
-      
+
       csrfToken = data.csrfToken;
       return csrfToken;
     } catch (error) {
-      console.error("Error fetching CSRF token:", error);
+      // Network error, CORS, redirect to unreachable host, etc.
+      // Log once and continue — do NOT block login.
+      console.warn("CSRF token fetch failed (non-fatal):", error.message);
+      return null;
+    } finally {
+      // Always clear the in-flight promise so next call retries fresh
       csrfTokenPromise = null;
-      throw error;
     }
   })();
 
@@ -75,22 +69,20 @@ export const fetchCSRFToken = async () => {
 };
 
 /**
- * Get current CSRF token (synchronous)
- * Returns null if token hasn't been fetched yet
+ * Get current CSRF token (synchronous).
+ * Returns null if token hasn't been fetched yet.
  */
-export const getCSRFToken = () => {
-  return csrfToken;
-};
+export const getCSRFToken = () => csrfToken;
 
 /**
- * Set CSRF token manually (for testing or manual override)
+ * Set CSRF token manually (for testing or manual override).
  */
 export const setCSRFToken = (token) => {
   csrfToken = token;
 };
 
 /**
- * Clear CSRF token (on logout)
+ * Clear CSRF token (on logout).
  */
 export const clearCSRFToken = () => {
   csrfToken = null;
@@ -98,29 +90,23 @@ export const clearCSRFToken = () => {
 };
 
 /**
- * Ensure CSRF token is available
- * Fetches if not already cached
- * Retries up to 3 times on failure
+ * Ensure CSRF token is available.
+ * Tries up to `retries` times, but always returns null instead of throwing
+ * so callers are never blocked by a CSRF fetch failure.
  */
 export const ensureCSRFToken = async (retries = 3) => {
-  if (csrfToken) {
-    return csrfToken;
-  }
+  if (csrfToken) return csrfToken;
 
   for (let i = 0; i < retries; i++) {
-    try {
-      await fetchCSRFToken();
-      if (csrfToken) {
-        return csrfToken;
-      }
-    } catch (err) {
-      if (i === retries - 1) {
-        throw err;
-      }
-      // Wait before retry
-      await new Promise(resolve => setTimeout(resolve, 100 * (i + 1)));
+    const token = await fetchCSRFToken();
+    if (token) return token;
+
+    // Small backoff before retry (skip on last attempt)
+    if (i < retries - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 150 * (i + 1)));
     }
   }
 
-  throw new Error("Failed to fetch CSRF token after retries");
+  // Return null — callers must handle missing CSRF gracefully
+  return null;
 };

@@ -1632,13 +1632,16 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
                             }}
                           >
                             <option value="">-- Select Product Type --</option>
-                            {[...Object.keys(productOptions), "Others"].map(
-                              (type) => (
-                                <option key={type} value={type}>
-                                  {type}
-                                </option>
-                              ),
-                            )}
+                            {[
+                              "Others",
+                              ...Object.keys(productOptions)
+                                .filter((type) => type !== "Others")
+                                .sort(),
+                            ].map((type) => (
+                              <option key={type} value={type}>
+                                {type}
+                              </option>
+                            ))}
                           </Form.Select>
                         )}
                       />

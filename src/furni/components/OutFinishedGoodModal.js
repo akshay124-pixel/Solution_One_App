@@ -226,7 +226,7 @@ const OutFinishedGoodModal = ({
       onCancel={onClose}
       footer={null}
       style={{ borderRadius: "15px", overflow: "hidden" }}
-      bodyStyle={{ padding: "30px", background: "#fff", borderRadius: "0 0 15px 15px" }}
+      styles={{ body: { padding: "30px", background: "#fff", borderRadius: "0 0 15px 15px" } }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "15px", fontFamily: "Arial, sans-serif" }}>
         {error && <div style={{ color: "red", marginBottom: "10px" }}>{error}</div>}

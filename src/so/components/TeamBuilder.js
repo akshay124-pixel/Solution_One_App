@@ -5,6 +5,7 @@ import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import styled from "styled-components";
 import io from "socket.io-client";
+import { getPortalAccessToken } from "../../portal/PortalAuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users,
@@ -588,6 +589,7 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       withCredentials: true,
+      auth: { token: getPortalAccessToken() },
     });
 
     socket.on("connect", () => {

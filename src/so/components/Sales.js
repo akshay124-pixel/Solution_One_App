@@ -11,6 +11,7 @@ import { toast } from "react-toastify";
 import { exportToExcel, readExcelFile } from "../../utils/excelHelper";
 import { BarChart2, Upload, Download,Users } from "lucide-react";
 import io from "socket.io-client";
+import { getPortalAccessToken } from "../../portal/PortalAuthContext";
 import styled from "styled-components";
 import { FixedSizeList as List } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -1354,6 +1355,7 @@ const Sales = () => {
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       withCredentials: true,
+      auth: { token: getPortalAccessToken() },
     });
 
     socket.on("connect", () => {

@@ -7,6 +7,7 @@ import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import { exportToExcel } from "../../utils/excelHelper";
 import io from "socket.io-client";
+import { getPortalAccessToken } from "../../portal/PortalAuthContext";
 
 const formatMoney = (value) => {
   const n = Number(value);
@@ -65,6 +66,7 @@ const Verification = () => {
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       withCredentials: true,
+      auth: { token: getPortalAccessToken() },
     });
 
     socket.on("connect", () => {

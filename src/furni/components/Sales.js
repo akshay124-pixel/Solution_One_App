@@ -460,12 +460,49 @@ const Sales = () => {
     toast.info("Filters reset!");
   }, [fetchPaginatedOrders]);
 
-  const handleAddEntry = useCallback(async () => { await fetchPaginatedOrders(); setIsAddModalOpen(false); fetchDashboardCounts(); }, [fetchPaginatedOrders, fetchDashboardCounts]);
+  const handleAddEntry = useCallback(async () => {
+    // Re-fetch with current filters so new order appears under the right financial year
+    await fetchPaginatedOrders({
+      page: currentPage,
+      search: searchTerm,
+      approval: productionStatusFilter,
+      orderType: productStatus,
+      dispatch: dispatchFilter,
+      salesPerson: "All",
+      dispatchFrom: "All",
+      financialYear: trackerFilter === "all" ? financialYearFilter : "All",
+      startDate,
+      endDate,
+      dashboardFilter: trackerFilter,
+      accountsStatus: accountsStatusFilter,
+      installationStatus: installStatusFilter,
+    });
+    setIsAddModalOpen(false);
+    fetchDashboardCounts();
+  }, [fetchPaginatedOrders, fetchDashboardCounts, currentPage, searchTerm, productionStatusFilter, productStatus, dispatchFilter, financialYearFilter, trackerFilter, startDate, endDate, accountsStatusFilter, installStatusFilter]);
+
   const handleViewClick = useCallback((order) => { setSelectedOrder(order); setIsViewModalOpen(true); }, []);
   const handleEditClick = useCallback((order) => { setSelectedOrder(order); setIsEditModalOpen(true); }, []);
   const handleDeleteClick = useCallback((order) => { setSelectedOrder(order); setIsDeleteModalOpen(true); }, []);
-  const handleDelete = useCallback(async () => { await fetchPaginatedOrders(); setIsDeleteModalOpen(false); fetchDashboardCounts(); }, [fetchPaginatedOrders, fetchDashboardCounts]);
-  const handleEntryUpdated = useCallback(async () => { await fetchPaginatedOrders(); setIsEditModalOpen(false); fetchDashboardCounts(); }, [fetchPaginatedOrders, fetchDashboardCounts]);
+
+  const handleDelete = useCallback((deletedIds) => {
+    // Local state update — no re-fetch needed, financial year filter stays intact
+    const ids = Array.isArray(deletedIds) ? deletedIds : [deletedIds];
+    setOrders((prev) => prev.filter((o) => !ids.includes(o._id)));
+    setFilteredOrders((prev) => prev.filter((o) => !ids.includes(o._id)));
+    setIsDeleteModalOpen(false);
+    fetchDashboardCounts();
+  }, [fetchDashboardCounts]);
+
+  const handleEntryUpdated = useCallback((updatedEntry) => {
+    // Local state update — same as SO, no re-fetch so financial year filter stays intact
+    if (updatedEntry && updatedEntry._id) {
+      setOrders((prev) => prev.map((o) => o._id === updatedEntry._id ? updatedEntry : o));
+      setFilteredOrders((prev) => prev.map((o) => o._id === updatedEntry._id ? updatedEntry : o));
+    }
+    setIsEditModalOpen(false);
+    fetchDashboardCounts();
+  }, [fetchDashboardCounts]);
 
   const formatCurrency = useCallback((value) => {
     if (!value || value === "") return "\u20b90.00";

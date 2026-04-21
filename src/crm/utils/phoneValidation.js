@@ -57,7 +57,6 @@ export const userPhoneMap = {
   "Surbhi Chugh": "7888492229",
   "Nancy Goyal": "6283362270",
   "Joyti Rani": "9056803504",
-  "Mayank Prasad": "7717309501"
 };
 
 /**

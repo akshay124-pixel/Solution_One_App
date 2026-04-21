@@ -1330,7 +1330,6 @@ export const Reportinglist = [
   { label: "Harpreet Singh", value: "Harpeet Singh" },
   { label: "J P Sharma", value: "J P Sharma" },
   { label: "Manjit Singh Chowhan", value: "Manjit Singh Chowhan" },
-  { label: "Mayank Prasad", value: "Mayank Prasad" },
   { label: "PS Brar", value: "PS Brar" },
   { label: "Priya Sharma", value: "Priya Sharma" },
   { label: "Purnendu Kumar", value: "Purnendu Kumar" },

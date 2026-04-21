@@ -924,6 +924,7 @@ export const salesPersonlist = [
   "Parth Bhardwaj",
   "Gursewak Singh",
   "Gem Team",
+  "Global",
   "Gurnam Bhullar",
   "Heena Mehra",
   "Harpeet Singh",

@@ -136,7 +136,18 @@ export const productOptions = {
     specs: ["Standard"],
   },
   "Stylus Pen": { sizes: ["N/A"], specs: ["N/A"] },
-  "Dual sliding shutter": { sizes: ["N/A"], specs: ["N/A"] },
+  "Dual sliding shutter": { sizes: ["65 inch", "75 inch", "86 inch", "98 inch"],
+    specs: [
+      "Common",
+      "White Writing Board & Blue Display Board",
+      "White Writing Board & Red Display Board",
+      "White Writing Board & Green Display Board",
+      "Green Writing Board & Blue Display Board",
+      "Both Side Main & Display Green Writing Board",
+      "Both Side Main & Display White Writing Board",
+      "White Writing Board (Main) & Green Writing Board (Display)",
+      "One White Writing & One Green Writing Board with red display board",
+    ], },
   "Single Sliding Shutter": {
     sizes: ["65 inch", "75 inch", "86 inch", "98 inch"],
     specs: [

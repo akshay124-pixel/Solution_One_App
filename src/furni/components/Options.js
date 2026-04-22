@@ -921,6 +921,7 @@ export const salesPersonlist = [
   "Ashwani Kumar",
   "Bachan Pal",
   "Deepak saini",
+  "Dinesh Soni",
   "Parth Bhardwaj",
   "Global",
   "Gursewak Singh",

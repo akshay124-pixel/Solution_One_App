@@ -1265,6 +1265,7 @@ export const salesPersonlist = [
   { label: "Ashwani Kumar", value: "Ashwani Kumar" },
   { label: "Bachan Pal", value: "Bachan Pal" },
   { label: "Deepak saini", value: "Deepak saini" },
+  { label: "Dinesh Soni", value: "Dinesh Soni" },
   { label: "Parth Bhardwaj", value: "Parth Bhardwaj" },
   { label: "Gursewak Singh", value: "Gursewak Singh" },
   { label: "Global", value: "Global" },

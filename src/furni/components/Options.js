@@ -1,4 +1,5 @@
 export const productOptions = [
+  "Others",
   "Chairs",
   "Tables",
   "Sheet Metal",
@@ -6,7 +7,6 @@ export const productOptions = [
   "Solid Wood",
   "Boards",
   "Lab Tables",
-  "Others",
 ];
 export const statesAndCities = {
   "Andhra Pradesh": [

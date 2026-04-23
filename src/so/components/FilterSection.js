@@ -405,7 +405,7 @@ const FilterSection = ({
             aria-label="Select order end date"
           />
         </DatePickerWrapper>
-        {(userRole === "GlobalAdmin" || userRole === "SuperAdmin") && (
+        {(userRole === "GlobalAdmin" || userRole === "SuperAdmin" || userRole === "Admin" || userRole === "salesperson") && (
           <StyledFormSelect
             value={financialYearFilter}
             onChange={(e) => setFinancialYearFilter(e.target.value)}

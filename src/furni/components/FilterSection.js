@@ -9,10 +9,10 @@ import styled from "styled-components";
 // Styled components
 const FilterContainer = styled.div`
   background: rgb(230, 240, 250);
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem;
   display: flex;
-  flex-wrap: wrap; /* Changed to wrap for better responsiveness */
-  gap: 0.5rem;
+  flex-wrap: nowrap;
+  gap: 0;
   align-items: center;
   justify-content: space-between;
   border-radius: 0.75rem;
@@ -23,25 +23,24 @@ const FilterContainer = styled.div`
   font-family: "Inter", sans-serif;
 
   @media (max-width: 1440px) {
-    gap: 0.4rem; /* Slightly reduced gap for 14-inch screens */
-    padding: 0.6rem;
+    padding: 0.4rem 0.6rem;
   }
 
   @media (max-width: 1023px) {
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.25rem;
     justify-content: flex-start;
   }
 
   @media (max-width: 768px) {
     flex-direction: column;
     align-items: stretch;
-    gap: 0.75rem;
+    gap: 0.5rem;
     padding: 1rem;
   }
 
   @media (max-width: 576px) {
-    gap: 0.5rem;
+    gap: 0.4rem;
     padding: 0.5rem;
   }
 `;
@@ -93,37 +92,36 @@ const SearchInput = styled(Form.Control)`
 
 const FilterGroup = styled.div`
   display: flex;
-  flex-wrap: wrap; /* Changed to wrap for better responsiveness */
-  gap: 0.5rem;
+  flex-wrap: nowrap;
+  gap: 0;
   align-items: center;
   flex: 1;
-  justify-content: space-between;
+  justify-content: space-evenly;
 
   @media (max-width: 1440px) {
-    gap: 0.4rem; /* Adjusted for 14-inch screens */
-    justify-content: flex-end;
+    justify-content: space-evenly;
   }
 
   @media (max-width: 1023px) {
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.25rem;
     justify-content: flex-start;
   }
 
   @media (max-width: 768px) {
     flex-direction: column;
     flex: 0 0 100%;
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
 
   @media (max-width: 576px) {
-    gap: 0.5rem;
+    gap: 0.4rem;
   }
 `;
 
 const DatePickerWrapper = styled.div`
   display: flex;
-  gap: 0.5rem;
+  gap: 0.25rem;
   align-items: center;
   flex: 0 0 22%;
 
@@ -191,15 +189,15 @@ const DatePickerWrapper = styled.div`
 const StyledButton = styled(Button)`
   background: linear-gradient(135deg, #2575fc, #6a11cb);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.7rem 1rem;
+  padding: 0.5rem 0.75rem;
   border-radius: 0.75rem;
   color: white;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   transition: all 0.3s ease-in-out;
   flex: 0 0 auto;
   white-space: nowrap;
@@ -236,11 +234,11 @@ const StyledButton = styled(Button)`
 const StyledDropdownToggle = styled(Dropdown.Toggle)`
   background: linear-gradient(135deg, #2575fc, #6a11cb);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.7rem 0.75rem;
+  padding: 0.5rem 0.6rem;
   border-radius: 0.75rem;
   color: white;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease-in-out;
   flex: 0 0 auto;
@@ -289,6 +287,20 @@ const StyledDropdownMenu = styled(Dropdown.Menu)`
   border: none;
   padding: 0.5rem;
   min-width: 180px;
+  max-height: 360px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #2575fc;
+    border-radius: 4px;
+  }
 
   @media (max-width: 768px) {
     min-width: 100%;
@@ -430,6 +442,9 @@ const FilterSection = ({
   financialYearFilter,
   setFinancialYearFilter,
   financialYearOptions = [],
+  salesPersonFilter,
+  setSalesPersonFilter,
+  uniqueSalesPersons = ["All"],
   handleReset,
   tableId = "orders-table",
 }) => {
@@ -442,23 +457,21 @@ const FilterSection = ({
         aria-label="Search orders by keyword"
       />
       <FilterGroup>
-        {(userRole === "SuperAdmin" || userRole === "GlobalAdmin") && (
-          <OverlayTrigger
-            trigger="click"
-            placement="bottom"
-            overlay={notificationPopover}
-            rootClose
-          >
-            <NotificationWrapper aria-label="View notifications">
-              <NotificationIcon />
-              {notifications.filter((notif) => !notif.isRead).length > 0 && (
-                <NotificationBadge>
-                  {notifications.filter((notif) => !notif.isRead).length}
-                </NotificationBadge>
-              )}
-            </NotificationWrapper>
-          </OverlayTrigger>
-        )}
+        <OverlayTrigger
+          trigger="click"
+          placement="bottom"
+          overlay={notificationPopover}
+          rootClose
+        >
+          <NotificationWrapper aria-label="View notifications">
+            <NotificationIcon />
+            {notifications.filter((notif) => !notif.isRead).length > 0 && (
+              <NotificationBadge>
+                {notifications.filter((notif) => !notif.isRead).length}
+              </NotificationBadge>
+            )}
+          </NotificationWrapper>
+        </OverlayTrigger>
         <DatePickerWrapper>
           <DatePicker
             selected={startDate}
@@ -484,13 +497,21 @@ const FilterSection = ({
             aria-label="Select order end date"
           />
         </DatePickerWrapper>
-        {(userRole === "SuperAdmin" || userRole === "GlobalAdmin") && (
+        <FilterDropdown
+          id="financial-year-filter"
+          label="Financial Year"
+          value={financialYearFilter}
+          onChange={setFinancialYearFilter}
+          options={["All", ...financialYearOptions]}
+          tableId={tableId}
+        />
+        {userRole !== "salesperson" && (
           <FilterDropdown
-            id="financial-year-filter"
-            label="Financial Year"
-            value={financialYearFilter}
-            onChange={setFinancialYearFilter}
-            options={["All", ...financialYearOptions]}
+            id="salesperson-filter"
+            label="All Salespersons"
+            value={salesPersonFilter}
+            onChange={setSalesPersonFilter}
+            options={uniqueSalesPersons}
             tableId={tableId}
           />
         )}

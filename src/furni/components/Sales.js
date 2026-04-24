@@ -288,6 +288,8 @@ const Sales = () => {
   const [productStatus, setProductStatusFilter] = useState("All");
   const [accountsStatusFilter, setAccountsStatusFilter] = useState("All");
   const [dispatchFilter, setDispatchFilter] = useState("All");
+  const [salesPersonFilter, setSalesPersonFilter] = useState("All");
+  const [uniqueSalesPersons, setUniqueSalesPersons] = useState(["All"]);
   const [financialYearFilter, setFinancialYearFilter] = useState(() => getCurrentFinancialYear());
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
@@ -309,6 +311,22 @@ const Sales = () => {
   }, []);
 
   const debouncedSetSearchTerm = useMemo(() => debounce((value) => setSearchTerm(value), 300), []);
+
+  // Fetch unique salesperson values once on mount to populate the filter dropdown.
+  // Uses the Furni legacy DB user list — filter works by createdBy (username lookup),
+  // same pattern as the SO/AV/EdTech module.
+  useEffect(() => {
+    const fetchSalesPersons = async () => {
+      try {
+        const res = await furniApi.get("/api/get-salespersons");
+        const names = Array.isArray(res.data?.data) ? res.data.data : [];
+        setUniqueSalesPersons(["All", ...names]);
+      } catch (err) {
+        console.error("Error fetching salesperson list:", err);
+      }
+    };
+    fetchSalesPersons();
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -448,13 +466,14 @@ const Sales = () => {
       filterEffectMounted.current = true;
       return;
     }
-    fetchPaginatedOrders({ page: currentPage, search: searchTerm, approval: productionStatusFilter, orderType: productStatus, dispatch: dispatchFilter, salesPerson: "All", dispatchFrom: "All", financialYear: trackerFilter === "all" ? financialYearFilter : "All", startDate, endDate, dashboardFilter: trackerFilter, accountsStatus: accountsStatusFilter, installationStatus: installStatusFilter });
+    fetchPaginatedOrders({ page: currentPage, search: searchTerm, approval: productionStatusFilter, orderType: productStatus, dispatch: dispatchFilter, salesPerson: salesPersonFilter, dispatchFrom: "All", financialYear: trackerFilter === "all" ? financialYearFilter : "All", startDate, endDate, dashboardFilter: trackerFilter, accountsStatus: accountsStatusFilter, installationStatus: installStatusFilter });
     fetchDashboardCounts(financialYearFilter);
-  }, [currentPage, searchTerm, productionStatusFilter, productStatus, dispatchFilter, financialYearFilter, startDate, endDate, trackerFilter, accountsStatusFilter, installStatusFilter, fetchPaginatedOrders, fetchDashboardCounts]);
+  }, [currentPage, searchTerm, productionStatusFilter, productStatus, dispatchFilter, salesPersonFilter, financialYearFilter, startDate, endDate, trackerFilter, accountsStatusFilter, installStatusFilter, fetchPaginatedOrders, fetchDashboardCounts]);
 
   const handleReset = useCallback(() => {
     setProductionStatusFilter("All"); setInstallStatusFilter("All"); setProductStatusFilter("All");
-    setAccountsStatusFilter("All"); setDispatchFilter("All"); setFinancialYearFilter(getCurrentFinancialYear()); setTrackerFilter("all");
+    setAccountsStatusFilter("All"); setDispatchFilter("All"); setSalesPersonFilter("All");
+    setFinancialYearFilter(getCurrentFinancialYear()); setTrackerFilter("all");
     setSearchTerm(""); setStartDate(null); setEndDate(null); setCurrentPage(1);
     fetchPaginatedOrders({ page: 1, search: "", approval: "All", orderType: "All", dispatch: "All", salesPerson: "All", dispatchFrom: "All", financialYear: getCurrentFinancialYear(), startDate: null, endDate: null, dashboardFilter: "all" });
     toast.info("Filters reset!");
@@ -468,7 +487,7 @@ const Sales = () => {
       approval: productionStatusFilter,
       orderType: productStatus,
       dispatch: dispatchFilter,
-      salesPerson: "All",
+      salesPerson: salesPersonFilter,
       dispatchFrom: "All",
       financialYear: trackerFilter === "all" ? financialYearFilter : "All",
       startDate,
@@ -479,7 +498,7 @@ const Sales = () => {
     });
     setIsAddModalOpen(false);
     fetchDashboardCounts();
-  }, [fetchPaginatedOrders, fetchDashboardCounts, currentPage, searchTerm, productionStatusFilter, productStatus, dispatchFilter, financialYearFilter, trackerFilter, startDate, endDate, accountsStatusFilter, installStatusFilter]);
+  }, [fetchPaginatedOrders, fetchDashboardCounts, currentPage, searchTerm, productionStatusFilter, productStatus, dispatchFilter, salesPersonFilter, financialYearFilter, trackerFilter, startDate, endDate, accountsStatusFilter, installStatusFilter]);
 
   const handleViewClick = useCallback((order) => { setSelectedOrder(order); setIsViewModalOpen(true); }, []);
   const handleEditClick = useCallback((order) => { setSelectedOrder(order); setIsEditModalOpen(true); }, []);
@@ -590,7 +609,7 @@ const Sales = () => {
 
   const handleExport = useCallback(async () => {
     try {
-      const response = await furniApi.get("/api/export", { params: { search: searchTerm, approval: productionStatusFilter, orderType: productStatus, dispatch: dispatchFilter, salesPerson: "All", dispatchFrom: "All", financialYear: financialYearFilter, startDate: startDate ? startDate.toISOString() : null, endDate: endDate ? endDate.toISOString() : null, dashboardFilter: trackerFilter }, responseType: "blob" });
+      const response = await furniApi.get("/api/export", { params: { search: searchTerm, approval: productionStatusFilter, orderType: productStatus, dispatch: dispatchFilter, salesPerson: salesPersonFilter, dispatchFrom: "All", financialYear: financialYearFilter, startDate: startDate ? startDate.toISOString() : null, endDate: endDate ? endDate.toISOString() : null, dashboardFilter: trackerFilter }, responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -706,6 +725,8 @@ const Sales = () => {
           dispatchFilter={dispatchFilter} setDispatchFilter={setDispatchFilter}
           financialYearFilter={financialYearFilter} setFinancialYearFilter={setFinancialYearFilter}
           financialYearOptions={FINANCIAL_YEAR_OPTIONS}
+          salesPersonFilter={salesPersonFilter} setSalesPersonFilter={setSalesPersonFilter}
+          uniqueSalesPersons={uniqueSalesPersons}
           handleReset={handleReset}
         />
       </div>

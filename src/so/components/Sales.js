@@ -185,7 +185,7 @@ const columnWidths = [
   80, 130, 190, 150, 200, 200, 200, 150, 150, 200, 130, 130, 130, 150, 300, 300,
   300, 150, 130, 130, 100, 150, 100, 130, 130, 150, 150, 150, 150, 150, 130,
   150, 150, 150, 150, 150, 150, 150, 150, 200, 150, 130, 150, 130, 130, 150,
-  150, 150, 150, 150, 150, 160, 150, 150, 150, 150, 150, 200,
+  150, 150, 150, 150, 150, 160, 150, 150, 150, 150, 150,
 ];
 
 const totalTableWidth = columnWidths.reduce((sum, width) => sum + width, 0);
@@ -252,10 +252,11 @@ body {
   letter-spacing: 0.5px;
   border-bottom: 2px solid rgba(255, 255, 255, 0.2);
   white-space: nowrap;
-  text-align: center;
+  text-align: center !important;
   box-sizing: border-box;
   overflow: hidden;
   text-overflow: ellipsis;
+  vertical-align: middle;
 }
 
 /* Table body rows */
@@ -1078,16 +1079,7 @@ const Row = React.memo(({ index, style, data }) => {
                 ? order.createdBy
                 : "-",
         },
-        {
-          width: columnWidths[57],
-          content: order.poFilePath ? "Attached" : "Not Attached",
-          title: order.poFilePath ? "Attached" : "Not Attached",
-        },
-        {
-          width: columnWidths[58],
-          content: order.remarks || "-",
-          title: order.remarks || "-",
-        },
+       
       ].map((cell, idx) => (
         <td
           key={idx}
@@ -2269,7 +2261,6 @@ const Sales = () => {
     "Company",
     "Created By",
     "Attachments",
-    "Remarks",
   ];
 
   return (

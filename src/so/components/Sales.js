@@ -1219,16 +1219,17 @@ const Sales = () => {
       const queryParams = {
         page,
         limit: 20,
-        search,
-        approval,
-        orderType,
-        dispatch,
-        salesPerson,
-        dispatchFrom,
-        financialYear,
-        dashboardFilter,
       };
 
+      // Only add filters if they're not "All" or empty
+      if (search && search.trim() !== "") queryParams.search = search.trim();
+      if (approval && approval !== "All") queryParams.approval = approval;
+      if (orderType && orderType !== "All") queryParams.orderType = orderType;
+      if (dispatch && dispatch !== "All") queryParams.dispatch = dispatch;
+      if (salesPerson && salesPerson !== "All") queryParams.salesPerson = salesPerson;
+      if (dispatchFrom && dispatchFrom !== "All") queryParams.dispatchFrom = dispatchFrom;
+      if (financialYear && financialYear !== "All") queryParams.financialYear = financialYear;
+      if (dashboardFilter && dashboardFilter !== "all") queryParams.dashboardFilter = dashboardFilter;
       if (startDate) queryParams.startDate = startDate.toISOString();
       if (endDate) queryParams.endDate = endDate.toISOString();
 
@@ -1465,23 +1466,26 @@ const Sales = () => {
       filterEffectMounted.current = true;
       return;
     }
-    if (currentPage !== 1) {
-      setCurrentPage(1);
-    } else {
-      fetchOrders({
-        page: 1,
-        search: searchTerm,
-        approval: approvalFilter,
-        orderType: orderTypeFilter,
-        dispatch: dispatchFilter,
-        salesPerson: salesPersonFilter,
-        dispatchFrom: dispatchFromFilter,
-        financialYear: trackerFilter === "all" ? financialYearFilter : "All",
-        startDate,
-        endDate,
-        dashboardFilter: trackerFilter,
-      });
-    }
+    
+    // Reset to page 1 when any filter changes
+    setCurrentPage(1);
+    
+    // Fetch with updated filters - always pass financialYear regardless of trackerFilter
+    fetchOrders({
+      page: 1,
+      search: searchTerm,
+      approval: approvalFilter,
+      orderType: orderTypeFilter,
+      dispatch: dispatchFilter,
+      salesPerson: salesPersonFilter,
+      dispatchFrom: dispatchFromFilter,
+      financialYear: financialYearFilter, // Always use the selected financial year
+      startDate,
+      endDate,
+      dashboardFilter: trackerFilter,
+    });
+    
+    // Update dashboard counts with current financial year
     fetchDashboardCounts(financialYearFilter);
   }, [
     searchTerm,
@@ -1494,25 +1498,28 @@ const Sales = () => {
     startDate,
     endDate,
     trackerFilter,
+    fetchOrders,
     fetchDashboardCounts,
-    // fetchOrders not needed here as it's stable and we want to avoid cycles
   ]);
 
   useEffect(() => {
-    fetchOrders({
-      page: currentPage,
-      search: searchTerm,
-      approval: approvalFilter,
-      orderType: orderTypeFilter,
-      dispatch: dispatchFilter,
-      salesPerson: salesPersonFilter,
-      dispatchFrom: dispatchFromFilter,
-      financialYear: trackerFilter === "all" ? financialYearFilter : "All",
-      startDate,
-      endDate,
-      dashboardFilter: trackerFilter,
-    });
-  }, [currentPage, fetchOrders]); // Only trigger on page change (and initial mount technically)
+    // Only fetch when page changes (not on initial mount or filter changes)
+    if (filterEffectMounted.current && currentPage !== 1) {
+      fetchOrders({
+        page: currentPage,
+        search: searchTerm,
+        approval: approvalFilter,
+        orderType: orderTypeFilter,
+        dispatch: dispatchFilter,
+        salesPerson: salesPersonFilter,
+        dispatchFrom: dispatchFromFilter,
+        financialYear: financialYearFilter, // Always use the selected financial year
+        startDate,
+        endDate,
+        dashboardFilter: trackerFilter,
+      });
+    }
+  }, [currentPage]); // Only trigger on page change
 
   // NOTE: The above two effects might cause double invocation on filter change if page != 1.
   // Optimization: use a ref or single effect with internal previous state check.
@@ -2034,7 +2041,10 @@ const Sales = () => {
     const active = trackerFilter === filterKey || isActive;
     return (
       <TrackerCard
-        onClick={() => setTrackerFilter(filterKey)}
+        onClick={() => {
+          setTrackerFilter(filterKey);
+          setCurrentPage(1); // Reset to first page when clicking tracker
+        }}
         className={active ? "active" : ""}
         style={{
           background: bgColor,

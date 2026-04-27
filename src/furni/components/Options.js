@@ -1003,6 +1003,7 @@ export const Reportinglist = [
   "Harpeet Singh",
   "J P Sharma",
   "Manjit Singh Chowhan",
+  "Mukul Kubba",
   "PS Brar",
   "Priya Sharma",
   "Purnendu Kumar",

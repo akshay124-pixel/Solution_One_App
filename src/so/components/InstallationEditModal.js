@@ -128,17 +128,9 @@ const InstallationEditModal = ({ show, onHide, order, onUpdate }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (
-            formData.installationReport === "Yes" &&
-            !formData.installationFile &&
-            !currentFile
-        ) {
-            toast.warning("Please upload the Installation Report file before saving.", {
-                position: "top-right",
-                autoClose: 4000,
-            });
-            return;
-        }
+        // Removed the requirement for installation report file upload
+        // Now you can complete installation without uploading the report
+        
         if (!validateForm()) return;
 
         setLoading(true);
@@ -234,11 +226,10 @@ const InstallationEditModal = ({ show, onHide, order, onUpdate }) => {
                             <option value="Pending">Pending</option>
                             <option value="Hold">Hold</option>
                             <option value="Site Not Ready">Site Not Ready</option>
-                            {formData.installationReport === "Yes" && (
-                                <option value="Completed">Completed</option>
-                            )}
-                        </Form.Select><small style={{ color: "#888", fontSize: "0.85rem" }}>
-                            Completed status is available only after Installation Report is marked as Yes.
+                            <option value="Completed">Completed</option>
+                        </Form.Select>
+                        <small style={{ color: "#888", fontSize: "0.85rem" }}>
+                            You can now mark as Completed without uploading the installation report.
                         </small>
                         {errors.installationStatus && (
                             <Form.Text style={{ color: "red", fontSize: "0.875rem" }}>
@@ -347,7 +338,7 @@ const InstallationEditModal = ({ show, onHide, order, onUpdate }) => {
 
                     <Form.Group style={{ marginBottom: "20px" }}>
                         <Form.Label style={{ fontWeight: "600", color: "#333" }}>
-                            Upload Installation Report File <span style={{ color: "red" }}>*</span>
+                            Upload Installation Report File (Optional)
                         </Form.Label>
 
                         <div
@@ -377,7 +368,7 @@ const InstallationEditModal = ({ show, onHide, order, onUpdate }) => {
                                             : "Click to upload Installation Report (PDF / Image / Doc / Excel)"}
                                 </div>
                                 <div style={{ fontSize: "0.8rem", color: "#666" }}>
-                                    Supported: PDF, JPG, PNG, DOCX, XLSX (Max 10MB)
+                                    Supported: PDF, JPG, PNG, DOCX, XLSX (Max 10MB) - Optional
                                 </div>
                             </label>
                         </div>

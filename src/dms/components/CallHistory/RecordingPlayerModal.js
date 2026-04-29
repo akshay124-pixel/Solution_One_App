@@ -406,32 +406,77 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
     }
     
     try {
-      let downloadUrl = recordingUrl;
+      toast.info("Preparing download...");
       
-      // If no recording URL is set, try to use the original call recording URL
-      if (!downloadUrl && call.recordingUrl) {
-        downloadUrl = call.recordingUrl;
-      }
-      
-      if (!downloadUrl) {
-        toast.error("No recording URL available for download");
+      // Strategy 1: If we have a blob URL, use it directly
+      if (recordingUrl && recordingUrl.startsWith('blob:')) {
+        const link = document.createElement("a");
+        link.href = recordingUrl;
+        link.setAttribute("download", `recording-${call._id}-${Date.now()}.mp3`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        toast.success("Recording download started!");
         return;
       }
       
-      // Create download link
+      // Strategy 2: Fetch from server stream endpoint
+      const streamUrl = `${process.env.REACT_APP_PORTAL_URL || 'http://localhost:5050'}/api/dms/recordings/${call._id}/stream`;
+      
+      const response = await fetch(streamUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${getPortalAccessToken()}`,
+          'Accept': 'audio/*,*/*;q=0.9',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.statusText}`);
+      }
+
+      // Get the blob from response
+      const blob = await response.blob();
+      
+      if (blob.size === 0) {
+        throw new Error("Downloaded file is empty");
+      }
+
+      // Create blob URL and trigger download
+      const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = downloadUrl;
+      link.href = blobUrl;
       link.setAttribute("download", `recording-${call._id}-${Date.now()}.mp3`);
-      link.setAttribute("target", "_blank");
-      link.setAttribute("rel", "noopener noreferrer");
       document.body.appendChild(link);
       link.click();
       link.remove();
       
-      toast.success("Recording download started - check your downloads folder");
+      // Clean up blob URL after a delay
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      
+      toast.success("Recording downloaded successfully!");
     } catch (error) {
       console.error("Download error:", error);
-      toast.error("Failed to download recording");
+      
+      // Fallback: Try direct URL if available
+      if (call.recordingUrl && call.recordingUrl.startsWith('http')) {
+        try {
+          const link = document.createElement("a");
+          link.href = call.recordingUrl;
+          link.setAttribute("download", `recording-${call._id}-${Date.now()}.mp3`);
+          link.setAttribute("target", "_blank");
+          link.setAttribute("rel", "noopener noreferrer");
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          toast.success("Recording download started via direct link!");
+        } catch (fallbackError) {
+          console.error("Fallback download error:", fallbackError);
+          toast.error("Failed to download recording. Please try again later.");
+        }
+      } else {
+        toast.error(`Failed to download recording: ${error.message}`);
+      }
     }
   };
   

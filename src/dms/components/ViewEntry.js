@@ -276,7 +276,7 @@ function ViewEntry({ isOpen, onClose, entry, isAdmin, onEntryUpdated }) {
               leadId={entry._id}
               phoneNumber={entry.mobileNumber}
               onCallInitiated={() => {
-                toast.success("Call initiated! Your phone will ring first.");
+                // Toast is already shown by ClickToCallButton component
               }}
             />
 

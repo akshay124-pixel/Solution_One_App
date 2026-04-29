@@ -82,57 +82,47 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
     
     try {
       // Strategy 1: Use enhanced server-side streaming endpoint (preferred)
-      if (retryCount === 0) {
-        const streamUrl = `/recordings/${call._id}/stream`;
-        await fetchAndCreateBlobUrl(streamUrl);
-        return;
-      }
+      const streamUrl = `/recordings/${call._id}/stream`;
+      await fetchAndCreateBlobUrl(streamUrl);
+      return;
 
-      // Strategy 2: Use direct recording URL from call if available
+    } catch (error) {
+      console.error("❌ Stream endpoint failed:", error);
+      
+      // Strategy 2: Try direct recording URL from call if available
       if (call.recordingUrl && call.recordingUrl.trim()) {
-        if (call.recordingUrl.startsWith('http') && call.recordingUrl.includes('cloudphone')) {
-          if (retryCount === 1) {
+        try {
+          if (call.recordingUrl.startsWith('http')) {
+            // For external URLs, try to fetch and create blob
             await fetchAndCreateBlobUrl(call.recordingUrl);
             return;
-          } else {
-            setRecordingUrl(call.recordingUrl);
-            setLoading(false);
-            return;
           }
+        } catch (directError) {
+          console.error("❌ Direct URL fetch failed:", directError);
         }
-        await fetchAndCreateBlobUrl(call.recordingUrl);
-        return;
       }
 
       // Strategy 3: Fetch from recording metadata API
-      const metadataResponse = await api.get(`/recordings/${call._id}`);
+      try {
+        const metadataResponse = await api.get(`/recordings/${call._id}`);
 
-      if (metadataResponse.data.success && metadataResponse.data.data?.recordingUrl) {
-        if (metadataResponse.data.data.streamUrl) {
-          await fetchAndCreateBlobUrl(metadataResponse.data.data.streamUrl);
-          return;
-        }
-
-        if (metadataResponse.data.data.recordingUrl.startsWith('http') &&
-            metadataResponse.data.data.recordingUrl.includes('cloudphone')) {
-          if (retryCount === 0) {
-            await fetchAndCreateBlobUrl(metadataResponse.data.data.recordingUrl);
+        if (metadataResponse.data.success && metadataResponse.data.data?.recordingUrl) {
+          if (metadataResponse.data.data.streamUrl) {
+            await fetchAndCreateBlobUrl(metadataResponse.data.data.streamUrl);
             return;
-          } else {
-            setRecordingUrl(metadataResponse.data.data.recordingUrl);
-            setLoading(false);
+          }
+
+          if (metadataResponse.data.data.recordingUrl.startsWith('http')) {
+            await fetchAndCreateBlobUrl(metadataResponse.data.data.recordingUrl);
             return;
           }
         }
-        
-        await fetchAndCreateBlobUrl(metadataResponse.data.data.recordingUrl);
-        return;
+      } catch (metadataError) {
+        console.error("❌ Metadata fetch failed:", metadataError);
       }
       
-      throw new Error("No recording URL available from any source");
-      
-    } catch (error) {
-      console.error("❌ All recording fetch strategies failed:", error);
+      // All strategies failed
+      console.error("❌ All recording fetch strategies failed");
       
       // Final fallback: Check if call should have recording
       if (call.duration > 0 && (call.callStatus === "completed" || call.callStatus === "answered")) {
@@ -151,6 +141,10 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
         fetchUrl = `${process.env.REACT_APP_PORTAL_URL || 'http://localhost:5050'}/api/dms${url}`;
       }
 
+      if (process.env.NODE_ENV === 'development') {
+        console.log("🎵 Fetching from:", fetchUrl);
+      }
+
       const response = await fetch(fetchUrl, {
         method: 'GET',
         headers: {
@@ -163,6 +157,7 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
 
       if (process.env.NODE_ENV === 'development') {
         console.log("📡 Response status:", response.status);
+        console.log("📡 Content-Type:", response.headers.get('content-type'));
       }
 
       if (!response.ok) {
@@ -180,6 +175,11 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
       const contentType = response.headers.get('content-type');
       const audioBlob = await response.blob();
 
+      if (process.env.NODE_ENV === 'development') {
+        console.log("📦 Blob size:", audioBlob.size, "bytes");
+        console.log("📦 Blob type:", audioBlob.type);
+      }
+
       if (audioBlob.size === 0) {
         throw new Error("Received empty audio file");
       }
@@ -187,14 +187,22 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
         throw new Error("Audio file too small - likely corrupted or empty");
       }
 
+      // Create blob with proper MIME type
       let finalBlob = audioBlob;
-      if (!audioBlob.type || audioBlob.type === '' || audioBlob.type === 'application/octet-stream') {
-        finalBlob = new Blob([audioBlob], { type: 'audio/mpeg' });
-      } else if (audioBlob.type.includes('audio/mp3') || audioBlob.type.includes('audio/x-mpeg')) {
+      const blobType = audioBlob.type;
+      
+      // Force audio/mpeg for better compatibility
+      if (!blobType || blobType === '' || blobType === 'application/octet-stream' || 
+          blobType.includes('audio/mp3') || blobType.includes('audio/x-mpeg')) {
         finalBlob = new Blob([audioBlob], { type: 'audio/mpeg' });
       }
 
       const blobUrl = URL.createObjectURL(finalBlob);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log("✅ Blob URL created:", blobUrl);
+      }
+      
       setRecordingUrl(blobUrl);
       setLoading(false);
 
@@ -292,10 +300,10 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
       error: e.target?.error,
       networkState: e.target?.networkState,
       readyState: e.target?.readyState,
-      src: e.target?.src,
+      src: e.target?.src ? e.target.src.substring(0, 100) + '...' : 'N/A',
       errorCode: e.target?.error?.code,
       errorMessage: e.target?.error?.message,
-      currentSrc: e.target?.currentSrc,
+      currentSrc: e.target?.currentSrc ? e.target.currentSrc.substring(0, 100) + '...' : 'N/A',
       duration: e.target?.duration,
       paused: e.target?.paused,
       ended: e.target?.ended
@@ -303,9 +311,9 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
     
     // Log additional debugging info
     console.error("🎵 Recording URL info:", {
-      recordingUrl,
+      recordingUrl: recordingUrl ? recordingUrl.substring(0, 100) + '...' : 'N/A',
       isBlob: recordingUrl?.startsWith('blob:'),
-      audioSrc: e.target?.src
+      audioSrc: e.target?.src ? e.target.src.substring(0, 100) + '...' : 'N/A'
     });
     
     // Provide specific error messages based on error type
@@ -331,10 +339,13 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
     
     console.error("🎵 Error classification:", debugInfo);
     
-    // For MEDIA_ERR_DECODE, try alternative approaches
-    if (e.target?.error?.code === 3 && retryCount < maxRetries) {
+    // Don't retry on every error - only on specific cases
+    const shouldRetry = retryCount < maxRetries && 
+                       (e.target?.error?.code === 3 || e.target?.error?.code === 4);
+    
+    if (shouldRetry) {
       if (process.env.NODE_ENV === 'development') {
-        console.log(`🔄 MEDIA_ERR_DECODE: Trying alternative approach (retry ${retryCount + 1}/${maxRetries})`);
+        console.log(`🔄 Retrying with different approach (retry ${retryCount + 1}/${maxRetries})`);
       }
       
       // Clean up failed blob URL
@@ -346,39 +357,7 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
       setLoading(true);
       setRetryCount(prev => prev + 1);
       
-      // Try direct URL approach for Smartflo recordings
-      if (call?.recordingUrl?.startsWith('http') && call.recordingUrl.includes('cloudphone')) {
-        console.log("🔄 Using direct Smartflo URL as decode fallback");
-        setTimeout(() => {
-          setRecordingUrl(call.recordingUrl);
-          setLoading(false);
-        }, 500);
-        return;
-      }
-      
-      // Otherwise retry with different blob approach
-      setTimeout(() => {
-        fetchRecordingWithFallbacks();
-      }, 1000);
-      
-      return; // Don't set error state yet, let retry happen
-    }
-    
-    // Check if it's other blob URL issues
-    if (recordingUrl?.startsWith('blob:') && e.target?.error?.code === 4 && retryCount < maxRetries) {
-      errorMessage += " The audio blob may be corrupted or invalid. Retrying...";
-      
-      // Try to revoke and recreate blob URL
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`🔄 Attempting to recreate blob URL (retry ${retryCount + 1}/${maxRetries})...`);
-      }
-      URL.revokeObjectURL(recordingUrl);
-      setRecordingUrl(null);
-      setError(null);
-      setLoading(true);
-      setRetryCount(prev => prev + 1);
-      
-      // Retry with a delay
+      // Retry after a delay
       setTimeout(() => {
         fetchRecordingWithFallbacks();
       }, 1000);
@@ -394,6 +373,8 @@ const RecordingPlayerModal = ({ open, onClose, call }) => {
     // Show user-friendly toast message
     if (debugInfo === "MEDIA_ERR_DECODE") {
       toast.error("Audio format not supported. Try downloading the recording instead.");
+    } else if (debugInfo === "MEDIA_ERR_NETWORK") {
+      toast.error("Network error while loading recording. Check your connection.");
     } else {
       toast.error(`Recording playback failed: ${debugInfo}`);
     }

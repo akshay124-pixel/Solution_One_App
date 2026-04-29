@@ -9,6 +9,7 @@ import {
 } from "./Options";
 import { getFinancialYear } from "../../shared/financialYear";
 import ConfirmModal from "./ConfirmModal";
+import { toTitleCase } from "../../shared/textFormatUtils";
 
 function AddEntry({ onSubmit, onClose }) {
   const [selectedState, setSelectedState] = useState("");
@@ -108,14 +109,22 @@ function AddEntry({ onSubmit, onClose }) {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    
+    // Fields that should be formatted to Title Case
+    const titleCaseFields = ['customername', 'name', 'billingAddress', 'shippingAddress'];
+    
     if (type === "checkbox") {
       setFormData((prev) => ({ ...prev, sameAddress: checked, shippingAddress: checked ? prev.billingAddress : prev.shippingAddress }));
     } else {
       if (["pinCode", "contactNo", "alterno"].includes(name) && value && !/^\d*$/.test(value)) return;
       if (["freightcs", "installation", "paymentCollected"].includes(name) && value && Number(value) < 0) { toast.error(`${name} cannot be negative`); return; }
+      
+      // Apply title case formatting for specific fields
+      const formattedValue = titleCaseFields.includes(name) ? toTitleCase(value) : value;
+      
       setFormData((prev) => ({
-        ...prev, [name]: value,
-        ...(name === "billingAddress" && prev.sameAddress ? { shippingAddress: value } : {}),
+        ...prev, [name]: formattedValue,
+        ...(name === "billingAddress" && prev.sameAddress ? { shippingAddress: formattedValue } : {}),
         ...(name === "paymentCollected" ? { paymentDue: calculatePaymentDue(Number(value) || 0) } : {}),
         ...(name === "paymentMethod" ? { neftTransactionId: "", chequeId: "" } : {}),
         ...(name === "freightstatus" && value !== "Extra" ? { freightcs: "" } : {}),
@@ -202,7 +211,8 @@ function AddEntry({ onSubmit, onClose }) {
     }
     const userId = localStorage.getItem("furniUserId");
     const newEntry = {
-      ...formData, createdBy: userId,
+      ...formData, 
+      createdBy: userId,
       products: products.map((p) => ({ productType: p.productType, size: p.size || "N/A", spec: p.spec || "N/A", qty: Number(p.qty), unitPrice: Number(p.unitPrice), gst: String(p.gst), modelNos: p.modelNos ? p.modelNos.split(",").map((s) => s.trim()) : [] })),
       soDate: formData.soDate, total: calculateTotal(), freightcs: formData.freightcs || "", installation: formData.installation || "",
       orderType: formData.orderType, paymentCollected: String(formData.paymentCollected || ""), paymentMethod: formData.paymentMethod || "",

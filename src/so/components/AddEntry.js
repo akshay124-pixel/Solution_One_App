@@ -19,6 +19,7 @@ import {
 } from "./Options";
 import ConfirmModal from "./ConfirmModal";
 import { getFinancialYear } from "../../shared/financialYear";
+import { toTitleCase } from "../../shared/textFormatUtils";
 function AddEntry({ onSubmit, onClose }) {
   const [selectedState, setSelectedState] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
@@ -190,6 +191,10 @@ function AddEntry({ onSubmit, onClose }) {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    
+    // Fields that should be formatted to Title Case
+    const titleCaseFields = ['customername', 'name', 'billingAddress', 'shippingAddress'];
+    
     if (type === "checkbox") {
       setFormData((prev) => ({
         ...prev,
@@ -197,11 +202,14 @@ function AddEntry({ onSubmit, onClose }) {
         shippingAddress: checked ? prev.billingAddress : prev.shippingAddress,
       }));
     } else {
+      // Apply title case formatting for specific fields
+      const formattedValue = titleCaseFields.includes(name) ? toTitleCase(value) : value;
+      
       setFormData((prev) => ({
         ...prev,
-        [name]: value,
+        [name]: formattedValue,
         ...(name === "billingAddress" && prev.sameAddress
-          ? { shippingAddress: value }
+          ? { shippingAddress: formattedValue }
           : {}),
         ...(name === "paymentCollected"
           ? { paymentDue: calculatePaymentDue(Number(value) || 0) }

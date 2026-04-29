@@ -9,12 +9,11 @@ import styled from "styled-components";
 // Styled components
 const FilterContainer = styled.div`
   background: rgb(230, 240, 250);
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
   display: flex;
-  flex-wrap: nowrap;
-  gap: 0;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   align-items: center;
-  justify-content: space-between;
   border-radius: 0.75rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   width: 100%;
@@ -22,166 +21,314 @@ const FilterContainer = styled.div`
   margin: 0;
   font-family: "Inter", sans-serif;
 
+  @media (min-width: 1920px) {
+    padding: 0.85rem 1.2rem;
+    gap: 0.85rem;
+  }
+
+  @media (max-width: 1600px) {
+    padding: 0.7rem 0.95rem;
+    gap: 0.7rem;
+  }
+
   @media (max-width: 1440px) {
-    padding: 0.4rem 0.6rem;
+    padding: 0.65rem 0.85rem;
+    gap: 0.65rem;
   }
 
-  @media (max-width: 1023px) {
-    flex-wrap: wrap;
-    gap: 0.25rem;
-    justify-content: flex-start;
+  @media (max-width: 1366px) {
+    padding: 0.6rem 0.8rem;
+    gap: 0.6rem;
   }
 
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.5rem;
-    padding: 1rem;
+  @media (max-width: 1280px) {
+    padding: 0.6rem 0.75rem;
+    gap: 0.55rem;
   }
 
-  @media (max-width: 576px) {
-    gap: 0.4rem;
-    padding: 0.5rem;
+  @media (max-width: 1199px) {
+    padding: 0.65rem 0.8rem;
+    gap: 0.6rem;
+  }
+
+  @media (max-width: 991px) {
+    padding: 0.7rem 0.85rem;
+    gap: 0.65rem;
+  }
+
+  @media (max-width: 767px) {
+    padding: 0.75rem 0.9rem;
+    gap: 0.7rem;
+  }
+
+  @media (max-width: 575px) {
+    padding: 0.7rem;
+    gap: 0.6rem;
   }
 `;
 
 const SearchInput = styled(Form.Control)`
-  flex: 0 0 15%;
-  min-width: 140px;
-  padding: 0.7rem 1rem;
+  width: 100%;
+  flex: 1;
+  max-width: 280px;
+  min-width: 180px;
+  padding: 0.65rem 0.9rem;
   border-radius: 0.75rem;
   border: none;
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 500;
   transition: all 0.3s ease-in-out;
 
   &:focus {
     box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
-    transform: scale(1.02);
     outline: none;
   }
 
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  @media (min-width: 1920px) {
+    max-width: 320px;
+    min-width: 220px;
+    font-size: 0.95rem;
+    padding: 0.75rem 1rem;
+  }
+
+  @media (max-width: 1600px) {
+    max-width: 260px;
+    min-width: 170px;
+    font-size: 0.85rem;
+    padding: 0.6rem 0.85rem;
+  }
+
   @media (max-width: 1440px) {
-    flex: 0 0 15%; /* Adjusted for 14-inch screens */
-    min-width: 130px;
-    max-width: 180px; /* Prevent overflow */
+    max-width: 240px;
+    min-width: 160px;
+    font-size: 0.825rem;
+    padding: 0.6rem 0.8rem;
+  }
+
+  @media (max-width: 1366px) {
+    max-width: 220px;
+    min-width: 150px;
+    font-size: 0.8rem;
+    padding: 0.55rem 0.75rem;
+  }
+
+  @media (max-width: 1280px) {
+    max-width: 200px;
+    min-width: 140px;
+    font-size: 0.775rem;
+    padding: 0.55rem 0.7rem;
+  }
+
+  @media (max-width: 1199px) {
+    max-width: 220px;
+    min-width: 160px;
     font-size: 0.85rem;
     padding: 0.6rem 0.8rem;
   }
 
-  @media (max-width: 1023px) {
-    flex: 0 0 25%;
-    min-width: 120px;
-    max-width: 160px;
+  @media (max-width: 991px) {
+    max-width: 200px;
+    min-width: 150px;
+    font-size: 0.825rem;
+    padding: 0.6rem 0.75rem;
   }
 
-  @media (max-width: 768px) {
-    flex: 0 0 100%;
-    max-width: none;
-    font-size: 0.95rem;
-    padding: 0.8rem 1rem;
+  @media (max-width: 767px) {
+    max-width: 100%;
+    min-width: 100%;
+    flex: none;
+    font-size: 0.875rem;
+    padding: 0.65rem 0.85rem;
   }
 
-  @media (max-width: 576px) {
-    font-size: 0.9rem;
-    padding: 0.7rem 0.9rem;
+  @media (max-width: 575px) {
+    font-size: 0.85rem;
+    padding: 0.6rem 0.8rem;
   }
 `;
 
 const FilterGroup = styled.div`
   display: flex;
-  flex-wrap: nowrap;
-  gap: 0;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   align-items: center;
+  justify-content: space-between;
   flex: 1;
-  justify-content: space-evenly;
+  min-width: 0;
 
-  @media (max-width: 1440px) {
-    justify-content: space-evenly;
+  @media (min-width: 1920px) {
+    gap: 0.85rem;
   }
 
-  @media (max-width: 1023px) {
-    flex-wrap: wrap;
-    gap: 0.25rem;
+  @media (max-width: 1600px) {
+    gap: 0.7rem;
+  }
+
+  @media (max-width: 1440px) {
+    gap: 0.65rem;
+  }
+
+  @media (max-width: 1366px) {
+    gap: 0.6rem;
+  }
+
+  @media (max-width: 1280px) {
+    gap: 0.55rem;
+  }
+
+  @media (max-width: 1199px) {
+    gap: 0.6rem;
     justify-content: flex-start;
   }
 
-  @media (max-width: 768px) {
-    flex-direction: column;
-    flex: 0 0 100%;
-    gap: 0.5rem;
+  @media (max-width: 991px) {
+    gap: 0.65rem;
   }
 
-  @media (max-width: 576px) {
-    gap: 0.4rem;
+  @media (max-width: 767px) {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.7rem;
+  }
+
+  @media (max-width: 575px) {
+    gap: 0.6rem;
   }
 `;
 
 const DatePickerWrapper = styled.div`
   display: flex;
-  gap: 0.25rem;
+  gap: 0.5rem;
   align-items: center;
-  flex: 0 0 22%;
 
   .react-datepicker-wrapper {
-    flex: 1;
+    width: 110px;
   }
 
   input {
-    padding: 0.7rem 0.75rem;
+    padding: 0.65rem 0.7rem;
     border-radius: 0.75rem;
     border: 1px solid #e5e7eb;
     background: #f9fafb;
-    font-size: 0.85rem;
-    width: 80%;
+    font-size: 0.825rem;
+    width: 100%;
     transition: all 0.3s ease-in-out;
 
     &:focus {
       border-color: #3b82f6;
       box-shadow: 0 0 8px rgba(59, 130, 246, 0.2);
-      transform: scale(1.02);
       outline: none;
+    }
+
+    &::placeholder {
+      color: #9ca3af;
+    }
+  }
+
+  @media (min-width: 1920px) {
+    gap: 0.6rem;
+    .react-datepicker-wrapper {
+      width: 135px;
+    }
+    input {
+      font-size: 0.9rem;
+      padding: 0.75rem 0.85rem;
+    }
+  }
+
+  @media (max-width: 1600px) {
+    gap: 0.45rem;
+    .react-datepicker-wrapper {
+      width: 105px;
+    }
+    input {
+      font-size: 0.8rem;
+      padding: 0.6rem 0.65rem;
     }
   }
 
   @media (max-width: 1440px) {
-    flex: 0 0 26%; /* Adjusted for 14-inch screens */
-    max-width: 260px; /* Prevent overflow */
+    gap: 0.4rem;
+    .react-datepicker-wrapper {
+      width: 100px;
+    }
     input {
-      font-size: 0.8rem;
-      padding: 0.6rem 0.7rem;
-      width: 100%; /* Full width for better fit */
+      font-size: 0.775rem;
+      padding: 0.6rem 0.6rem;
     }
   }
 
-  @media (max-width: 1023px) {
-    flex: 0 0 35%;
-    max-width: 220px;
+  @media (max-width: 1366px) {
+    gap: 0.4rem;
+    .react-datepicker-wrapper {
+      width: 95px;
+    }
+    input {
+      font-size: 0.75rem;
+      padding: 0.55rem 0.55rem;
+    }
+  }
+
+  @media (max-width: 1280px) {
+    gap: 0.35rem;
+    .react-datepicker-wrapper {
+      width: 92px;
+    }
+    input {
+      font-size: 0.725rem;
+      padding: 0.55rem 0.5rem;
+    }
+  }
+
+  @media (max-width: 1199px) {
+    gap: 0.45rem;
+    .react-datepicker-wrapper {
+      width: 105px;
+    }
     input {
       font-size: 0.8rem;
+      padding: 0.6rem 0.65rem;
+    }
+  }
+
+  @media (max-width: 991px) {
+    gap: 0.5rem;
+    .react-datepicker-wrapper {
+      width: 110px;
+    }
+    input {
+      font-size: 0.825rem;
       padding: 0.6rem 0.7rem;
     }
   }
 
-  @media (max-width: 768px) {
-    flex-direction: row; /* Keep horizontal for usability */
-    flex: 0 0 100%;
-    max-width: none;
+  @media (max-width: 767px) {
+    width: 100%;
+    gap: 0.6rem;
+    .react-datepicker-wrapper {
+      flex: 1;
+    }
     input {
-      font-size: 0.95rem;
-      padding: 0.8rem 1rem;
+      font-size: 0.875rem;
+      padding: 0.65rem 0.75rem;
+    }
+  }
+
+  @media (max-width: 575px) {
+    flex-direction: column;
+    gap: 0.6rem;
+    .react-datepicker-wrapper {
       width: 100%;
     }
-  }
-
-  @media (max-width: 576px) {
-    flex-direction: column; /* Stack on very small screens */
-    gap: 0.5rem;
     input {
-      font-size: 0.9rem;
-      padding: 0.7rem 0.9rem;
+      font-size: 0.85rem;
+      padding: 0.6rem 0.7rem;
     }
   }
 `;
@@ -189,93 +336,162 @@ const DatePickerWrapper = styled.div`
 const StyledButton = styled(Button)`
   background: linear-gradient(135deg, #2575fc, #6a11cb);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.5rem 0.75rem;
+  padding: 0.65rem 0.9rem;
   border-radius: 0.75rem;
   color: white;
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.825rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
   transition: all 0.3s ease-in-out;
-  flex: 0 0 auto;
   white-space: nowrap;
+  min-width: 90px;
 
   &:hover {
-    transform: scale(1.05);
+    transform: scale(1.02);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    opacity: 0.9;
+    opacity: 0.92;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  @media (min-width: 1920px) {
+    font-size: 0.9rem;
+    padding: 0.75rem 1rem;
+    min-width: 105px;
+  }
+
+  @media (max-width: 1600px) {
+    font-size: 0.8rem;
+    padding: 0.6rem 0.85rem;
+    min-width: 85px;
   }
 
   @media (max-width: 1440px) {
-    font-size: 0.8rem;
+    font-size: 0.775rem;
     padding: 0.6rem 0.8rem;
-    min-width: 100px; /* Ensure button is clickable */
+    min-width: 82px;
   }
 
-  @media (max-width: 1023px) {
+  @media (max-width: 1366px) {
+    font-size: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    min-width: 78px;
+  }
+
+  @media (max-width: 1280px) {
+    font-size: 0.725rem;
+    padding: 0.55rem 0.7rem;
+    min-width: 75px;
+    gap: 0.35rem;
+  }
+
+  @media (max-width: 1199px) {
+    font-size: 0.8rem;
+    padding: 0.6rem 0.85rem;
+    min-width: 85px;
+  }
+
+  @media (max-width: 991px) {
+    font-size: 0.825rem;
+    padding: 0.6rem 0.9rem;
     min-width: 90px;
   }
 
-  @media (max-width: 768px) {
-    flex: 0 0 100%;
-    justify-content: center;
-    font-size: 0.95rem;
-    padding: 0.8rem 1rem;
+  @media (max-width: 767px) {
+    width: 100%;
+    font-size: 0.875rem;
+    padding: 0.65rem 0.95rem;
+    min-width: auto;
   }
 
-  @media (max-width: 576px) {
-    font-size: 0.9rem;
-    padding: 0.7rem 0.9rem;
+  @media (max-width: 575px) {
+    font-size: 0.85rem;
+    padding: 0.6rem 0.85rem;
   }
 `;
 
 const StyledDropdownToggle = styled(Dropdown.Toggle)`
   background: linear-gradient(135deg, #2575fc, #6a11cb);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.5rem 0.6rem;
+  padding: 0.65rem 0.8rem;
   border-radius: 0.75rem;
   color: white;
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.825rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease-in-out;
-  flex: 0 0 auto;
-  min-width: 120px;
-  max-width: 150px;
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
+  min-width: 130px;
 
   &:hover {
-    transform: scale(1.05);
+    transform: scale(1.02);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    opacity: 0.9;
+    opacity: 0.92;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  @media (min-width: 1920px) {
+    min-width: 155px;
+    font-size: 0.9rem;
+    padding: 0.75rem 0.95rem;
+  }
+
+  @media (max-width: 1600px) {
+    min-width: 125px;
+    font-size: 0.8rem;
+    padding: 0.6rem 0.75rem;
   }
 
   @media (max-width: 1440px) {
-    min-width: 110px;
-    max-width: 140px;
-    font-size: 0.8rem;
+    min-width: 120px;
+    font-size: 0.775rem;
     padding: 0.6rem 0.7rem;
   }
 
-  @media (max-width: 1023px) {
-    min-width: 100px;
-    max-width: 130px;
+  @media (max-width: 1366px) {
+    min-width: 115px;
+    font-size: 0.75rem;
+    padding: 0.55rem 0.65rem;
   }
 
-  @media (max-width: 768px) {
-    flex: 0 0 100%;
-    max-width: none;
+  @media (max-width: 1280px) {
+    min-width: 110px;
+    font-size: 0.725rem;
+    padding: 0.55rem 0.6rem;
+  }
+
+  @media (max-width: 1199px) {
+    min-width: 125px;
+    font-size: 0.8rem;
+    padding: 0.6rem 0.75rem;
+  }
+
+  @media (max-width: 991px) {
+    min-width: 130px;
+    font-size: 0.825rem;
+    padding: 0.6rem 0.8rem;
+  }
+
+  @media (max-width: 767px) {
+    width: 100%;
     min-width: auto;
-    font-size: 0.95rem;
-    padding: 0.8rem 1rem;
+    font-size: 0.875rem;
+    padding: 0.65rem 0.85rem;
   }
 
-  @media (max-width: 576px) {
-    font-size: 0.9rem;
+  @media (max-width: 575px) {
+    font-size: 0.85rem;
     padding: 0.7rem 0.9rem;
   }
 `;
@@ -345,21 +561,36 @@ const NotificationWrapper = styled.div`
   cursor: pointer;
   display: flex;
   align-items: center;
-  padding: 0.5rem;
-  flex: 0 0 auto;
+  padding: 0.3rem;
 
-  @media (max-width: 1440px) {
+  @media (min-width: 1920px) {
     padding: 0.4rem;
   }
 
-  @media (max-width: 768px) {
-    padding: 0.5rem;
+  @media (max-width: 1600px) {
+    padding: 0.25rem;
+  }
+
+  @media (max-width: 1440px) {
+    padding: 0.25rem;
+  }
+
+  @media (max-width: 1366px) {
+    padding: 0.2rem;
+  }
+
+  @media (max-width: 1280px) {
+    padding: 0.2rem;
+  }
+
+  @media (max-width: 767px) {
+    padding: 0.3rem;
     justify-content: center;
   }
 `;
 
 const NotificationIcon = styled(FaBell)`
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   color: #4b5563;
   transition: all 0.3s ease-in-out;
 
@@ -368,34 +599,71 @@ const NotificationIcon = styled(FaBell)`
     transform: scale(1.1);
   }
 
-  @media (max-width: 1440px) {
-    font-size: 1.15rem;
+  @media (min-width: 1920px) {
+    font-size: 1.3rem;
   }
 
-  @media (max-width: 768px) {
-    font-size: 1.3rem;
+  @media (max-width: 1600px) {
+    font-size: 1.1rem;
+  }
+
+  @media (max-width: 1440px) {
+    font-size: 1.08rem;
+  }
+
+  @media (max-width: 1366px) {
+    font-size: 1.05rem;
+  }
+
+  @media (max-width: 1280px) {
+    font-size: 1rem;
+  }
+
+  @media (max-width: 767px) {
+    font-size: 1.2rem;
   }
 `;
 
 const NotificationBadge = styled.span`
   position: absolute;
-  top: -4px;
-  right: -4px;
+  top: -2px;
+  right: -2px;
   background: #ef4444;
   color: white;
   border-radius: 50%;
-  padding: 2px 6px;
-  font-size: 0.7rem;
+  padding: 2px 5px;
+  font-size: 0.65rem;
   font-weight: 600;
+  line-height: 1.2;
 
-  @media (max-width: 1440px) {
-    padding: 2px 5px;
-    font-size: 0.65rem;
-  }
-
-  @media (max-width: 768px) {
+  @media (min-width: 1920px) {
     padding: 2px 6px;
     font-size: 0.7rem;
+  }
+
+  @media (max-width: 1600px) {
+    padding: 2px 5px;
+    font-size: 0.63rem;
+  }
+
+  @media (max-width: 1440px) {
+    padding: 1px 4px;
+    font-size: 0.62rem;
+  }
+
+  @media (max-width: 1366px) {
+    padding: 1px 4px;
+    font-size: 0.6rem;
+  }
+
+  @media (max-width: 1280px) {
+    padding: 1px 4px;
+    font-size: 0.58rem;
+  }
+
+  @media (max-width: 767px) {
+    padding: 2px 5px;
+    font-size: 0.68rem;
   }
 `;
 

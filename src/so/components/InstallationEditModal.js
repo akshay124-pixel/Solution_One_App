@@ -290,7 +290,7 @@ const InstallationEditModal = ({ show, onHide, order, onUpdate }) => {
                                         padding: "12px",
                                         fontSize: "1rem",
                                     }}
-                                    required
+                                   
                                 />
                             </Form.Group>
                         </>

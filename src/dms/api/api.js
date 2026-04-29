@@ -25,6 +25,10 @@ const processQueue = (error, token = null) => {
 
 // Attach portal access token to every request
 api.interceptors.request.use(async (config) => {
+  // Skip token attachment if this is a retry with token already set
+  if (config._tokenAlreadySet) {
+    return config;
+  }
   const token = getPortalAccessToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
@@ -38,7 +42,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => failedQueue.push({ resolve, reject }))
-          .then((token) => { originalRequest.headers.Authorization = `Bearer ${token}`; return api(originalRequest); })
+          .then((token) => { 
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            originalRequest._tokenAlreadySet = true;
+            return api(originalRequest); 
+          })
           .catch((err) => Promise.reject(err));
       }
       originalRequest._retry = true;
@@ -55,6 +63,7 @@ api.interceptors.response.use(
         setPortalAccessToken(newToken);
         processQueue(null, newToken);
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        originalRequest._tokenAlreadySet = true;
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);

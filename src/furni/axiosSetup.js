@@ -24,6 +24,10 @@ const furniApi = axios.create({
 // ── Request interceptor: attach in-memory portal token ────────────────────────────────────
 furniApi.interceptors.request.use(
   async (config) => {
+    // Skip token attachment if this is a retry with token already set
+    if (config._tokenAlreadySet) {
+      return config;
+    }
     const token = getPortalAccessToken();
     if (token) {
       config.headers = config.headers || {};
@@ -72,6 +76,7 @@ furniApi.interceptors.response.use(
         setPortalAccessToken(result.accessToken);
         originalRequest.headers = originalRequest.headers || {};
         originalRequest.headers.Authorization = `Bearer ${result.accessToken}`;
+        originalRequest._tokenAlreadySet = true;
         return furniApi(originalRequest);
       } catch (_) {
         forceLogout("Session expired. Please log in again.");

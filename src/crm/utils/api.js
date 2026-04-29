@@ -57,6 +57,10 @@ export const getAccessToken = () => accessToken;
 // Request Interceptor
 api.interceptors.request.use(
     async (config) => {
+        // Skip token attachment if this is a retry with token already set
+        if (config._tokenAlreadySet) {
+            return config;
+        }
         if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`;
         }
@@ -81,6 +85,7 @@ api.interceptors.response.use(
                 
                 // Update header for the original request
                 originalRequest.headers.Authorization = `Bearer ${result.accessToken}`;
+                originalRequest._tokenAlreadySet = true;
                 return api(originalRequest);
             } catch (refreshError) {
                 console.error("Session expired:", refreshError);

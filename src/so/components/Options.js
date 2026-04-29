@@ -279,7 +279,7 @@ export const productOptions = {
     ],
   },
   "Google TV": {
-    sizes: ["43 inch", "50 inch", "55 inch"],
+    sizes: ["43 inch", "50 inch", "55 inch", "75 inch","86 inch"],
     specs: ["4GB RAM / 32GB ROM 4K"],
   },
   "Wriety Software": { sizes: ["N/A"], specs: ["N/A"] },

@@ -11,7 +11,8 @@ export const ROLES = {
   SUPER_ADMIN:         "superadmin",
   ADMIN:               "admin",
   SALESPERSON:         "salesperson",
-
+  SERVICE:             "service",
+   
   PRODUCTION:          "Production",
   INSTALLATION:        "Installation",
   FINISH:              "Finish",

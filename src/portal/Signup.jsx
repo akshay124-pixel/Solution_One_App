@@ -75,7 +75,7 @@ const Signup = () => {
     role: "salesperson",
     dms: false,
     furniOnly: false,
-    superadminModules: { crm: true, so: true, dms: true, furni: true },
+    superadminModules: { crm: true, so: true, dms: true, furni: true, service: true },
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -86,7 +86,7 @@ const Signup = () => {
       ...prev,
       [name]: value,
       ...(name === "role" && value !== "salesperson" && value !== "admin" ? { dms: false } : {}),
-      ...(name === "role" && value === "superadmin" ? { superadminModules: { crm: true, so: true, dms: true, furni: true } } : {}),
+      ...(name === "role" && value === "superadmin" ? { superadminModules: { crm: true, so: true, dms: true, furni: true, service: true } } : {}),
     }));
   };
 
@@ -137,11 +137,12 @@ const Signup = () => {
 
         const hint     = res.data.redirectHint;
         const userRole = res.data.user?.role;
-        if (hint === "select-module")        navigate("/select-module", { replace: true });
-        else if (hint === "dms-dashboard")   navigate("/dms/dashboard", { replace: true });
-        else if (hint === "furni-dashboard") navigate(furniRoleRoute(userRole), { replace: true });
-        else if (hint === "so-dashboard")    navigate(soRoleRoute(userRole), { replace: true });
-        else                                 navigate("/crm/dashboard", { replace: true });
+        if (hint === "select-module")          navigate("/select-module", { replace: true });
+        else if (hint === "service-dashboard") navigate("/service", { replace: true });
+        else if (hint === "dms-dashboard")     navigate("/dms/dashboard", { replace: true });
+        else if (hint === "furni-dashboard")   navigate(furniRoleRoute(userRole), { replace: true });
+        else if (hint === "so-dashboard")      navigate(soRoleRoute(userRole), { replace: true });
+        else                                   navigate("/crm/dashboard", { replace: true });
       } else {
         toast.error(res.data.message || "Signup failed.", { theme: "colored", autoClose: 3000 });
       }
@@ -217,7 +218,7 @@ const Signup = () => {
             {/* Superadmin module selector */}
             {formData.role === "superadmin" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {["crm", "so", "dms", "furni"].map((mod) => (
+                {["crm", "so", "dms", "furni", "service"].map((mod) => (
                   <label key={mod} style={{
                     position: "relative", display: "flex", alignItems: "center",
                     padding: "10px 14px",

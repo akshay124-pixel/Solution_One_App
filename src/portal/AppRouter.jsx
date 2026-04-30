@@ -9,6 +9,7 @@ import CRMApp from "./CRMApp";
 import SOApp from "./SOApp";
 import DMSApp from "./DMSApp";
 import FurniApp from "./FurniApp";
+import ServiceApp from "./ServiceApp";
 import IdentityManager from "./admin/IdentityManager";
 import AdminPanel from "./admin/AdminPanel";
 
@@ -79,6 +80,16 @@ const AppRouter = () => (
       element={
         <ProtectedRoute appAccess="furni">
           <FurniApp />
+        </ProtectedRoute>
+      }
+    />
+
+    {/* Service module */}
+    <Route
+      path="/service/*"
+      element={
+        <ProtectedRoute appAccess="service">
+          <ServiceApp />
         </ProtectedRoute>
       }
     />

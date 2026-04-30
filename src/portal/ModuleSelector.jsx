@@ -117,6 +117,25 @@ const modules = [
     glow: "rgba(245,158,11,0.22)",
     tag: "Furniture Orders",
   },
+  {
+    key: "service",
+    route: "/service",
+    label: "Service Dashboard",
+    sub: "Customer Service & Support",
+    icon: (
+      <svg width="38" height="38" viewBox="0 0 24 24" fill="none">
+        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke="url(#svg)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <defs>
+          <linearGradient id="svg" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#10b981"/><stop offset="1" stopColor="#059669"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    ),
+    accent: "linear-gradient(135deg,#10b981,#059669)",
+    glow: "rgba(16,185,129,0.22)",
+    tag: "Service & Support",
+  },
 ];
 
 const ModuleSelector = () => {

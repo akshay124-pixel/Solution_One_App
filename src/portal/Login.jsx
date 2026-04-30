@@ -68,14 +68,16 @@ const Login = () => {
 
       // Role-based redirect using hint from server
       // hint === "select-module" → anyone with app_access.length === 2
+      // hint === "service-dashboard" → service role
       // hint === "so-dashboard"  → SO-only roles
       // hint === "crm-dashboard" → CRM-only fallback
       const hint = result.redirectHint;
       const role = result.user?.role;
-      if (hint === "select-module")      navigate("/select-module", { replace: true });
-      else if (hint === "dms-dashboard")  navigate("/dms/dashboard", { replace: true });
-      else if (hint === "furni-dashboard") navigate(furniRoleRoute(role), { replace: true });
-      else if (hint === "so-dashboard")   navigate(soRoleRoute(role), { replace: true });
+      if (hint === "select-module")        navigate("/select-module", { replace: true });
+      else if (hint === "service-dashboard") navigate("/service", { replace: true });
+      else if (hint === "dms-dashboard")    navigate("/dms/dashboard", { replace: true });
+      else if (hint === "furni-dashboard")  navigate(furniRoleRoute(role), { replace: true });
+      else if (hint === "so-dashboard")     navigate(soRoleRoute(role), { replace: true });
       else navigate("/crm/dashboard", { replace: true });
     } else {
       toast.error(result.message, {

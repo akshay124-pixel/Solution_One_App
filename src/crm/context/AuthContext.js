@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, useMemo, useCallback } from "react";
+import axios from "axios";
 import api, { setAccessToken, refreshAccessToken } from "../utils/api";
 
 const AuthContext = createContext(null);
@@ -107,7 +108,6 @@ export const AuthProvider = ({ children }) => {
     // Memoized login to prevent re-creation
     const login = useCallback(async (email, password) => {
         try {
-            const axios = require("axios");
             const response = await axios.post(
                 `${process.env.REACT_APP_PORTAL_URL || "http://localhost:5050"}/api/auth/login`,
                 { email, password },
@@ -132,7 +132,6 @@ export const AuthProvider = ({ children }) => {
     // Memoized signup — uses unified portal endpoint
     const signup = useCallback(async (userData) => {
         try {
-            const axios = require("axios");
             const response = await axios.post(
                 `${process.env.REACT_APP_PORTAL_URL || "http://localhost:5050"}/api/auth/signup`,
                 userData,
@@ -157,7 +156,6 @@ export const AuthProvider = ({ children }) => {
     // Memoized logout - NO window.location.href, returns callback for navigation
     const logout = useCallback(async () => {
         try {
-            const axios = require("axios");
             await axios.post(
                 `${process.env.REACT_APP_PORTAL_URL || "http://localhost:5050"}/api/auth/logout`,
                 {},

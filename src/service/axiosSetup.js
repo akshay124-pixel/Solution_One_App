@@ -11,7 +11,7 @@ import {
 } from "../portal/PortalAuthContext";
 
 export const BASE_URL =
-  process.env.REACT_APP_SERVICE_URL || "http://localhost:5050/api/service";
+  process.env.REACT_APP_SERVICE_URL 
 
 // Dedicated Service axios instance
 const serviceApi = axios.create({

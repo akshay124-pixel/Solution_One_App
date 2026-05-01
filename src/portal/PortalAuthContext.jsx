@@ -174,7 +174,12 @@ export const PortalAuthProvider = ({ children }) => {
       try {
         const result = await refreshPortalToken();
         if (result.success) {
-          setUser(result.user);
+          // Ensure app_access is preserved in user state
+          const userData = {
+            ...result.user,
+            app_access: result.user.app_access || [],
+          };
+          setUser(userData);
           setIsAuthenticated(true);
         }
       } catch (_) {
@@ -200,11 +205,16 @@ export const PortalAuthProvider = ({ children }) => {
       const res = await portalApi.post("/api/auth/login", { email, password });
       if (res.data.success) {
         setPortalAccessToken(res.data.accessToken);
-        setUser(res.data.user);
+        // Ensure app_access is preserved in user state
+        const userData = {
+          ...res.data.user,
+          app_access: res.data.user.app_access || [],
+        };
+        setUser(userData);
         setIsAuthenticated(true);
         setLoading(false);
-        syncLocalStorage(res.data.accessToken, res.data.user);
-        return { success: true, redirectHint: res.data.redirectHint, user: res.data.user };
+        syncLocalStorage(res.data.accessToken, userData);
+        return { success: true, redirectHint: res.data.redirectHint, user: userData };
       }
       return { success: false, message: "Login failed." };
     } catch (err) {
@@ -219,10 +229,15 @@ export const PortalAuthProvider = ({ children }) => {
   // without making a second login API call
   const setAuthFromToken = useCallback((accessToken, userData) => {
     setPortalAccessToken(accessToken);
-    setUser(userData);
+    // Ensure app_access is preserved in user state
+    const userWithAccess = {
+      ...userData,
+      app_access: userData.app_access || [],
+    };
+    setUser(userWithAccess);
     setIsAuthenticated(true);
     setLoading(false);
-    syncLocalStorage(accessToken, userData);
+    syncLocalStorage(accessToken, userWithAccess);
   }, []);
 
   const logout = useCallback(async () => {

@@ -20,6 +20,7 @@ import SalesDashboardDrawer from "./Dashbords/SalesDashboardDrawer";
 import { AnimatePresence, motion } from "framer-motion";
 import { FINANCIAL_YEAR_OPTIONS } from "../../shared/financialYear";
 import { getCurrentFinancialYear } from "../../shared/financialYear";
+import { salesPersonlist } from "./Options";
 // Lazy load modals
 const ViewEntry = React.lazy(() => import("./ViewEntry"));
 const DeleteModal = React.lazy(() => import("./Delete"));
@@ -1056,8 +1057,8 @@ const Row = React.memo(({ index, style, data }) => {
         },
         {
           width: columnWidths[54],
-          content: order.salesPerson || "-",
-          title: order.salesPerson || "-",
+          content: getSalesPersonLabel(order.salesPerson),
+          title: getSalesPersonLabel(order.salesPerson),
         },
         {
           width: columnWidths[55],
@@ -1097,6 +1098,13 @@ const Row = React.memo(({ index, style, data }) => {
     </tr>
   );
 });
+
+// Helper function to get salesperson label from value
+const getSalesPersonLabel = (value) => {
+  if (!value) return "-";
+  const person = salesPersonlist.find(p => p.value === value);
+  return person ? person.label : value;
+};
 
 const Sales = () => {
   const [orders, setOrders] = useState([]);

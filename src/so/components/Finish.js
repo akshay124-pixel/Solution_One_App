@@ -12,6 +12,14 @@ import styled from "styled-components";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { useRef } from "react";
+import { salesPersonlist } from "./Options";
+
+// Helper function to get salesperson label from value
+const getSalesPersonLabel = (value) => {
+  if (!value) return "N/A";
+  const person = salesPersonlist.find(p => p.value === value);
+  return person ? person.label : value;
+};
 
 // Styled Component for DatePicker
 const DatePickerWrapper = styled.div`
@@ -606,7 +614,7 @@ function Finish() {
       Quantity: order.products
         ? order.products.reduce((sum, p) => sum + (p.qty || 0), 0)
         : "N/A",
-      "Sales Person": order.salesPerson || "N/A",
+      "Sales Person": getSalesPersonLabel(order.salesPerson),
       "Production Remarks": order.remarksByProduction || "N/A",
       "SO Date": order.soDate
         ? new Date(order.soDate).toLocaleDateString()
@@ -1486,7 +1494,7 @@ function Finish() {
                     <div className="pdf-item"><strong>SO Date:</strong> {viewOrder.soDate ? new Date(viewOrder.soDate).toLocaleDateString() : "N/A"}</div>
                     <div className="pdf-item"><strong>Dispatch Date:</strong> {viewOrder.dispatchDate ? new Date(viewOrder.dispatchDate).toLocaleDateString() : "N/A"}</div>
                     <div className="pdf-item" style={{ gridColumn: "span 2" }}><strong>Shipping Address:</strong> {viewOrder.shippingAddress || "N/A"}</div>
-                    <div className="pdf-item"><strong>Sales Person:</strong> {viewOrder.salesPerson || "N/A"}</div>
+                    <div className="pdf-item"><strong>Sales Person:</strong> {getSalesPersonLabel(viewOrder.salesPerson)}</div>
                     <div className="pdf-item"><strong>Dispatch From:</strong> {viewOrder.dispatchFrom || "N/A"}</div>
                     <div className="pdf-item"><strong>Transporter:</strong> {viewOrder.transporter || "N/A"}</div>
                     <div className="pdf-item"><strong>Docket No:</strong> {viewOrder.docketNo || "N/A"}</div>
@@ -1718,7 +1726,7 @@ function Finish() {
                       </div>
                     </div>
                     <InfoItem label="Dispatch From" value={viewOrder.dispatchFrom || "N/A"} />
-                    <InfoItem label="Sales Person" value={viewOrder.salesPerson || "N/A"} />
+                    <InfoItem label="Sales Person" value={getSalesPersonLabel(viewOrder.salesPerson)} />
                   </div>
                 </div>
 

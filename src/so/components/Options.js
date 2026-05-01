@@ -1273,7 +1273,7 @@ export const salesPersonlist = [
   { label: "Gurnam Bhullar", value: "Gurnam Bhullar" },
   { label: "Harish Kumar", value: "Harish Kumar" },
   { label: "Heena Mehra", value:"Heena Mehra"},
-  { label: "Harpreet Singh", value: "Harpeet Singh" },
+  { label: "Harpreet Singh", value: "Harpeet Singh" }, // Old DB value (typo)
   { label: "J P Sharma", value: "J P Sharma" },
   { label: "Jagan Lal", value: "Jagan Lal" },
   { label: "Jyoti Rani", value: "Jyoti Rani" },
@@ -1339,8 +1339,7 @@ export const Reportinglist = [
   { label: "Ashwani Kumar", value: "Ashwani Kumar" },
   { label: "Bachan Pal", value: "Bachan Pal" },
   { label: "Gem Team", value: "Gem Team" },
-  { label: "Heera Singh Daspa", value: "Heera Singh Daspa" },
-  { label: "Harpreet Singh", value: "Harpeet Singh" },
+  { label: "Harpreet Singh", value: "Harpeet Singh" }, // Correct value
   { label: "J P Sharma", value: "J P Sharma" },
   { label: "Manjit Singh Chowhan", value: "Manjit Singh Chowhan" },
   { label: "Mukul Kubba", value: "Mukul Kubba" },
@@ -1564,3 +1563,5 @@ export const productCode = [
   "859K01543",
   "052K15520",
 ];
+
+

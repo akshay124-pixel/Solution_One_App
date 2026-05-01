@@ -2,6 +2,15 @@ import React, { memo } from "react";
 import { Badge, Button, Spinner } from "react-bootstrap";
 import { FaEye, FaEnvelope } from "react-icons/fa";
 import "../App.css";
+import { salesPersonlist } from "./Options";
+
+// Helper function to get salesperson label from value
+const getSalesPersonLabel = (value) => {
+  if (!value) return "N/A";
+  const person = salesPersonlist.find(p => p.value === value);
+  return person ? person.label : value;
+};
+
 // PERFORMANCE: Memoized row component to prevent re-rendering entire list on simple updates
 const InstallationRow = memo(
   ({
@@ -252,9 +261,9 @@ const InstallationRow = memo(
             whiteSpace: "nowrap",
             maxWidth: "150px",
           }}
-          title={order.salesPerson || "N/A"}
+          title={getSalesPersonLabel(order.salesPerson)}
         >
-          {order.salesPerson || "N/A"}
+          {getSalesPersonLabel(order.salesPerson)}
         </td>
 
         <td

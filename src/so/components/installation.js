@@ -17,6 +17,14 @@ import InstallationRow from "./InstallationRow";
 import debounce from "lodash/debounce";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { salesPersonlist } from "./Options";
+
+// Helper function to get salesperson label from value
+const getSalesPersonLabel = (value) => {
+  if (!value) return "N/A";
+  const person = salesPersonlist.find(p => p.value === value);
+  return person ? person.label : value;
+};
 
 function Installation() {
   const [orders, setOrders] = useState([]);
@@ -596,7 +604,7 @@ function Installation() {
         "Charges Status": order.installchargesstatus || "N/A",
         Charges: order.installation || "N/A",
         "Installation Status": order.installationStatus || "Pending",
-        "Sales Person": order.salesPerson || "N/A",
+        "Sales Person": getSalesPersonLabel(order.salesPerson),
         City: order.city || "N/A",
         State: order.state || "N/A",
         deliveredDate: order.deliveredDate
@@ -1522,7 +1530,7 @@ function Installation() {
                       </div>
                       <div className="pdf-item">
                         <strong>Sales Person:</strong>{" "}
-                        {viewOrder.salesPerson || "N/A"}
+                        {getSalesPersonLabel(viewOrder.salesPerson)}
                       </div>
                       <div
                         className="pdf-item"
@@ -1732,7 +1740,7 @@ function Installation() {
                       <InfoItem label="Contact Person" value={viewOrder.name || "N/A"} />
                       <InfoItem label="Contact Number" value={viewOrder.contactNo || "N/A"} copyable />
                       <InfoItem label="Email Address" value={viewOrder.customerEmail || "N/A"} />
-                      <InfoItem label="Sales Person" value={viewOrder.salesPerson || "N/A"} />
+                      <InfoItem label="Sales Person" value={getSalesPersonLabel(viewOrder.salesPerson)} />
                       <InfoItem label="Dispatch Status" value={viewOrder.dispatchStatus || "N/A"} />
                       <div className="info-item" style={{ gridColumn: "1 / -1" }}>
                         <span className="info-label">Shipping Address</span>

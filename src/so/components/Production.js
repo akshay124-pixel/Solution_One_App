@@ -12,6 +12,15 @@ import { Download } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { useRef } from "react";
+import { salesPersonlist } from "./Options";
+
+// Helper function to get salesperson label from value
+const getSalesPersonLabel = (value) => {
+  if (!value) return "N/A";
+  const person = salesPersonlist.find(p => p.value === value);
+  return person ? person.label : value;
+};
+
 const DatePickerWrapper = styled.div`
   display: flex;
 
@@ -532,7 +541,7 @@ const Production = () => {
     const textToCopy = `
       Order ID: ${viewOrder.orderId || "N/A"}
       Customer Name: ${viewOrder.customername || "N/A"}
-      Sales Person: ${viewOrder.salesPerson || "N/A"}
+      Sales Person: ${getSalesPersonLabel(viewOrder.salesPerson)}
       Products:\n${productsText}
       Fulfilling Status: ${viewOrder.fulfillingStatus || "Pending"}
       Remarks by Production: ${viewOrder.remarksByProduction || "N/A"}
@@ -1332,9 +1341,9 @@ const Production = () => {
                               whiteSpace: "nowrap",
                               maxWidth: "150px",
                             }}
-                            title={order.salesPerson || "N/A"}
+                            title={getSalesPersonLabel(order.salesPerson)}
                           >
-                            {order.salesPerson || "N/A"}
+                            {getSalesPersonLabel(order.salesPerson)}
                           </td>
                           <td
                             style={{
@@ -2177,7 +2186,7 @@ const Production = () => {
                       </div>
                       <div className="pdf-item">
                         <strong>Sales Person:</strong>{" "}
-                        {viewOrder.salesPerson || "N/A"}
+                        {getSalesPersonLabel(viewOrder.salesPerson)}
                       </div>
                       <div className="pdf-item">
                         <strong>Contact No:</strong>{" "}
@@ -2465,7 +2474,7 @@ const Production = () => {
                       </div>
                       {viewOrder.startDate && <InfoItem label="Start Date" value={new Date(viewOrder.startDate).toLocaleDateString()} />}
                       {viewOrder.endDate && <InfoItem label="End Date" value={new Date(viewOrder.endDate).toLocaleDateString()} />}
-                      <InfoItem label="Sales Person" value={viewOrder.salesPerson || "N/A"} />
+                      <InfoItem label="Sales Person" value={getSalesPersonLabel(viewOrder.salesPerson)} />
                     </div>
                   </div>
 

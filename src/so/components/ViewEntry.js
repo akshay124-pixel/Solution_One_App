@@ -8,6 +8,14 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { useRef } from "react";
 import { Spinner } from "react-bootstrap";
+import { salesPersonlist } from "./Options";
+
+// Helper function to get salesperson label from value
+const getSalesPersonLabel = (value) => {
+  if (!value) return "N/A";
+  const person = salesPersonlist.find(p => p.value === value);
+  return person ? person.label : value;
+};
 
 function ViewEntry({ isOpen, onClose, entry }) {
   const [copied, setCopied] = useState(false);
@@ -619,7 +627,11 @@ function ViewEntry({ isOpen, onClose, entry }) {
       condition: true,
       formatter: () => (isValidField(createdByName) ? createdByName : "N/A"),
     },
-    { key: "salesPerson", label: "Sales Person" },
+    { 
+      key: "salesPerson", 
+      label: "Sales Person",
+      formatter: (value) => getSalesPersonLabel(value)
+    },
     { key: "report", label: "Reporting Person" },
     {
       key: "approvalTimestamp",
@@ -1178,7 +1190,7 @@ function ViewEntry({ isOpen, onClose, entry }) {
                 <strong>GEM Order No:</strong> {entry.gemOrderNumber || "N/A"}
               </div>
               <div className="pdf-item">
-                <strong>Sales Person:</strong> {entry.salesPerson || "N/A"}
+                <strong>Sales Person:</strong> {getSalesPersonLabel(entry.salesPerson)}
               </div>
               <div className="pdf-item">
                 <strong>Reporting Person:</strong> {entry.report || "N/A"}

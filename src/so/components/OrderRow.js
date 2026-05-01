@@ -1,6 +1,14 @@
 import React from "react";
 import { Button, Badge } from "react-bootstrap";
 import { FaEye } from "react-icons/fa";
+import { salesPersonlist } from "./Options";
+
+// Helper function to get salesperson label from value
+const getSalesPersonLabel = (value) => {
+  if (!value) return "N/A";
+  const person = salesPersonlist.find(p => p.value === value);
+  return person ? person.label : value;
+};
 
 // Memoized OrderRow component - prevents re-renders when props don't change
 const OrderRow = React.memo(({
@@ -197,9 +205,9 @@ const OrderRow = React.memo(({
                     whiteSpace: "nowrap",
                     maxWidth: "150px",
                 }}
-                title={order.salesPerson || "N/A"}
+                title={getSalesPersonLabel(order.salesPerson)}
             >
-                {order.salesPerson || "N/A"}
+                {getSalesPersonLabel(order.salesPerson)}
             </td>
             <td
                 style={{

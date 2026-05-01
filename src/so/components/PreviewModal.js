@@ -3,6 +3,14 @@ import { toast } from "react-toastify";
 import { Download } from "lucide-react";
 import soApi from "../../so/axiosSetup";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { salesPersonlist } from "./Options";
+
+// Helper function to get salesperson label from value
+const getSalesPersonLabel = (value) => {
+  if (!value) return "N/A";
+  const person = salesPersonlist.find(p => p.value === value);
+  return person ? person.label : value;
+};
 
 const PreviewModal = ({ isOpen, onClose, entry }) => {
   if (!entry) return null;
@@ -311,7 +319,7 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
                     <div class="mb-2">
                       <strong class="text-gray-700">Name of the Sales Person:</strong>
                       <span class="text-gray-900">${
-                        entry.salesPerson || "N/A"
+                        getSalesPersonLabel(entry.salesPerson)
                       }</span>
                     </div>
                     <div class="mb-2">
@@ -827,7 +835,7 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
                     Name of the Sales Person:
                   </strong>{" "}
                   <span className="text-gray-900">
-                    {entry.salesPerson || "N/A"}
+                    {getSalesPersonLabel(entry.salesPerson)}
                   </span>
                 </div>
                 <div className="mb-2">

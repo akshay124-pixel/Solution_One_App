@@ -281,7 +281,6 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
         <Form.Group controlId="dispatchFrom"><Form.Label>📍 Dispatch From</Form.Label><Form.Select {...register("dispatchFrom")} onChange={(e) => {
           const newVal = e.target.value;
           debouncedHandleInputChange("dispatchFrom", newVal);
-          // Business Rule: auto-update Production Status when Dispatch location changes
           const currentStatus = watch("fulfillingStatus");
           const nextStatus = evaluateProductionStatus(newVal, currentStatus);
           if (nextStatus !== currentStatus) {

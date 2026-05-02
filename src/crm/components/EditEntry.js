@@ -322,7 +322,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entry }) {
           ? new Date(entry.followUpDate).toISOString().split("T")[0]
           : "",
         remarks: entry.remarks || "",
-        liveLocation: entry.liveLocation || "",
+        liveLocation: "", // Clear old location - require fresh location for each follow-up
         nextAction: entry.nextAction || "",
         estimatedValue: entry.estimatedValue || "",
         closeamount: entry.closeamount || "",
@@ -334,12 +334,12 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entry }) {
       setError(null);
       setShowConfirm(false);
       setManualLocation(false);
-      setLocationFetched(!!entry.liveLocation);
+      setLocationFetched(false); // Always start fresh - don't show old location as "saved"
       setView("options");
 
-      // Reset enhanced location state
+      // Reset enhanced location state - Always start fresh for new follow-up
       setLocationState({
-        status: entry.liveLocation ? 'success' : 'idle',
+        status: 'idle', // Always idle - require fresh location for each follow-up
         coordinates: null,
         error: null,
         attempts: 0,
@@ -1614,6 +1614,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entry }) {
           <Form.Label>📅 Created At</Form.Label>
           <Form.Control
             type="date"
+            readOnly
             {...register("createdAt")}
             isInvalid={!!errors.createdAt}
             aria-label="Created At"

@@ -191,6 +191,17 @@ function AddEntry({ isOpen, onClose, onEntryAdded }) {
   const [locationFetched, setLocationFetched] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Daily entry limit state
+  const [dailyLimit, setDailyLimit] = useState({
+    count: 0,
+    limit: null,
+    remaining: null,
+    allowed: true,
+    message: "",
+    resetsIn: "",
+    loading: true
+  });
+
   // Enhanced location state management
   const [locationState, setLocationState] = useState({
     status: 'idle', // 'idle', 'fetching', 'slow', 'timeout', 'success', 'error'
@@ -210,8 +221,36 @@ function AddEntry({ isOpen, onClose, onEntryAdded }) {
 
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+  const hasShownWarning = useRef(false); // Track if warning was already shown
 
   const totalSteps = 4;
+
+  // Fetch daily entry count
+  const fetchDailyEntryCount = useCallback(async (showWarning = false) => {
+    try {
+      const response = await api.get("/api/daily-entry-count");
+      if (response.data.success) {
+        setDailyLimit({
+          ...response.data.data,
+          loading: false
+        });
+        
+        // Show warning if approaching limit (only once per modal open)
+        if (showWarning && 
+            response.data.data.remaining !== null && 
+            response.data.data.remaining <= 2 && 
+            response.data.data.remaining > 0 &&
+            !hasShownWarning.current) {
+          toast.warning(`⚠️ ${response.data.data.message}`, { autoClose: 5000 });
+          hasShownWarning.current = true;
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching daily entry count:", error);
+      // Don't block the user if this fails
+      setDailyLimit(prev => ({ ...prev, loading: false }));
+    }
+  }, []);
 
   useEffect(() => {
     const fetchUsersForTagging = async () => {
@@ -230,6 +269,8 @@ function AddEntry({ isOpen, onClose, onEntryAdded }) {
 
     if (isOpen) {
       fetchUsersForTagging();
+      hasShownWarning.current = false; // Reset warning flag when modal opens
+      fetchDailyEntryCount(true); // Fetch daily limit when modal opens (with warning enabled)
       setFormData({ ...initialFormData, createdAt: new Date().toISOString() });
       setSelectedState("");
       setSelectedCity("");
@@ -247,7 +288,7 @@ function AddEntry({ isOpen, onClose, onEntryAdded }) {
         lastKnownLocation: null
       });
     }
-  }, [isOpen]);
+  }, [isOpen, fetchDailyEntryCount]);
 
   const handleInput = useCallback((e) => {
     const { name, value } = e.target;
@@ -573,6 +614,9 @@ function AddEntry({ isOpen, onClose, onEntryAdded }) {
         const newEntry = response.data.data;
         onEntryAdded(newEntry);
 
+        // Refresh daily entry count after successful submission (without showing warning again)
+        fetchDailyEntryCount(false);
+
         setFormData({ ...initialFormData, createdAt: new Date().toISOString() });
         setSelectedState("");
         setSelectedCity("");
@@ -599,12 +643,37 @@ function AddEntry({ isOpen, onClose, onEntryAdded }) {
           if (error.response) {
             const status = error.response.status;
             const serverMessage = error.response.data?.message || "";
+            const errorCode = error.response.data?.code;
+            
+            // Handle daily limit exceeded error
+            if (status === 403 && errorCode === "DAILY_LIMIT_EXCEEDED") {
+              const limitData = error.response.data?.data;
+              friendlyMessage = serverMessage || "Daily entry limit reached.";
+              
+              // Update local state with server response
+              if (limitData) {
+                setDailyLimit({
+                  count: limitData.count,
+                  limit: limitData.limit,
+                  remaining: limitData.remaining,
+                  allowed: false,
+                  message: serverMessage,
+                  resetsIn: limitData.resetsIn,
+                  loading: false
+                });
+              }
+              
+              toast.error(friendlyMessage, { autoClose: 7000 });
+              setLoading(false);
+              return;
+            }
+            
             if (status === 400) {
-              friendlyMessage = "Please check the information you entered.";
+              friendlyMessage = serverMessage || "Please check the information you entered.";
             } else if (status === 401) {
               friendlyMessage = "Session expired. Please log in again.";
             } else if (status === 403) {
-              friendlyMessage = "Access denied.";
+              friendlyMessage = serverMessage || "Access denied.";
             } else if (serverMessage) {
               friendlyMessage = serverMessage;
             }
@@ -1272,17 +1341,53 @@ function AddEntry({ isOpen, onClose, onEntryAdded }) {
           color: "#fff",
           boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
           borderBottom: "none",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
         }}
       >
-        <Modal.Title style={{ fontWeight: "bold", fontSize: "1.5rem" }}>
-          <span role="img" aria-label="add-entry">
-            ✨
-          </span>{" "}
-          Add New Entry - Step {currentStep} of {totalSteps}
-        </Modal.Title>
+        <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "8px" }}>
+          <Modal.Title style={{ fontWeight: "bold", fontSize: "1.5rem" }}>
+            <span role="img" aria-label="add-entry">
+              ✨
+            </span>{" "}
+            Add New Entry - Step {currentStep} of {totalSteps}
+          </Modal.Title>
+          
+          {/* Daily Limit Indicator */}
+          {!dailyLimit.loading && dailyLimit.limit !== null && (
+            <div style={{ 
+              fontSize: "0.85rem", 
+              opacity: 0.95,
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              flexWrap: "wrap"
+            }}>
+              <span>
+                📊 Today's Entries: <strong>{dailyLimit.count}/{dailyLimit.limit}</strong>
+              </span>
+              {dailyLimit.remaining !== null && (
+                <>
+                  <span>•</span>
+                  <span style={{ 
+                    color: dailyLimit.remaining === 0 ? "#ffcccc" : 
+                           dailyLimit.remaining <= 2 ? "#fff3cd" : "#d4edda"
+                  }}>
+                    {dailyLimit.remaining === 0 ? "⛔ Limit Reached" : 
+                     dailyLimit.remaining === 1 ? "⚠️ 1 remaining" :
+                     `✅ ${dailyLimit.remaining} remaining`}
+                  </span>
+                  {dailyLimit.resetsIn && dailyLimit.remaining === 0 && (
+                    <>
+                      <span>•</span>
+                      <span style={{ fontSize: "0.8rem" }}>
+                        Resets in {dailyLimit.resetsIn}
+                      </span>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </Modal.Header>
 
       <Modal.Body style={{ padding: "2rem", backgroundColor: "#f8f9fa" }}>
@@ -1333,23 +1438,29 @@ function AddEntry({ isOpen, onClose, onEntryAdded }) {
                 <Button
                   variant="success"
                   onClick={handleSubmit}
-                  disabled={loading}
+                  disabled={loading || !dailyLimit.allowed}
                   style={{
                     borderRadius: "8px",
                     padding: "10px 40px",
-                    backgroundColor: "#28a745",
+                    backgroundColor: !dailyLimit.allowed ? "#6c757d" : "#28a745",
                     border: "none",
                     fontWeight: "bold",
                     transition: "all 0.3s ease",
+                    cursor: !dailyLimit.allowed ? "not-allowed" : "pointer",
                   }}
-                  onMouseOver={(e) =>
-                    (e.target.style.backgroundColor = "#218838")
-                  }
-                  onMouseOut={(e) =>
-                    (e.target.style.backgroundColor = "#28a745")
-                  }
+                  onMouseOver={(e) => {
+                    if (dailyLimit.allowed) {
+                      e.target.style.backgroundColor = "#218838";
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (dailyLimit.allowed) {
+                      e.target.style.backgroundColor = "#28a745";
+                    }
+                  }}
+                  title={!dailyLimit.allowed ? dailyLimit.message : ""}
                 >
-                  {loading ? "Submitting..." : "Submit"}
+                  {loading ? "Submitting..." : !dailyLimit.allowed ? "Limit Reached" : "Submit"}
                 </Button>
               )}
             </div>

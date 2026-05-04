@@ -21,6 +21,34 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
   const [fileError, setFileError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const handleDownloadAttachment = async (filename) => {
+    if (!filename) {
+      toast.error("No attachment found");
+      return;
+    }
+    
+    try {
+      toast.info("Starting download...");
+      const response = await serviceApi.get(`/download/${encodeURIComponent(filename)}`, {
+        responseType: "blob"
+      });
+      
+      const blob = response.data;
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("Download completed!");
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error(error.response?.data?.message || "Failed to download file");
+    }
+  };
+
   const getSystemBadge = (systemType) => {
     if (systemType === 'furniture') {
       return {
@@ -945,18 +973,22 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
                   <strong style={{ color: "#1e40af" }}>Current Attachment:</strong>
                   <div style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "8px" }}>
                     <span style={{ color: "#374151" }}>{log.serviceAttachment}</span>
-                    <a
-                      href={`/api/service/download/${encodeURIComponent(log.serviceAttachment)}`}
-                      download
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadAttachment(log.serviceAttachment)}
                       style={{
                         color: "#3b82f6",
-                        textDecoration: "none",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        textDecoration: "underline",
                         fontSize: "0.75rem",
-                        fontWeight: "500"
+                        fontWeight: "500",
+                        padding: 0
                       }}
                     >
                       Download
-                    </a>
+                    </button>
                   </div>
                 </div>
               )}

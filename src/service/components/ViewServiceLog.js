@@ -1,12 +1,42 @@
 import { useEffect } from "react";
 import { Modal, Badge, Alert, Accordion, Button } from "react-bootstrap";
 import { User, Calendar, Clock, History, X, Eye, FileText } from "lucide-react";
+import { toast } from "react-toastify";
+import serviceApi from "../axiosSetup";
 import engineersList from "../utils/engineersList";
 
 const ViewServiceLog = ({ isOpen, onClose, log }) => {
   useEffect(() => {
     // Component is now read-only, no state management needed
   }, [log]);
+
+  const handleDownloadAttachment = async (filename) => {
+    if (!filename) {
+      toast.error("No attachment found");
+      return;
+    }
+    
+    try {
+      toast.info("Starting download...");
+      const response = await serviceApi.get(`/download/${encodeURIComponent(filename)}`, {
+        responseType: "blob"
+      });
+      
+      const blob = response.data;
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("Download completed!");
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error(error.response?.data?.message || "Failed to download file");
+    }
+  };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
@@ -684,20 +714,20 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                         Click to download attachment
                       </div>
                     </div>
-                    <a
-                      href={`/api/service/download/${encodeURIComponent(log.serviceAttachment)}`}
-                      download
+                    <button
+                      onClick={() => handleDownloadAttachment(log.serviceAttachment)}
                       style={{
                         padding: "8px 16px",
                         background: "linear-gradient(135deg, #3b82f6, #1e40af)",
                         color: "white",
-                        textDecoration: "none",
+                        border: "none",
                         borderRadius: "6px",
                         fontSize: "0.75rem",
                         fontWeight: "500",
                         display: "flex",
                         alignItems: "center",
                         gap: "6px",
+                        cursor: "pointer",
                         transition: "all 0.2s ease"
                       }}
                       onMouseEnter={(e) => {
@@ -723,7 +753,7 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                         />
                       </svg>
                       Download
-                    </a>
+                    </button>
                   </div>
                 </div>
               )}

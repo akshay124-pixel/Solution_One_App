@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Modal, Badge, Alert, Accordion, Button } from "react-bootstrap";
 import { User, Calendar, Clock, History, X, Eye, FileText } from "lucide-react";
+import engineersList from "../utils/engineersList";
 
 const ViewServiceLog = ({ isOpen, onClose, log }) => {
   useEffect(() => {
@@ -166,6 +167,17 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
             </h6>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <div>
+                <strong style={{ color: "#0369a1", fontSize: "0.875rem" }}>Complaint No:</strong>
+                <div style={{ 
+                  color: "#dc2626", 
+                  fontWeight: "700", 
+                  fontSize: "1.1rem",
+                  marginTop: "4px"
+                }}>
+                  {log.complaintNumber || "-"}
+                </div>
+              </div>
+              <div>
                 <strong style={{ color: "#0369a1", fontSize: "0.875rem" }}>System:</strong>
                 <div style={{ marginTop: "4px" }}>
                   <Badge 
@@ -191,15 +203,30 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
               </div>
               <div>
                 <strong style={{ color: "#0369a1", fontSize: "0.875rem" }}>Customer:</strong>
-                <div style={{ color: "#1f2937", fontWeight: "500" }}>{log.orderDetails?.customername || "-"}</div>
+                <div style={{ color: "#1f2937", fontWeight: "500" }}>
+                  {log.orderId?.startsWith('PMTM') 
+                    ? (log.serviceRequestName || "-")
+                    : (log.orderDetails?.customername || "-")
+                  }
+                </div>
               </div>
               <div>
                 <strong style={{ color: "#0369a1", fontSize: "0.875rem" }}>Contact Person:</strong>
-                <div style={{ color: "#1f2937", fontWeight: "500" }}>{log.orderDetails?.name || "-"}</div>
+                <div style={{ color: "#1f2937", fontWeight: "500" }}>
+                  {log.orderId?.startsWith('PMTM') 
+                    ? (log.serviceRequestName || "-")
+                    : (log.orderDetails?.name || "-")
+                  }
+                </div>
               </div>
               <div>
                 <strong style={{ color: "#0369a1", fontSize: "0.875rem" }}>Contact No:</strong>
-                <div style={{ color: "#1f2937", fontWeight: "500" }}>{log.orderDetails?.contactNo || "-"}</div>
+                <div style={{ color: "#1f2937", fontWeight: "500" }}>
+                  {log.orderId?.startsWith('PMTM') 
+                    ? (log.serviceRequestMobile || "-")
+                    : (log.orderDetails?.contactNo || "-")
+                  }
+                </div>
               </div>
               {log.orderDetails?.salesPerson && (
                 <div>
@@ -440,16 +467,6 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                   </h6>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                     {log.assignedEngineers.map((engineerId, index) => {
-                      const engineersList = [
-                        { id: 1, name: "Rajesh Kumar", specialization: "Hardware" },
-                        { id: 2, name: "Priya Sharma", specialization: "Software" },
-                        { id: 3, name: "Amit Singh", specialization: "Network" },
-                        { id: 4, name: "Neha Gupta", specialization: "Hardware" },
-                        { id: 5, name: "Vikash Yadav", specialization: "Software" },
-                        { id: 6, name: "Sunita Devi", specialization: "Support" },
-                        { id: 7, name: "Rohit Verma", specialization: "Hardware" },
-                        { id: 8, name: "Kavita Jain", specialization: "Network" }
-                      ];
                       const engineer = engineersList.find(e => e.id === engineerId);
                       return engineer ? (
                         <div key={index} style={{
@@ -461,6 +478,11 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                         }}>
                           <div style={{ fontWeight: "500", color: "#1e40af" }}>{engineer.name}</div>
                           <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>{engineer.specialization}</div>
+                          {engineer.mobile && (
+                            <div style={{ fontSize: "0.75rem", color: "#059669", marginTop: "2px" }}>
+                              📞 {engineer.mobile}
+                            </div>
+                          )}
                         </div>
                       ) : null;
                     })}
@@ -496,7 +518,7 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                         borderRadius: "6px",
                         padding: "12px",
                         display: "grid",
-                        gridTemplateColumns: log.warrantyStatus === "Out of Warranty" ? "2fr 1fr 1fr" : "2fr 1fr",
+                        gridTemplateColumns: "2fr 1fr 1fr",
                         gap: "12px",
                         alignItems: "center"
                       }}>
@@ -509,40 +531,48 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                           <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>Quantity</div>
                           <div style={{ fontWeight: "500", color: "#1f2937" }}>{item.quantity}</div>
                         </div>
-                        {log.warrantyStatus === "Out of Warranty" && (
-                          <div style={{ textAlign: "right" }}>
-                            <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>Price</div>
-                            <div style={{ fontWeight: "500", color: "#1f2937" }}>₹{item.price || "0"}</div>
-                          </div>
-                        )}
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>Price</div>
+                          <div style={{ fontWeight: "500", color: "#1f2937" }}>₹{item.price || "0"}</div>
+                        </div>
                       </div>
                     ))}
-                    {log.warrantyStatus === "Out of Warranty" && (
-                      <div style={{
-                        background: "white",
-                        border: "2px solid #fbbf24",
-                        borderRadius: "6px",
-                        padding: "12px",
-                        textAlign: "right",
-                        fontWeight: "600",
-                        color: "#92400e"
-                      }}>
-                        Total: ₹{log.hardwareItems.reduce((total, item) => total + (parseFloat(item.price || 0) * parseInt(item.quantity || 0)), 0).toFixed(2)}
-                      </div>
-                    )}
-                    {log.warrantyStatus === "In Warranty" && (
-                      <div style={{
-                        background: "white",
-                        border: "2px solid #10b981",
-                        borderRadius: "6px",
-                        padding: "12px",
-                        textAlign: "center",
-                        fontWeight: "600",
-                        color: "#059669"
-                      }}>
-                        ✅ Parts covered under warranty - No charges
-                      </div>
-                    )}
+                    <div style={{
+                      background: "white",
+                      border: "2px solid #fbbf24",
+                      borderRadius: "6px",
+                      padding: "12px",
+                      textAlign: "right",
+                      fontWeight: "600",
+                      color: "#92400e"
+                    }}>
+                      Total: ₹{log.hardwareItems.reduce((total, item) => total + (parseFloat(item.price || 0) * parseInt(item.quantity || 0)), 0).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* No Charges Tag - Show when: Software call OR Hardware with no parts OR In Warranty with no parts */}
+              {(log.callType === "Software" || 
+                (log.callType === "Hardware" && (!log.hardwareItems || log.hardwareItems.length === 0)) ||
+                (log.warrantyStatus === "In Warranty" && (!log.hardwareItems || log.hardwareItems.length === 0))) && (
+                <div style={{ 
+                  marginBottom: "20px",
+                  padding: "16px",
+                  background: "#f0fdf4",
+                  borderRadius: "8px",
+                  border: "1px solid #86efac"
+                }}>
+                  <div style={{
+                    background: "white",
+                    border: "2px solid #10b981",
+                    borderRadius: "6px",
+                    padding: "12px",
+                    textAlign: "center",
+                    fontWeight: "600",
+                    color: "#059669"
+                  }}>
+                    ✅ Parts covered under warranty - No charges
                   </div>
                 </div>
               )}
@@ -762,7 +792,96 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                             borderRadius: "4px",
                             border: "1px solid #e2e8f0"
                           }}>
-                            {history.remarks}
+                            <strong style={{ color: "#374151", fontSize: "0.75rem" }}>Remarks:</strong>
+                            <div style={{ marginTop: "4px" }}>{history.remarks}</div>
+                          </div>
+                        )}
+                        {history.assignedEngineers && history.assignedEngineers.length > 0 && (
+                          <div style={{ 
+                            marginTop: "8px",
+                            padding: "8px",
+                            background: "white",
+                            borderRadius: "4px",
+                            border: "1px solid #e2e8f0"
+                          }}>
+                            <strong style={{ color: "#374151", fontSize: "0.75rem", display: "block", marginBottom: "6px" }}>
+                              👨‍💻 Assigned Engineers:
+                            </strong>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                              {history.assignedEngineers.map((engineerId, engIndex) => {
+                                const engineer = engineersList.find(e => e.id === engineerId);
+                                return engineer ? (
+                                  <div key={engIndex} style={{
+                                    background: "#f0f9ff",
+                                    border: "1px solid #bfdbfe",
+                                    borderRadius: "4px",
+                                    padding: "4px 8px",
+                                    fontSize: "0.75rem",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: "2px"
+                                  }}>
+                                    <div style={{ fontWeight: "500", color: "#1e40af" }}>{engineer.name}</div>
+                                    <div style={{ fontSize: "0.7rem", color: "#6b7280" }}>{engineer.specialization}</div>
+                                    {engineer.mobile && (
+                                      <div style={{ fontSize: "0.7rem", color: "#059669" }}>
+                                        📞 {engineer.mobile}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : null;
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {history.hardwareItems && history.hardwareItems.length > 0 && (
+                          <div style={{ 
+                            marginTop: "8px",
+                            padding: "8px",
+                            background: "white",
+                            borderRadius: "4px",
+                            border: "1px solid #e2e8f0"
+                          }}>
+                            <strong style={{ color: "#374151", fontSize: "0.75rem", display: "block", marginBottom: "6px" }}>
+                              🔧 Parts & Hardware:
+                            </strong>
+                            <div style={{ display: "grid", gap: "6px" }}>
+                              {history.hardwareItems.map((item, itemIndex) => (
+                                <div key={itemIndex} style={{
+                                  background: "#fef3c7",
+                                  border: "1px solid #fbbf24",
+                                  borderRadius: "4px",
+                                  padding: "6px 8px",
+                                  display: "grid",
+                                  gridTemplateColumns: "2fr 1fr 1fr",
+                                  gap: "8px",
+                                  alignItems: "center",
+                                  fontSize: "0.75rem"
+                                }}>
+                                  <div style={{ fontWeight: "500", color: "#92400e" }}>
+                                    {item.description}
+                                  </div>
+                                  <div style={{ textAlign: "center", color: "#1f2937" }}>
+                                    Qty: {item.quantity}
+                                  </div>
+                                  <div style={{ textAlign: "right", fontWeight: "500", color: "#1f2937" }}>
+                                    ₹{item.price || "0"}
+                                  </div>
+                                </div>
+                              ))}
+                              <div style={{
+                                background: "#fef3c7",
+                                border: "2px solid #fbbf24",
+                                borderRadius: "4px",
+                                padding: "6px 8px",
+                                textAlign: "right",
+                                fontWeight: "600",
+                                color: "#92400e",
+                                fontSize: "0.75rem"
+                              }}>
+                                Total: ₹{history.hardwareItems.reduce((total, item) => total + (parseFloat(item.price || 0) * parseInt(item.quantity || 0)), 0).toFixed(2)}
+                              </div>
+                            </div>
                           </div>
                         )}
                         {history.changedBy?.username && (
@@ -771,7 +890,8 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                             color: "#6b7280",
                             display: "flex",
                             alignItems: "center",
-                            gap: "4px"
+                            gap: "4px",
+                            marginTop: "8px"
                           }}>
                             <User size={12} />
                             Updated by: <strong>{history.changedBy.username}</strong>

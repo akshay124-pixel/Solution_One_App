@@ -3,6 +3,7 @@ import { Modal, Form, Button, Alert, Badge } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { Settings, X, Save } from "lucide-react";
 import serviceApi from "../axiosSetup";
+import engineersList from "../utils/engineersList";
 
 const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
   const [serviceStatus, setServiceStatus] = useState("");
@@ -35,18 +36,6 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
       };
     }
   };
-
-  // Predefined engineers list
-  const engineersList = [
-    { id: 1, name: "Rajesh Kumar", specialization: "Hardware" },
-    { id: 2, name: "Priya Sharma", specialization: "Software" },
-    { id: 3, name: "Amit Singh", specialization: "Network" },
-    { id: 4, name: "Neha Gupta", specialization: "Hardware" },
-    { id: 5, name: "Vikash Yadav", specialization: "Software" },
-    { id: 6, name: "Sunita Devi", specialization: "Support" },
-    { id: 7, name: "Rohit Verma", specialization: "Hardware" },
-    { id: 8, name: "Kavita Jain", specialization: "Network" }
-  ];
 
   // Helper functions for engineers
   const handleEngineerToggle = (engineerId) => {
@@ -814,7 +803,7 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
                       }}>
                         <div style={{ 
                           display: "grid", 
-                          gridTemplateColumns: warrantyStatus === "Out of Warranty" ? "2fr 1fr 1fr auto" : "2fr 1fr auto", 
+                          gridTemplateColumns: "2fr 1fr 1fr auto", 
                           gap: "8px", 
                           alignItems: "end" 
                         }}>
@@ -851,26 +840,28 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
                               }}
                             />
                           </Form.Group>
-                          {warrantyStatus === "Out of Warranty" && (
-                            <Form.Group>
-                              <Form.Label style={{ fontSize: "0.75rem", fontWeight: "500", color: "#374151" }}>
-                                Price (₹)
-                              </Form.Label>
-                              <Form.Control
-                                type="number"
-                                value={item.price}
-                                onChange={(e) => updateHardwareItem(index, "price", e.target.value)}
-                                placeholder="Price"
-                                min="0"
-                                step="0.01"
-                                style={{
-                                  fontSize: "0.875rem",
-                                  padding: "8px 10px",
-                                  borderRadius: "4px"
-                                }}
-                              />
-                            </Form.Group>
-                          )}
+                          <Form.Group>
+                            <Form.Label style={{ fontSize: "0.75rem", fontWeight: "500", color: "#374151" }}>
+                              Price (₹) {warrantyStatus === "In Warranty" && <span style={{ color: "#6b7280", fontSize: "0.7rem" }}>(Optional)</span>}
+                              {warrantyStatus === "Out of Warranty" && <span style={{ color: "#ef4444", fontSize: "0.7rem" }}>*</span>}
+                            </Form.Label>
+                            <Form.Control
+                              type="number"
+                              value={item.price}
+                              onChange={(e) => updateHardwareItem(index, "price", e.target.value)}
+                              placeholder="Enter price"
+                              min="0"
+                              step="0.01"
+                              required={warrantyStatus === "Out of Warranty"}
+                              style={{
+                                fontSize: "0.875rem",
+                                padding: "8px 10px",
+                                borderRadius: "4px",
+                                borderColor: warrantyStatus === "Out of Warranty" && !item.price ? "#fca5a5" : "#d1d5db"
+                              }}
+                            />
+                          
+                          </Form.Group>
                           {hardwareItems.length > 1 && (
                             <button
                               type="button"

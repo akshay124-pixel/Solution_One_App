@@ -4,10 +4,12 @@ import { Download, RefreshCw, TrendingUp, Clock, CheckCircle, AlertCircle } from
 import SearchSection from "./SearchSection";
 import SearchResultsTable from "./SearchResultsTable";
 import ServiceLogsTable from "./ServiceLogsTable";
+import ServiceLogsFilters from "./ServiceLogsFilters";
 import CallLogModal from "./CallLogModal";
 import ViewServiceLog from "./ViewServiceLog";
 import EditServiceLog from "./EditServiceLog";
 import DeleteServiceLogModal from "./DeleteServiceLogModal";
+import ManualServiceRequestModal from "./ManualServiceRequestModal";
 import serviceApi from "../axiosSetup";
 import { toast } from "react-toastify";
 
@@ -24,10 +26,14 @@ const ServiceDashboard = () => {
   const [showEditLogModal, setShowEditLogModal] = useState(false);
   const [showDeleteLogModal, setShowDeleteLogModal] = useState(false);
   const [showViewOrderModal, setShowViewOrderModal] = useState(false);
+  const [showManualRequestModal, setShowManualRequestModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [serviceLogsSearch, setServiceLogsSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [callTypeFilter, setCallTypeFilter] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [stats, setStats] = useState({
     open: 0,
     inProgress: 0,
@@ -36,9 +42,10 @@ const ServiceDashboard = () => {
     total: 0,
   });
 
-  // Filter service logs based on search and status
+  // Filter service logs based on search, status, call type, and date range
   const filteredServiceLogs = serviceLogs.filter((log) => {
     const matchesSearch = !serviceLogsSearch || 
+      log.complaintNumber?.toLowerCase().includes(serviceLogsSearch.toLowerCase()) ||
       log.orderId?.toLowerCase().includes(serviceLogsSearch.toLowerCase()) ||
       log.orderDetails?.customername?.toLowerCase().includes(serviceLogsSearch.toLowerCase()) ||
       log.orderDetails?.billNumber?.toLowerCase().includes(serviceLogsSearch.toLowerCase()) ||
@@ -46,7 +53,25 @@ const ServiceDashboard = () => {
     
     const matchesStatus = !statusFilter || log.serviceStatus === statusFilter;
     
-    return matchesSearch && matchesStatus;
+    const matchesCallType = !callTypeFilter || log.callType === callTypeFilter;
+    
+    // Date range filter (based on createdAt)
+    let matchesDateRange = true;
+    if (startDate || endDate) {
+      const logDate = new Date(log.createdAt);
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        matchesDateRange = matchesDateRange && logDate >= start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        matchesDateRange = matchesDateRange && logDate <= end;
+      }
+    }
+    
+    return matchesSearch && matchesStatus && matchesCallType && matchesDateRange;
   });
 
   // Fetch service logs on mount
@@ -89,6 +114,16 @@ const ServiceDashboard = () => {
 
   const handleClearSearch = () => {
     setSearchResults([]);
+  };
+
+  const handleManualRequest = () => {
+    setShowManualRequestModal(true);
+  };
+
+  const handleManualRequestSuccess = () => {
+    fetchServiceLogs();
+    fetchDashboardStats();
+    setShowManualRequestModal(false);
   };
 
   const handleViewOrder = (order) => {
@@ -416,7 +451,11 @@ const ServiceDashboard = () => {
 
           {/* Search Section */}
           <div style={{ marginBottom: "30px" }}>
-            <SearchSection onSearch={handleSearch} onClear={handleClearSearch} />
+            <SearchSection 
+              onSearch={handleSearch} 
+              onClear={handleClearSearch}
+              onManualRequest={handleManualRequest}
+            />
           </div>
 
           {/* Search Results Table */}
@@ -457,92 +496,20 @@ const ServiceDashboard = () => {
               </div>
             </div>
 
-            {/* Service Logs Search */}
-            <div style={{ 
-              marginBottom: "20px",
-              background: "white",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-              border: "1px solid #e2e8f0"
-            }}>
-              <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
-                <div style={{ flex: "1", minWidth: "250px" }}>
-                  <input
-                    type="text"
-                    placeholder="Search by Order ID, Customer Name, Bill Number, or Issue..."
-                    value={serviceLogsSearch}
-                    onChange={(e) => setServiceLogsSearch(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "12px 16px",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "8px",
-                      fontSize: "0.875rem",
-                      transition: "border-color 0.15s ease, box-shadow 0.15s ease",
-                      background: "white"
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = "#3b82f6";
-                      e.target.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.1)";
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = "#d1d5db";
-                      e.target.style.boxShadow = "none";
-                    }}
-                  />
-                </div>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    style={{
-                      padding: "12px 16px",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "8px",
-                      fontSize: "0.875rem",
-                      background: "white",
-                      minWidth: "120px"
-                    }}
-                  >
-                    <option value="">All Status</option>
-                    <option value="Open">Open</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Resolved">Resolved</option>
-                    <option value="Closed">Closed</option>
-                  </select>
-                  {(serviceLogsSearch || statusFilter) && (
-                    <button
-                      onClick={() => {
-                        setServiceLogsSearch("");
-                        setStatusFilter("");
-                      }}
-                      style={{
-                        padding: "12px 16px",
-                        background: "#ef4444",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "8px",
-                        fontSize: "0.875rem",
-                        cursor: "pointer",
-                        fontWeight: "500"
-                      }}
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-              </div>
-              {(serviceLogsSearch || statusFilter) && (
-                <div style={{ 
-                  marginTop: "12px", 
-                  fontSize: "0.875rem", 
-                  color: "#6b7280" 
-                }}>
-                  Showing {filteredServiceLogs.length} of {serviceLogs.length} service logs
-                </div>
-              )}
-            </div>
+            {/* Service Logs Filters */}
+            <ServiceLogsFilters
+              serviceLogsSearch={serviceLogsSearch}
+              setServiceLogsSearch={setServiceLogsSearch}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              callTypeFilter={callTypeFilter}
+              setCallTypeFilter={setCallTypeFilter}
+              startDate={startDate}
+              setStartDate={setStartDate}
+              endDate={endDate}
+              setEndDate={setEndDate}
+              filteredCount={filteredServiceLogs.length}
+            />
             
             <ServiceLogsTable
               logs={filteredServiceLogs}
@@ -579,6 +546,12 @@ const ServiceDashboard = () => {
             onClose={() => setShowDeleteLogModal(false)}
             log={selectedLog}
             onDelete={handleConfirmDelete}
+          />
+
+          <ManualServiceRequestModal
+            isOpen={showManualRequestModal}
+            onClose={() => setShowManualRequestModal(false)}
+            onSuccess={handleManualRequestSuccess}
           />
 
           {/* Reuse SO ViewEntry component */}

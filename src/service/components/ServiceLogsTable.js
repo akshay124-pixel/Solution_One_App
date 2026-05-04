@@ -4,6 +4,10 @@ import { FaEye } from "react-icons/fa";
 import { Settings } from "lucide-react";
 
 const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
+  // Get user role from localStorage - only globaladmin can delete
+  const userRole = localStorage.getItem("role")?.toLowerCase() || "";
+  const isGlobalAdmin = userRole === "globaladmin";
+
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     const date = new Date(dateStr);
@@ -203,6 +207,20 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
                 textAlign: "center",
                 border: "none",
                 color: "white"
+              }}>Complaint No</th>
+              <th style={{ 
+                padding: "10px 15px", 
+                height: "50px",
+                lineHeight: "30px",
+                fontSize: "0.95rem",
+                fontWeight: "600",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                borderBottom: "2px solid rgba(255, 255, 255, 0.2)",
+                whiteSpace: "nowrap",
+                textAlign: "center",
+                border: "none",
+                color: "white"
               }}>System</th>
               <th style={{ 
                 padding: "10px 15px", 
@@ -363,6 +381,20 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
                   padding: "10px 15px", 
                   height: "50px",
                   lineHeight: "30px",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  textAlign: "center",
+                  fontWeight: "700",
+                  color: "#dc2626",
+                  fontSize: "0.9rem"
+                }}>
+                  {log.complaintNumber || "-"}
+                </td>
+                <td style={{ 
+                  padding: "10px 15px", 
+                  height: "50px",
+                  lineHeight: "30px",
                   textAlign: "center"
                 }}>
                   <Badge 
@@ -406,7 +438,10 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
                   fontWeight: "500",
                   color: "#1f2937"
                 }}>
-                  {log.orderDetails?.customername || "-"}
+                  {log.orderId?.startsWith('PMTM') 
+                    ? (log.serviceRequestName || "-")
+                    : (log.orderDetails?.customername || "-")
+                  }
                 </td>
                 <td style={{ 
                   padding: "10px 15px", 
@@ -419,7 +454,10 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
                   fontWeight: "500",
                   color: "#1f2937"
                 }}>
-                  {log.orderDetails?.contactNo || "-"}
+                  {log.orderId?.startsWith('PMTM') 
+                    ? (log.serviceRequestMobile || "-")
+                    : (log.orderDetails?.contactNo || "-")
+                  }
                 </td>
                 <td style={{ 
                   padding: "10px 15px", 
@@ -571,7 +609,8 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
                       </svg>
                     </button>
 
-                    {onDelete && (
+                    {/* Delete button - only visible for globaladmin */}
+                    {isGlobalAdmin && onDelete && (
                       <button
                         className="bin-button"
                         onClick={() => onDelete(log)}

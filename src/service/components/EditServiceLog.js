@@ -345,7 +345,12 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
               </div>
               <div>
                 <strong style={{ color: "#92400e", fontSize: "0.875rem" }}>Customer:</strong>
-                <div style={{ color: "#1f2937", fontWeight: "500" }}>{log.orderDetails?.customername || "-"}</div>
+                <div style={{ color: "#1f2937", fontWeight: "500" }}>
+                  {log.orderId?.startsWith('PMTM') 
+                    ? (log.serviceRequestName || "-")
+                    : (log.orderDetails?.customername || "-")
+                  }
+                </div>
               </div>
             </div>
           </Alert>

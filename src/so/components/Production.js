@@ -2420,6 +2420,9 @@ const Production = () => {
                     <div className="info-grid">
                       <InfoItem label="Order ID" value={viewOrder.orderId || "N/A"} copyable />
                       <InfoItem label="Order Type" value={viewOrder.orderType || "N/A"} />
+                      {viewOrder.orderType === "B2G" && viewOrder.gemOrderNumber && (
+                        <InfoItem label="GEM Order Number" value={viewOrder.gemOrderNumber} copyable />
+                      )}
                       <InfoItem
                         label="SO Date"
                         value={

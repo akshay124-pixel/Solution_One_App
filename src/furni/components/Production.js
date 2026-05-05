@@ -509,7 +509,7 @@ const Production = () => {
                   <div style={{ marginBottom: "12px" }}>
                     <div style={{ background: "#f8f9fa", padding: "6px 10px", borderLeft: "4px solid #6a11cb", fontWeight: "bold", textTransform: "uppercase", marginBottom: "10px", fontSize: "15px" }}>Order Information</div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                      {[["SO Date", viewOrder.soDate ? new Date(viewOrder.soDate).toLocaleDateString("en-IN") : "N/A"], ["Order Type", viewOrder.orderType || "N/A"], ["Customer Name", viewOrder.customername || "N/A"], ["Contact No", viewOrder.contactNo || "N/A"], ["Email", viewOrder.customerEmail || "N/A"], ["Dispatch From", viewOrder.dispatchFrom || "N/A"], ["SO Status", viewOrder.sostatus || "N/A"], ["Sales Remarks", viewOrder.remarks || "N/A"]].map(([label, val]) => (
+                      {[["SO Date", viewOrder.soDate ? new Date(viewOrder.soDate).toLocaleDateString("en-IN") : "N/A"], ["Order Type", viewOrder.orderType || "N/A"], ...(viewOrder.orderType === "B2G" && viewOrder.gemOrderNumber ? [["GEM Order Number", viewOrder.gemOrderNumber]] : []), ["Customer Name", viewOrder.customername || "N/A"], ["Contact No", viewOrder.contactNo || "N/A"], ["Email", viewOrder.customerEmail || "N/A"], ["Dispatch From", viewOrder.dispatchFrom || "N/A"], ["SO Status", viewOrder.sostatus || "N/A"], ["Sales Remarks", viewOrder.remarks || "N/A"]].map(([label, val]) => (
                         <div key={label} style={{ fontSize: "13px" }}><strong style={{ color: "#444" }}>{label}:</strong> {val}</div>
                       ))}
                       <div style={{ fontSize: "13px", gridColumn: "span 2" }}><strong style={{ color: "#444" }}>Shipping Address:</strong> {viewOrder.shippingAddress || "N/A"}</div>
@@ -558,6 +558,9 @@ const Production = () => {
                         <div><strong>Order ID:</strong> {viewOrder.orderId || "N/A"}</div>
                         <div><strong>SO Date:</strong> {viewOrder.soDate ? new Date(viewOrder.soDate).toLocaleDateString("en-IN") : "N/A"}</div>
                         <div><strong>Order Type:</strong> <Badge bg={viewOrder.orderType === "B2C" ? "success" : viewOrder.orderType === "B2B" ? "info" : viewOrder.orderType === "B2G" ? "primary" : "secondary"}>{viewOrder.orderType || "N/A"}</Badge></div>
+                        {viewOrder.orderType === "B2G" && viewOrder.gemOrderNumber && (
+                          <div><strong>GEM Order Number:</strong> {viewOrder.gemOrderNumber}</div>
+                        )}
                         <div><strong>Customer Name:</strong> {viewOrder.customername || "N/A"}</div>
                         <div><strong>Contact No:</strong> {viewOrder.contactNo || "N/A"}</div>
                         <div><strong>Email:</strong> {viewOrder.customerEmail || "N/A"}</div>

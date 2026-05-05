@@ -997,6 +997,7 @@ export const Reportinglist = [
   "Abhayjit Sekhon",
   "Amarjeet Singh",
   "Arwinder Singh",
+  "Abhishek Sharma",
   "Ashwani Kumar",
   "Bachan Pal",
   "Gem Team",

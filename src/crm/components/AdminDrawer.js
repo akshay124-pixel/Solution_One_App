@@ -64,14 +64,18 @@ const AdminDrawer = ({
     if (drawerUsers && drawerUsers.length > 0) {
       let relevantUsers;
       if (role === "superadmin" || role === "globaladmin") {
+        // Include all roles except superadmin and globaladmin themselves
         relevantUsers = drawerUsers.filter(
-          (u) => u.role === "admin" || u.role === "salesperson"
+          (u) => u.role !== "superadmin" && u.role !== "globaladmin"
         );
       } else if (role === "admin") {
         relevantUsers = drawerUsers.filter(
           (user) =>
             user._id === userId ||
-            (user.assignedAdmins?.includes(userId) && user.role === "salesperson")
+            (user.assignedAdmins?.includes(userId) && 
+             user.role !== "superadmin" && 
+             user.role !== "globaladmin" &&
+             user.role !== "admin")
         );
       } else {
         relevantUsers = drawerUsers.filter((user) => user._id === userId);
@@ -137,14 +141,18 @@ const AdminDrawer = ({
       // Filter relevant users
       let relevantUsers;
       if (role === "superadmin" || role === "globaladmin") {
+        // Include all roles except superadmin and globaladmin themselves
         relevantUsers = allUsers.filter(
-          (u) => u.role === "admin" || u.role === "salesperson"
+          (u) => u.role !== "superadmin" && u.role !== "globaladmin"
         );
       } else if (role === "admin") {
         relevantUsers = allUsers.filter(
           (user) =>
             user._id === userId ||
-            (user.assignedAdmins?.includes(userId) && user.role === "salesperson")
+            (user.assignedAdmins?.includes(userId) && 
+             user.role !== "superadmin" && 
+             user.role !== "globaladmin" &&
+             user.role !== "admin")
         );
       } else {
         relevantUsers = allUsers.filter((user) => user._id === userId);

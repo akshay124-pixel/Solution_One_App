@@ -53,21 +53,20 @@ const ValueAnalyticsDrawer = ({
       let relevantUserIds = [];
 
       if (role === "superadmin" || role === "globaladmin") {
-        const admins = usersData.filter(
-          (user) =>
-            typeof user.role === "string" && user.role.toLowerCase() === "admin"
-        );
-        const teamMembers = usersData.filter(
-          (user) =>
-            typeof user.role === "string" &&
-            user.role.toLowerCase() === "salesperson"
-        );
-        relevantUserIds = [...admins, ...teamMembers].map((user) => ({
-          _id: user._id,
-          username: user.username,
-          role: user.role,
-          assignedAdmins: user.assignedAdmins || [],
-        }));
+        // Include all users except superadmin and globaladmin themselves
+        relevantUserIds = usersData
+          .filter(
+            (user) =>
+              typeof user.role === "string" &&
+              user.role.toLowerCase() !== "superadmin" &&
+              user.role.toLowerCase() !== "globaladmin"
+          )
+          .map((user) => ({
+            _id: user._id,
+            username: user.username,
+            role: user.role,
+            assignedAdmins: user.assignedAdmins || [],
+          }));
       } else if (role === "admin") {
         relevantUserIds = usersData
           .filter(

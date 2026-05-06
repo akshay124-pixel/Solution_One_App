@@ -235,14 +235,21 @@ const Navbar = () => {
 
   // Format timestamp
   const formatTimestamp = (timestamp) => {
-    return new Date(timestamp).toLocaleString("en-US", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
+    const date = new Date(timestamp);
+    
+    // Format date as DD/MM/YYYY
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    
+    // Format time as 12-hour with AM/PM
+    const time = date.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
     });
+    
+    return `${day}/${month}/${year}, ${time}`;
   };
 
   return (

@@ -2796,7 +2796,7 @@ function DashBoard() {
               userId={userId}
             />
 
-            {(role === "superadmin" || role === "globaladmin" || role === "admin") && (
+            {(role === "superadmin" || role === "globaladmin") && (
               <TeamAnalyticsDrawer
                 key={`drawer-team-${drawerState.isOpen && drawerState.type === "team"
                   }`}
@@ -2907,7 +2907,7 @@ function DashBoard() {
                   <FaChartBar size={16} />
                   Value Analytics
                 </motion.button>
-                {(role === "superadmin" || role === "globaladmin" || role === "admin") && (
+                {(role === "superadmin" || role === "globaladmin") && (
                   <motion.button
                     onClick={() => handleAnalyticsOpen("team")}
                     whileHover={{ scale: 1.05 }}

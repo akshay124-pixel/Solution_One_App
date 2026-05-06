@@ -208,14 +208,15 @@ const TeamAnalyticsDrawer = ({
           .filter((u) => {
             const userRole =
               typeof u.role === "string" ? u.role.toLowerCase() : "unknown";
-            if (userRole !== "salesperson") return false;
+            // Include all roles except admin, superadmin, and globaladmin
+            if (userRole === "admin" || userRole === "superadmin" || userRole === "globaladmin") return false;
             const assignedAdmin = u.assignedAdmin?.toString();
             const assignedAdmins = Array.isArray(u.assignedAdmins)
               ? u.assignedAdmins.map((id) => id.toString())
               : [];
             console.log(
               `Checking team member: ${u.username
-              }, AssignedAdmin: ${assignedAdmin}, AssignedAdmins: ${JSON.stringify(
+              }, Role: ${userRole}, AssignedAdmin: ${assignedAdmin}, AssignedAdmins: ${JSON.stringify(
                 assignedAdmins
               )}, AdminId: ${adminId}`
             );

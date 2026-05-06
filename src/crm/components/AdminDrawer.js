@@ -457,6 +457,32 @@ const AdminDrawer = ({
         </IconButton>
       </Box>
 
+      {/* Info Message */}
+      <Box
+        sx={{
+          mx: 3,
+          mt: 2,
+          mb: 1,
+          p: 1.5,
+          background: "rgba(255, 193, 7, 0.15)",
+          border: "1px solid rgba(255, 193, 7, 0.4)",
+          borderRadius: "8px",
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+        }}
+      >
+        <Typography
+          sx={{
+            fontSize: "0.85rem",
+            color: "rgba(255, 255, 255, 0.95)",
+            lineHeight: 1.4,
+          }}
+        >
+          ℹ️ <strong>Note:</strong> This report shows only individual user data. Entries assigned to other users are not included in their counts.
+        </Typography>
+      </Box>
+
       {(role === "superadmin" || role === "globaladmin" || role === "admin") && (
         <Box sx={{ px: 3, py: 2 }}>
           <TextField

@@ -914,6 +914,7 @@ export const salesPersonlist = [
   "Abhay Bhardwaj",
   "Abhayjit Sekhon",
   "Ajay Kumar",
+  "Anmol Arora",
   "Amarjeet Singh",
   "Anirban Syam",
   "Arif Khan",

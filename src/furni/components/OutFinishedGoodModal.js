@@ -270,23 +270,15 @@ const OutFinishedGoodModal = ({
       <div style={{ display: "flex", flexDirection: "column", gap: "15px", fontFamily: "Arial, sans-serif" }}>
         {error && <div style={{ color: "red", marginBottom: "10px" }}>{error}</div>}
         
-        {/* Approval Status Warning for Replacement Orders ONLY (not Demo) */}
-        {isReplacement && (
+        {/* Approval Status Warning for Replacement Orders ONLY when trying to dispatch/deliver */}
+        {isReplacement && 
+         approvalStatus !== "Approved" && 
+         (formData.dispatchStatus === "Dispatched" || formData.dispatchStatus === "Delivered") && (
           <div style={{
             padding: "15px",
             borderRadius: "8px",
-            background: approvalStatus === "Approved" 
-              ? "#f6ffed" 
-              : approvalStatus === "Rejected"
-              ? "#fff1f0"
-              : "#fffbe6",
-            border: `2px solid ${
-              approvalStatus === "Approved" 
-                ? "#52c41a" 
-                : approvalStatus === "Rejected"
-                ? "#ff4d4f"
-                : "#faad14"
-            }`,
+            background: approvalStatus === "Rejected" ? "#fff1f0" : "#fffbe6",
+            border: `2px solid ${approvalStatus === "Rejected" ? "#ff4d4f" : "#faad14"}`,
             marginBottom: "10px"
           }}>
             <div style={{ 
@@ -296,31 +288,25 @@ const OutFinishedGoodModal = ({
               marginBottom: "8px"
             }}>
               <span style={{ fontSize: "1.2rem" }}>
-                {approvalStatus === "Approved" ? "✅" : approvalStatus === "Rejected" ? "❌" : "⚠️"}
+                {approvalStatus === "Rejected" ? "❌" : "⚠️"}
               </span>
               <span style={{ 
                 fontWeight: "700", 
                 fontSize: "1.1rem",
-                color: approvalStatus === "Approved" 
-                  ? "#389e0d" 
-                  : approvalStatus === "Rejected"
-                  ? "#cf1322"
-                  : "#d48806"
+                color: approvalStatus === "Rejected" ? "#cf1322" : "#d48806"
               }}>
-                {entryToEdit?.orderType} Order - Approval Status: {approvalStatus || "Pending"}
+                {entryToEdit?.orderType} Order - Approval Status: {approvalStatus || "Proceed For Approval"}
               </span>
             </div>
             <div style={{ fontSize: "0.95rem", color: "#595959", lineHeight: "1.5" }}>
               {checkingApproval ? (
                 <span>Checking approval status...</span>
-              ) : approvalStatus === "Approved" ? (
-                <span>✓ This order has been approved and can be dispatched.</span>
               ) : approvalStatus === "Rejected" ? (
                 <span>✗ This order has been rejected and cannot be dispatched.</span>
               ) : (
                 <span>
                   ⓘ This {entryToEdit?.orderType} order requires Mangement approval before dispatch. 
-                  Dispatch button will be disabled until approval is granted.
+                  Dispatch option will be disabled until approval is granted.
                 </span>
               )}
             </div>

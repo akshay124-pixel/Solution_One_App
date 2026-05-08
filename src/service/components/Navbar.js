@@ -2,8 +2,9 @@ import React from "react";
 import { Navbar, Nav, Container, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
+import ApprovalNotificationBell from "./ApprovalNotificationBell";
 
-const ServiceNavbar = ({ isAuthenticated, onLogout }) => {
+const ServiceNavbar = ({ isAuthenticated, onLogout, userRole, onApprovalAction }) => {
   const navigate = useNavigate();
 
   return (
@@ -62,6 +63,10 @@ const ServiceNavbar = ({ isAuthenticated, onLogout }) => {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
           }
+          .service-navbar .notification-bell-wrapper {
+            display: flex;
+            align-items: center;
+          }
           @media (max-width: 767px) {
             .service-navbar .navbar-brand {
               font-size: 1.2rem;
@@ -94,6 +99,12 @@ const ServiceNavbar = ({ isAuthenticated, onLogout }) => {
             <Nav className="ms-auto align-items-center">
               {isAuthenticated && (
                 <>
+                  <Nav.Item style={{ marginRight: "1rem" }}>
+                    <ApprovalNotificationBell 
+                      userRole={userRole}
+                      onApprovalAction={onApprovalAction}
+                    />
+                  </Nav.Item>
                   <Nav.Item className="user-info">
                     👤 {localStorage.getItem("user")
                       ? JSON.parse(localStorage.getItem("user")).username

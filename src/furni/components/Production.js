@@ -436,10 +436,10 @@ const Production = () => {
               <Form.Group style={{ marginBottom: "20px" }}>
                 <Form.Label style={{ fontWeight: "600", color: "#333" }}>Production Status</Form.Label>
                 <Form.Select value={formData.fulfillingStatus || ""} onChange={(e) => setFormData({ ...formData, fulfillingStatus: e.target.value })} style={{ borderRadius: "10px", border: "1px solid #ced4da", padding: "12px", fontSize: "1rem" }}>
-                  <option value="Under Process">Under Process</option>
                   <option value="Pending">Pending</option>
-                  <option value="Partial Dispatch">Partial Dispatched</option>
                   <option value="Hold">Hold</option>
+                  <option value="Under Process">Under Process</option>
+                  <option value="Partial Dispatch">Partial Dispatched</option>
                   <option value="Order Cancel">Order Cancelled</option>
                   <option value="Fulfilled">Completed</option>
                 </Form.Select>

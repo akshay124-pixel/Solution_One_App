@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { usePortalAuth } from "./PortalAuthContext";
 
@@ -8,10 +8,16 @@ import ServiceNavbar from "../service/components/Navbar";
 const ServiceApp = () => {
   const { user, logout } = usePortalAuth();
   const navigate = useNavigate();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleLogout = async () => {
     await logout();
     navigate("/login", { replace: true });
+  };
+
+  const handleApprovalAction = () => {
+    // Trigger refresh in ServiceDashboard by updating state
+    setRefreshTrigger(prev => prev + 1);
   };
 
   // Show switch bar for multi-module users
@@ -51,9 +57,14 @@ const ServiceApp = () => {
           </button>
         </div>
       )}
-      <ServiceNavbar isAuthenticated={true} onLogout={handleLogout} />
+      <ServiceNavbar 
+        isAuthenticated={true} 
+        onLogout={handleLogout}
+        userRole={user?.role}
+        onApprovalAction={handleApprovalAction}
+      />
       <Routes>
-        <Route path="/" element={<ServiceDashboard />} />
+        <Route path="/" element={<ServiceDashboard refreshTrigger={refreshTrigger} onApprovalAction={handleApprovalAction} />} />
         <Route path="*" element={<Navigate to="/service" replace />} />
       </Routes>
     </>

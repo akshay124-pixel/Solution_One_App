@@ -12,8 +12,13 @@ const EditBill = ({ isOpen, onClose, onEntryUpdated, entryToEdit }) => {
     invoiceDate: entryToEdit?.invoiceDate ? new Date(entryToEdit.invoiceDate) : null,
     remarksByBilling: entryToEdit?.remarksByBilling || "",
     billStatus: entryToEdit?.billStatus || "Pending",
+    receiptNumber: entryToEdit?.receiptNumber || "",
+    receiptDate: entryToEdit?.receiptDate ? new Date(entryToEdit.receiptDate) : null,
   });
   const [errors, setErrors] = useState({});
+  
+  // Check if order is Replacement or Demo type
+  const isReplacementOrDemo = ["Replacement", "Demo"].includes(entryToEdit?.orderType);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -26,13 +31,36 @@ const EditBill = ({ isOpen, onClose, onEntryUpdated, entryToEdit }) => {
     setErrors((prev) => ({ ...prev, invoiceDate: "" }));
   };
 
+  const handleReceiptDateChange = (date) => {
+    setFormData((prev) => ({ ...prev, receiptDate: date }));
+    setErrors((prev) => ({ ...prev, receiptDate: "" }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate receipt fields for Replacement/Demo orders when billStatus is "Billing Complete"
+    if (isReplacementOrDemo && formData.billStatus === "Billing Complete") {
+      const newErrors = {};
+      if (!formData.receiptNumber || formData.receiptNumber.trim() === "") {
+        newErrors.receiptNumber = "Receipt Number is required for Replacement/Demo orders";
+      }
+      if (!formData.receiptDate) {
+        newErrors.receiptDate = "Receipt Date is required for Replacement/Demo orders";
+      }
+      
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        toast.error("Please fill in all required receipt fields", { position: "top-right", autoClose: 3000 });
+        return;
+      }
+    }
 
     try {
       const payload = {
         ...formData,
         invoiceDate: formData.invoiceDate ? formData.invoiceDate.toISOString() : null,
+        receiptDate: formData.receiptDate ? formData.receiptDate.toISOString() : null,
       };
       const response = await furniApi.put(`/api/edit/${entryToEdit._id}`, payload);
       onEntryUpdated(response.data.data);
@@ -45,7 +73,7 @@ const EditBill = ({ isOpen, onClose, onEntryUpdated, entryToEdit }) => {
       if (error.response?.status === 404) {
         friendlyMessage = "The bill order you are trying to update was not found.";
       } else if (error.response?.status === 400) {
-        friendlyMessage = "Some details are missing or invalid. Please check again.";
+        friendlyMessage = error.response?.data?.error || "Some details are missing or invalid. Please check again.";
       } else if (error.response?.status === 500) {
         friendlyMessage = "Server is having trouble. Please try again later.";
       } else if (!navigator.onLine) {
@@ -94,6 +122,57 @@ const EditBill = ({ isOpen, onClose, onEntryUpdated, entryToEdit }) => {
               <option value="Billing Complete">Billing Complete</option>
             </Form.Select>
           </Form.Group>
+          
+          {/* Conditional Receipt Fields for Replacement/Demo Orders */}
+          {isReplacementOrDemo && (
+            <>
+              <div style={{ background: "linear-gradient(135deg, #fff3cd, #ffeaa7)", padding: "15px", borderRadius: "10px", marginBottom: "20px", border: "2px solid #ffc107" }}>
+                <p style={{ margin: 0, fontWeight: "600", color: "#856404", fontSize: "0.95rem" }}>
+                  ⚠️ <strong>{entryToEdit?.orderType} Order:</strong> Receipt Number and Receipt Date are required to complete billing.
+                </p>
+              </div>
+              
+              <Form.Group className="mb-3">
+                <Form.Label style={{ fontWeight: "600", color: "#333" }}>
+                  Receipt Number <span style={{ color: "red" }}>*</span>
+                </Form.Label>
+                <Form.Control 
+                  type="text" 
+                  name="receiptNumber" 
+                  value={formData.receiptNumber} 
+                  onChange={handleChange} 
+                  placeholder="Enter receipt number" 
+                  style={{ 
+                    borderRadius: "10px", 
+                    padding: "12px", 
+                    border: errors.receiptNumber ? "1px solid red" : "1px solid #ced4da", 
+                    fontSize: "1rem" 
+                  }} 
+                />
+                {errors.receiptNumber && <Form.Text style={{ color: "red", fontSize: "0.875rem" }}>{errors.receiptNumber}</Form.Text>}
+              </Form.Group>
+              
+              <Form.Group className="mb-3">
+                <Form.Label style={{ fontWeight: "600", color: "#333" }}>
+                  Receipt Date <span style={{ color: "red" }}>*</span>
+                </Form.Label>
+                <div className="custom-datepicker">
+                  <DatePicker 
+                    selected={formData.receiptDate} 
+                    onChange={handleReceiptDateChange} 
+                    className="form-control" 
+                    dateFormat="dd/MM/yyyy" 
+                    placeholderText="Select receipt date"
+                    style={{ 
+                      border: errors.receiptDate ? "1px solid red" : "1px solid #ced4da"
+                    }}
+                  />
+                </div>
+                {errors.receiptDate && <Form.Text style={{ color: "red", fontSize: "0.875rem" }}>{errors.receiptDate}</Form.Text>}
+              </Form.Group>
+            </>
+          )}
+          
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "15px" }}>
             <Button onClick={onClose} style={{ background: "linear-gradient(135deg, #6c757d, #5a6268)", border: "none", padding: "10px 20px", borderRadius: "20px", color: "#fff", fontWeight: "600" }}>Cancel</Button>
             <Button type="submit" style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", padding: "10px 20px", borderRadius: "20px", color: "#fff", fontWeight: "600" }}>Save Changes</Button>

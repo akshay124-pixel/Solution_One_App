@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { getDirtyValues } from "../utils/formUtils"; // Refined Diff Utility
 import { Modal, Button, Input, Select, Collapse } from "antd";
 import soApi from "../../so/axiosSetup";
+import serviceApi from "../../service/axiosSetup"; // Import service API for replacement logs
 import { toast } from "react-toastify";
 
 const { Option } = Select;
@@ -32,6 +33,14 @@ const OutFinishedGoodModal = ({
   const [error, setError] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [stampReportFile, setStampReportFile] = useState(null);
+  const [approvalStatus, setApprovalStatus] = useState(null);
+  const [checkingApproval, setCheckingApproval] = useState(false);
+  
+  // Check if order is Replacement type (Demo orders don't need approval)
+  const isReplacement = entryToEdit?.orderType === "Replacement";
+  
+  // Check if order is Replacement or Demo type (for receipt fields)
+  const isReplacementOrDemo = ["Replacement", "Demo"].includes(entryToEdit?.orderType);
 
   useEffect(() => {
     if (initialData && entryToEdit) {
@@ -83,8 +92,37 @@ const OutFinishedGoodModal = ({
 
       setFormData(initializedData);
       setOriginalFormData(initializedData);
+      
+      // Fetch approval status for Replacement orders ONLY (not Demo)
+      if (isReplacement && entryToEdit._id) {
+        fetchApprovalStatus(entryToEdit._id);
+      }
     }
-  }, [initialData, entryToEdit]);
+  }, [initialData, entryToEdit, isReplacement]);
+  
+  const fetchApprovalStatus = async (orderId) => {
+    setCheckingApproval(true);
+    try {
+      console.log("[OutFinishGood] Fetching approval status for orderId:", orderId);
+      // Use serviceApi instead of soApi since this is a service module endpoint
+      const response = await serviceApi.get(`/replacement-demo-logs/order/${orderId}`);
+      console.log("[OutFinishGood] Approval response:", response.data);
+      if (response.data.success && response.data.log) {
+        console.log("[OutFinishGood] Approval status:", response.data.log.approvalStatus);
+        setApprovalStatus(response.data.log.approvalStatus);
+      } else {
+        console.log("[OutFinishGood] No log found, setting to Pending");
+        setApprovalStatus("Pending");
+      }
+    } catch (error) {
+      console.error("[OutFinishGood] Failed to fetch approval status:", error);
+      console.error("[OutFinishGood] Error response:", error.response?.data);
+      // If log doesn't exist, assume pending
+      setApprovalStatus("Pending");
+    } finally {
+      setCheckingApproval(false);
+    }
+  };
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
@@ -114,6 +152,13 @@ const OutFinishedGoodModal = ({
 
   const handleSubmit = async () => {
     if (!showConfirm) {
+      // Check approval status for Replacement orders ONLY (not Demo)
+      if (isReplacement && approvalStatus !== "Approved") {
+        setError(`Cannot dispatch ${entryToEdit?.orderType} order until it is approved by Global Admin. Current status: ${approvalStatus || "Pending"}`);
+        toast.error(`${entryToEdit?.orderType} order must be approved before dispatch!`);
+        return;
+      }
+      
       if (
         (formData.dispatchStatus === "Dispatched" || formData.dispatchStatus === "Delivered") &&
         (entryToEdit?.billStatus || "").trim().toLowerCase() !== "billing complete"
@@ -225,6 +270,63 @@ const OutFinishedGoodModal = ({
       <div style={{ display: "flex", flexDirection: "column", gap: "15px", fontFamily: "Arial, sans-serif" }}>
         {error && <div style={{ color: "red", textAlign: "center", fontWeight: "600", marginBottom: "10px" }}>{error}</div>}
 
+        {/* Approval Status Warning for Replacement Orders ONLY (not Demo) */}
+        {isReplacement && (
+          <div style={{
+            padding: "15px",
+            borderRadius: "8px",
+            background: approvalStatus === "Approved" 
+              ? "#f6ffed" 
+              : approvalStatus === "Rejected"
+              ? "#fff1f0"
+              : "#fffbe6",
+            border: `2px solid ${
+              approvalStatus === "Approved" 
+                ? "#52c41a" 
+                : approvalStatus === "Rejected"
+                ? "#ff4d4f"
+                : "#faad14"
+            }`,
+            marginBottom: "10px"
+          }}>
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "10px",
+              marginBottom: "8px"
+            }}>
+              <span style={{ fontSize: "1.2rem" }}>
+                {approvalStatus === "Approved" ? "✅" : approvalStatus === "Rejected" ? "❌" : "⚠️"}
+              </span>
+              <span style={{ 
+                fontWeight: "700", 
+                fontSize: "1.1rem",
+                color: approvalStatus === "Approved" 
+                  ? "#389e0d" 
+                  : approvalStatus === "Rejected"
+                  ? "#cf1322"
+                  : "#d48806"
+              }}>
+                {entryToEdit?.orderType} Order - Approval Status: {approvalStatus || "Pending"}
+              </span>
+            </div>
+            <div style={{ fontSize: "0.95rem", color: "#595959", lineHeight: "1.5" }}>
+              {checkingApproval ? (
+                <span>Checking approval status...</span>
+              ) : approvalStatus === "Approved" ? (
+                <span>✓ This order has been approved and can be dispatched.</span>
+              ) : approvalStatus === "Rejected" ? (
+                <span>✗ This order has been rejected and cannot be dispatched.</span>
+              ) : (
+                <span>
+                  ⓘ This {entryToEdit?.orderType} order requires Mangement approval before dispatch. 
+                  Dispatch option will be disabled until approval is granted.
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         <div>
           <label style={{ fontSize: "1rem", fontWeight: "600", color: "#333", marginBottom: "5px", display: "block" }}>Dispatch From</label>
           <Select
@@ -297,7 +399,11 @@ const OutFinishedGoodModal = ({
             <Option value="Hold by Customer">Hold by Customer</Option>
             <Option value="Order Cancelled">Order Cancelled</Option>
 
-            {isBillingComplete && (
+            {/* Show Dispatched/Delivered options only if:
+                1. Billing is complete AND
+                2. Either NOT a Replacement order OR approval status is "Approved" 
+                   (Demo orders can dispatch without approval) */}
+            {isBillingComplete && (!isReplacement || approvalStatus === "Approved") && (
               <>
                 <Option value="Partially Shipped">Partially Shipped</Option>
                 <Option value="Dispatched">Dispatched</Option>

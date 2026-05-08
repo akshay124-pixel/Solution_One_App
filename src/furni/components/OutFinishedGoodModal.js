@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Input, Select, Collapse } from "antd";
 import furniApi from "../axiosSetup";
+import serviceApi from "../../service/axiosSetup"; // Import service API for replacement logs
 import { toast } from "react-toastify";
 const { Option } = Select;
 const { Panel } = Collapse;
@@ -28,6 +29,11 @@ const OutFinishedGoodModal = ({
   const [error, setError] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [stampReportFile, setStampReportFile] = useState(null);
+  const [approvalStatus, setApprovalStatus] = useState(null);
+  const [checkingApproval, setCheckingApproval] = useState(false);
+  
+  // Check if order is Replacement type (Demo orders don't need approval)
+  const isReplacement = entryToEdit?.orderType === "Replacement";
 
   useEffect(() => {
     if (initialData && entryToEdit) {
@@ -70,8 +76,30 @@ const OutFinishedGoodModal = ({
         stamp: initialData.stamp || "Not Received",
         products,
       });
+      
+      // Fetch approval status for Replacement orders ONLY (not Demo)
+      if (isReplacement && entryToEdit._id) {
+        fetchApprovalStatus(entryToEdit._id);
+      }
     }
-  }, [initialData, entryToEdit]);
+  }, [initialData, entryToEdit, isReplacement]);
+  
+  const fetchApprovalStatus = async (orderId) => {
+    setCheckingApproval(true);
+    try {
+      // Use serviceApi instead of furniApi since this is a service module endpoint
+      const response = await serviceApi.get(`/replacement-demo-logs/order/${orderId}`);
+      if (response.data.success && response.data.log) {
+        setApprovalStatus(response.data.log.approvalStatus);
+      }
+    } catch (error) {
+      console.error("Failed to fetch approval status:", error);
+      // If log doesn't exist, assume pending
+      setApprovalStatus("Pending");
+    } finally {
+      setCheckingApproval(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -114,6 +142,17 @@ const OutFinishedGoodModal = ({
 
   const handleSubmit = async () => {
     if (!showConfirm) {
+      // Check approval status for Replacement orders ONLY when trying to dispatch/deliver (not Demo)
+      if (
+        isReplacement && 
+        approvalStatus !== "Approved" && 
+        (formData.dispatchStatus === "Dispatched" || formData.dispatchStatus === "Delivered")
+      ) {
+        setError(`Cannot dispatch ${entryToEdit?.orderType} order until it is approved by Global Admin. Current status: ${approvalStatus || "Pending"}`);
+        toast.error(`${entryToEdit?.orderType} order must be approved before dispatch!`);
+        return;
+      }
+      
       if (
         formData.dispatchStatus === "Delivered" &&
         entryToEdit?.billStatus !== "Billing Complete"
@@ -230,6 +269,64 @@ const OutFinishedGoodModal = ({
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "15px", fontFamily: "Arial, sans-serif" }}>
         {error && <div style={{ color: "red", marginBottom: "10px" }}>{error}</div>}
+        
+        {/* Approval Status Warning for Replacement Orders ONLY (not Demo) */}
+        {isReplacement && (
+          <div style={{
+            padding: "15px",
+            borderRadius: "8px",
+            background: approvalStatus === "Approved" 
+              ? "#f6ffed" 
+              : approvalStatus === "Rejected"
+              ? "#fff1f0"
+              : "#fffbe6",
+            border: `2px solid ${
+              approvalStatus === "Approved" 
+                ? "#52c41a" 
+                : approvalStatus === "Rejected"
+                ? "#ff4d4f"
+                : "#faad14"
+            }`,
+            marginBottom: "10px"
+          }}>
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "10px",
+              marginBottom: "8px"
+            }}>
+              <span style={{ fontSize: "1.2rem" }}>
+                {approvalStatus === "Approved" ? "✅" : approvalStatus === "Rejected" ? "❌" : "⚠️"}
+              </span>
+              <span style={{ 
+                fontWeight: "700", 
+                fontSize: "1.1rem",
+                color: approvalStatus === "Approved" 
+                  ? "#389e0d" 
+                  : approvalStatus === "Rejected"
+                  ? "#cf1322"
+                  : "#d48806"
+              }}>
+                {entryToEdit?.orderType} Order - Approval Status: {approvalStatus || "Pending"}
+              </span>
+            </div>
+            <div style={{ fontSize: "0.95rem", color: "#595959", lineHeight: "1.5" }}>
+              {checkingApproval ? (
+                <span>Checking approval status...</span>
+              ) : approvalStatus === "Approved" ? (
+                <span>✓ This order has been approved and can be dispatched.</span>
+              ) : approvalStatus === "Rejected" ? (
+                <span>✗ This order has been rejected and cannot be dispatched.</span>
+              ) : (
+                <span>
+                  ⓘ This {entryToEdit?.orderType} order requires Mangement approval before dispatch. 
+                  Dispatch button will be disabled until approval is granted.
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+        
         <div>
           <label style={{ fontSize: "1rem", fontWeight: "600", color: "#333", marginBottom: "5px", display: "block" }}>Dispatch From *</label>
           <Select value={formData.dispatchFrom || undefined} onChange={handleDispatchFromChange} placeholder="Select dispatch location" style={{ width: "100%", borderRadius: "8px" }} disabled={loading}>
@@ -262,9 +359,15 @@ const OutFinishedGoodModal = ({
             <Option value="Hold by Salesperson">Hold by Salesperson</Option>
             <Option value="Hold by Customer">Hold by Customer</Option>
             <Option value="Order Cancelled">Order Cancelled</Option>
-            <Option value="Dispatched">Dispatched</Option>
-            {(entryToEdit?.billStatus || "Pending").trim().toLowerCase() === "billing complete" && (
-              <Option value="Delivered">Delivered</Option>
+            {/* Show Dispatched/Delivered options only if:
+                1. Billing is complete AND
+                2. Either NOT a Replacement order OR approval status is "Approved" 
+                   (Demo orders can dispatch without approval) */}
+            {(entryToEdit?.billStatus || "Pending").trim().toLowerCase() === "billing complete" && (!isReplacement || approvalStatus === "Approved") && (
+              <>
+                <Option value="Dispatched">Dispatched</Option>
+                <Option value="Delivered">Delivered</Option>
+              </>
             )}
           </Select>
         </div>

@@ -15,22 +15,53 @@ const EditBill = ({ isOpen, onClose, onEntryUpdated, entryToEdit }) => {
     remarksByBilling: entryToEdit?.remarksByBilling || "",
     productno: entryToEdit?.productno || "",
     billStatus: entryToEdit?.billStatus || "Pending",
+    receiptNumber: entryToEdit?.receiptNumber || "",
+    receiptDate: entryToEdit?.receiptDate ? new Date(entryToEdit.receiptDate) : null,
   });
+  const [errors, setErrors] = useState({});
+  
+  // Check if order is Replacement or Demo type
+  const isReplacementOrDemo = ["Replacement", "Demo"].includes(entryToEdit?.orderType);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-
+  const handleReceiptDateChange = (date) => {
+    setFormData((prev) => ({ ...prev, receiptDate: date }));
+    setErrors((prev) => ({ ...prev, receiptDate: "" }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate receipt fields for Replacement/Demo orders when billStatus is "Billing Complete"
+    if (isReplacementOrDemo && formData.billStatus === "Billing Complete") {
+      const newErrors = {};
+      if (!formData.receiptNumber || formData.receiptNumber.trim() === "") {
+        newErrors.receiptNumber = "Receipt Number is required for Replacement/Demo orders";
+      }
+      if (!formData.receiptDate) {
+        newErrors.receiptDate = "Receipt Date is required for Replacement/Demo orders";
+      }
+      
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        toast.error("Please fill in all required receipt fields", { position: "top-right", autoClose: 3000 });
+        return;
+      }
+    }
+    
     try {
       const payload = {
         ...formData,
         invoiceDate: formData.invoiceDate
           ? formData.invoiceDate.toISOString()
+          : null,
+        receiptDate: formData.receiptDate
+          ? formData.receiptDate.toISOString()
           : null,
       };
       const response = await soApi.patch(
@@ -38,6 +69,7 @@ const EditBill = ({ isOpen, onClose, onEntryUpdated, entryToEdit }) => {
         payload
       );
       onEntryUpdated(response.data.data);
+      toast.success("Bill order updated successfully!", { position: "top-right", autoClose: 3000 });
       onClose();
     } catch (error) {
       console.error("Error updating bill order:", error);
@@ -46,12 +78,12 @@ const EditBill = ({ isOpen, onClose, onEntryUpdated, entryToEdit }) => {
 
       if (error.response) {
         if (error.response.status === 400) {
-          errorMessage =
+          errorMessage = error.response.data?.error ||
             "Some details are missing or incorrect. Please check the form.";
         } else if (error.response.status === 401) {
           errorMessage = "Your session has expired. Please log in again.";
         } else if (error.response.status === 403) {
-          errorMessage = "You don’t have permission to update this order.";
+          errorMessage = "You don't have permission to update this order.";
         } else if (error.response.status === 404) {
           errorMessage = "The order you are trying to update was not found.";
         } else if (error.response.status === 500) {
@@ -70,6 +102,7 @@ const EditBill = ({ isOpen, onClose, onEntryUpdated, entryToEdit }) => {
       });
     }
   };
+  
   return (
     <Modal show={isOpen} onHide={onClose} centered backdrop="static">
       <style>
@@ -267,6 +300,65 @@ const EditBill = ({ isOpen, onClose, onEntryUpdated, entryToEdit }) => {
               <option value="Billing Complete">Billing Complete</option>
             </Form.Select>
           </Form.Group>
+          
+          {/* Conditional Receipt Fields for Replacement/Demo Orders */}
+          {isReplacementOrDemo && (
+            <>
+              <div style={{ background: "linear-gradient(135deg, #fff3cd, #ffeaa7)", padding: "15px", borderRadius: "10px", marginBottom: "20px", border: "2px solid #ffc107" }}>
+                <p style={{ margin: 0, fontWeight: "600", color: "#856404", fontSize: "0.95rem" }}>
+                  ⚠️ <strong>{entryToEdit?.orderType} Order:</strong> Receipt Number and Receipt Date are required to complete billing.
+                </p>
+              </div>
+              
+              <Form.Group className="mb-3">
+                <Form.Label style={{ fontWeight: "600", color: "#333" }}>
+                  Receipt Number <span style={{ color: "red" }}>*</span>
+                </Form.Label>
+                <Form.Control 
+                  type="text" 
+                  name="receiptNumber" 
+                  value={formData.receiptNumber} 
+                  onChange={handleChange} 
+                  placeholder="Enter receipt number" 
+                  style={{ 
+                    borderRadius: "10px", 
+                    padding: "12px", 
+                    border: errors.receiptNumber ? "1px solid red" : "1px solid #ced4da", 
+                    fontSize: "1rem",
+                    transition: "all 0.3s ease",
+                  }} 
+                  onFocus={(e) =>
+                    (e.target.style.boxShadow = "0 0 10px rgba(37, 117, 252, 0.5)")
+                  }
+                  onBlur={(e) => (e.target.style.boxShadow = "none")}
+                />
+                {errors.receiptNumber && <Form.Text style={{ color: "red", fontSize: "0.875rem" }}>{errors.receiptNumber}</Form.Text>}
+              </Form.Group>
+              
+              <Form.Group className="mb-3">
+                <Form.Label style={{ fontWeight: "600", color: "#333" }}>
+                  Receipt Date <span style={{ color: "red" }}>*</span>
+                </Form.Label>
+                <div className="custom-datepicker">
+                  <DatePicker 
+                    selected={formData.receiptDate} 
+                    onChange={handleReceiptDateChange} 
+                    className="form-control" 
+                    dateFormat="dd/MM/yyyy" 
+                    placeholderText="Select receipt date"
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
+                    style={{ 
+                      border: errors.receiptDate ? "1px solid red" : "1px solid #ced4da"
+                    }}
+                  />
+                </div>
+                {errors.receiptDate && <Form.Text style={{ color: "red", fontSize: "0.875rem" }}>{errors.receiptDate}</Form.Text>}
+              </Form.Group>
+            </>
+          )}
+          
           <div
             style={{
               display: "flex",

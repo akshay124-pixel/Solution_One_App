@@ -175,7 +175,7 @@ const BillGeneration = () => {
         .filter((order) => order.billStatus !== "Billing Complete"),
     );
     setIsEditModalOpen(false);
-    toast.success("Order updated successfully!");
+    // Toast notification is handled by EditBill component
   };
 
  const handleExportToXLSX = async () => {

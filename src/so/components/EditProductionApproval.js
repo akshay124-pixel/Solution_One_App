@@ -37,6 +37,12 @@ const EditProductionApproval = ({
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    
+    // Show toast only when changing to "Approved" without delivery date
+    if (name === "sostatus" && value === "Approved" && !formData.deliveryDate) {
+      toast.info("Please select Delivery Date to approve the order");
+    }
+    
     setFormData((prev) => {
       const newFormData = {
         ...prev,
@@ -47,9 +53,6 @@ const EditProductionApproval = ({
       if (name === "stockStatus" && value === "Not in Stock") {
         newFormData.sostatus = "Accounts Approved"; // auto shift
         newFormData.deliveryDate = ""; // clear date
-      }
-      if (name === "sostatus" && value === "Approved" && !formData.deliveryDate) {
-        toast.info("Please select Delivery Date to approve the order");
       }
 
       return newFormData;
@@ -91,6 +94,7 @@ const EditProductionApproval = ({
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+      // Don't show toast here - already shown in handleChange
       return;
     }
 

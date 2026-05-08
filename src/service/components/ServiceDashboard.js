@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { Container, Row, Col, Card, Button } from "react-bootstrap";
-import { Download, RefreshCw, TrendingUp, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { Download, RefreshCw, TrendingUp, Clock, CheckCircle, AlertCircle, Repeat } from "lucide-react";
 import SearchSection from "./SearchSection";
 import SearchResultsTable from "./SearchResultsTable";
 import ServiceLogsTable from "./ServiceLogsTable";
@@ -10,13 +10,18 @@ import ViewServiceLog from "./ViewServiceLog";
 import EditServiceLog from "./EditServiceLog";
 import DeleteServiceLogModal from "./DeleteServiceLogModal";
 import ManualServiceRequestModal from "./ManualServiceRequestModal";
+import ReplacementDemoLogsTable from "./ReplacementDemoLogsTable";
+import ReplacementDemoLogsFilters from "./ReplacementDemoLogsFilters";
+import ViewReplacementDemoLog from "./ViewReplacementDemoLog";
+import EditReplacementDemoLog from "./EditReplacementDemoLog";
+import DeleteReplacementDemoLogModal from "./DeleteReplacementDemoLogModal";
 import serviceApi from "../axiosSetup";
 import { toast } from "react-toastify";
 
 // Lazy load SO ViewEntry component
 const ViewEntry = React.lazy(() => import("../../so/components/ViewEntry"));
 
-const ServiceDashboard = () => {
+const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [serviceLogs, setServiceLogs] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -29,6 +34,7 @@ const ServiceDashboard = () => {
   const [showManualRequestModal, setShowManualRequestModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshingReplacementLogs, setRefreshingReplacementLogs] = useState(false);
   const [serviceLogsSearch, setServiceLogsSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [callTypeFilter, setCallTypeFilter] = useState("");
@@ -41,6 +47,21 @@ const ServiceDashboard = () => {
     closed: 0,
     total: 0,
   });
+  
+  // Replacement/Demo Logs State
+  const [replacementDemoLogs, setReplacementDemoLogs] = useState([]);
+  const [selectedReplacementDemoLog, setSelectedReplacementDemoLog] = useState(null);
+  const [showViewReplacementDemoLog, setShowViewReplacementDemoLog] = useState(false);
+  const [showEditReplacementDemoLog, setShowEditReplacementDemoLog] = useState(false);
+  const [showDeleteReplacementDemoLog, setShowDeleteReplacementDemoLog] = useState(false);
+  const [replacementDemoLoading, setReplacementDemoLoading] = useState(false);
+  const [userRole, setUserRole] = useState("");
+  
+  // Replacement/Demo Logs Filters
+  const [replacementSearchTerm, setReplacementSearchTerm] = useState("");
+  const [replacementApprovalStatusFilter, setReplacementApprovalStatusFilter] = useState("");
+  const [replacementStartDate, setReplacementStartDate] = useState("");
+  const [replacementEndDate, setReplacementEndDate] = useState("");
 
   // Filter service logs based on search, status, call type, and date range
   const filteredServiceLogs = serviceLogs.filter((log) => {
@@ -73,12 +94,51 @@ const ServiceDashboard = () => {
     
     return matchesSearch && matchesStatus && matchesCallType && matchesDateRange;
   });
+  
+  // Filter replacement/demo logs based on search, approval status, and date range
+  const filteredReplacementDemoLogs = replacementDemoLogs.filter((log) => {
+    const matchesSearch = !replacementSearchTerm || 
+      log.logNumber?.toLowerCase().includes(replacementSearchTerm.toLowerCase()) ||
+      log.orderId?.toLowerCase().includes(replacementSearchTerm.toLowerCase()) ||
+      log.orderDetails?.customername?.toLowerCase().includes(replacementSearchTerm.toLowerCase()) ||
+      log.orderDetails?.salesPerson?.toLowerCase().includes(replacementSearchTerm.toLowerCase());
+    
+    const matchesApprovalStatus = !replacementApprovalStatusFilter || log.approvalStatus === replacementApprovalStatusFilter;
+    
+    // Date range filter (based on createdAt)
+    let matchesDateRange = true;
+    if (replacementStartDate || replacementEndDate) {
+      const logDate = new Date(log.createdAt);
+      if (replacementStartDate) {
+        const start = new Date(replacementStartDate);
+        start.setHours(0, 0, 0, 0);
+        matchesDateRange = matchesDateRange && logDate >= start;
+      }
+      if (replacementEndDate) {
+        const end = new Date(replacementEndDate);
+        end.setHours(23, 59, 59, 999);
+        matchesDateRange = matchesDateRange && logDate <= end;
+      }
+    }
+    
+    return matchesSearch && matchesApprovalStatus && matchesDateRange;
+  });
 
   // Fetch service logs on mount
   useEffect(() => {
     fetchServiceLogs();
     fetchDashboardStats();
+    fetchReplacementDemoLogs();
+    fetchUserRole();
   }, []);
+
+  // Refresh when refreshTrigger changes (from navbar approval actions)
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      fetchReplacementDemoLogs();
+      fetchDashboardStats();
+    }
+  }, [refreshTrigger]);
 
   const fetchServiceLogs = async () => {
     setLoading(true);
@@ -106,6 +166,28 @@ const ServiceDashboard = () => {
     } catch (error) {
       console.error("Failed to fetch dashboard stats:", error);
     }
+  };
+  
+  const fetchReplacementDemoLogs = async () => {
+    setReplacementDemoLoading(true);
+    try {
+      const response = await serviceApi.get("/replacement-demo-logs");
+      if (response.data.success) {
+        setReplacementDemoLogs(response.data.data || []); // API returns 'data' not 'logs'
+      }
+    } catch (error) {
+      console.error("Failed to fetch replacement logs:", error);
+      toast.error("Failed to load replacement logs");
+      setReplacementDemoLogs([]); // Ensure we set an empty array on error
+    } finally {
+      setReplacementDemoLoading(false);
+    }
+  };
+  
+  const fetchUserRole = () => {
+    // Get user role from localStorage or context
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    setUserRole(user.role || "");
   };
 
   const handleSearch = (orders) => {
@@ -184,7 +266,93 @@ const ServiceDashboard = () => {
     setRefreshing(true);
     await Promise.all([fetchServiceLogs(), fetchDashboardStats()]);
     setRefreshing(false);
-    toast.success("Data refreshed successfully!");
+    toast.success("Service logs refreshed successfully!");
+  };
+  
+  const handleRefreshReplacementLogs = async () => {
+    setRefreshingReplacementLogs(true);
+    await fetchReplacementDemoLogs();
+    setRefreshingReplacementLogs(false);
+    toast.success("Replacement logs refreshed successfully!");
+  };
+  
+  // Replacement/Demo Log Handlers
+  const handleViewReplacementDemoLog = (log) => {
+    setSelectedReplacementDemoLog(log);
+    setShowViewReplacementDemoLog(true);
+  };
+  
+  const handleEditReplacementDemoLog = (log) => {
+    setSelectedReplacementDemoLog(log);
+    setShowEditReplacementDemoLog(true);
+  };
+  
+  const handleReplacementDemoLogUpdate = () => {
+    fetchReplacementDemoLogs();
+    setShowEditReplacementDemoLog(false);
+    // Trigger notification bell refresh (in case status changed to Approved/Rejected)
+    if (onApprovalAction) {
+      onApprovalAction();
+    }
+  };
+  
+  const handleDeleteReplacementDemoLog = (log) => {
+    setSelectedReplacementDemoLog(log);
+    setShowDeleteReplacementDemoLog(true);
+  };
+  
+  const handleConfirmDeleteReplacementDemoLog = async (log) => {
+    try {
+      const response = await serviceApi.delete(`/replacement-demo-logs/${log._id}`);
+      if (response.data.success) {
+        fetchReplacementDemoLogs();
+        toast.success("Replacement log deleted successfully!");
+      }
+    } catch (error) {
+      console.error("Failed to delete replacement log:", error);
+      toast.error("Failed to delete replacement log");
+      throw error;
+    }
+  };
+  
+  const handleApproveReplacementDemoLog = async (log) => {
+    try {
+      const response = await serviceApi.post(`/replacement-demo-logs/${log._id}/approve`);
+      if (response.data.success) {
+        fetchReplacementDemoLogs();
+        toast.success("Log approved successfully!");
+        // Trigger notification bell refresh
+        if (onApprovalAction) {
+          onApprovalAction();
+        }
+      }
+    } catch (error) {
+      console.error("Failed to approve log:", error);
+      toast.error(error.response?.data?.message || "Failed to approve log");
+    }
+  };
+  
+  const handleRejectReplacementDemoLog = async (log) => {
+    const remarks = prompt("Please enter rejection reason:");
+    if (!remarks || remarks.trim() === "") {
+      toast.warning("Rejection reason is required");
+      return;
+    }
+    
+    try {
+      const response = await serviceApi.post(`/replacement-demo-logs/${log._id}/reject`, { remarks });
+      if (response.data.success) {
+        fetchReplacementDemoLogs();
+        toast.success("Log rejected successfully!");
+        // Trigger notification bell refresh
+        if (onApprovalAction) {
+          onApprovalAction();
+        }
+      }
+    } catch (error) {
+      console.error("Failed to reject log:", error);
+      toast.error(error.response?.data?.message || "Failed to reject log");
+    }
   };
 
   const handleExport = async () => {
@@ -209,18 +377,116 @@ const ServiceDashboard = () => {
       console.error(error);
     }
   };
+  
+  const handleExportReplacementLogs = async () => {
+    try {
+      toast.info("Preparing replacement logs export...");
+      
+      // Use ExcelJS for export
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Replacement Logs");
+      
+      // Define columns
+      worksheet.columns = [
+        { header: "#", key: "index", width: 8 },
+        { header: "Log Number", key: "logNumber", width: 15 },
+        { header: "Order ID", key: "orderId", width: 15 },
+        { header: "Order Type", key: "orderType", width: 15 },
+        { header: "Customer Name", key: "customerName", width: 25 },
+        { header: "Sales Person", key: "salesPerson", width: 20 },
+        { header: "Approval Status", key: "approvalStatus", width: 20 },
+        { header: "Created Date", key: "createdDate", width: 15 },
+        { header: "Remarks", key: "remarks", width: 30 },
+        { header: "Total Amount", key: "totalAmount", width: 15 },
+      ];
+      
+      // Style header row
+      worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      worksheet.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF667eea" },
+      };
+      worksheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
+      worksheet.getRow(1).height = 25;
+      
+      // Add data rows
+      filteredReplacementDemoLogs.forEach((log, index) => {
+        worksheet.addRow({
+          index: index + 1,
+          logNumber: log.logNumber || "N/A",
+          orderId: log.orderId || "N/A",
+          orderType: log.orderDetails?.orderType || "N/A",
+          customerName: log.orderDetails?.customername || "N/A",
+          salesPerson: log.orderDetails?.salesPerson || "N/A",
+          approvalStatus: log.approvalStatus || "N/A",
+          createdDate: log.createdAt 
+            ? new Date(log.createdAt).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })
+            : "N/A",
+          remarks: log.remarks || "N/A",
+          totalAmount: log.orderDetails?.total || "N/A",
+        });
+      });
+      
+      // Add borders to all cells
+      worksheet.eachRow((row, rowNumber) => {
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
+          if (rowNumber > 1) {
+            cell.alignment = { vertical: "middle", horizontal: "left" };
+          }
+        });
+      });
+      
+      // Generate buffer and download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const link = document.createElement("a");
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `replacement-logs-${Date.now()}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(link.href);
+      
+      toast.success("Replacement logs exported successfully!");
+    } catch (error) {
+      toast.error("Failed to export replacement logs");
+      console.error(error);
+    }
+  };
 
   const statsCards = [
     {
-      title: "Total Logs",
+      title: "Service Total Logs",
       value: stats.total,
       icon: <TrendingUp size={24} />,
       gradient: "linear-gradient(135deg, #667eea, #764ba2)",
       color: "#667eea",
       bgColor: "#f0f4ff",
     },
+     {
+      title: "Replacement Total Logs",
+      value: replacementDemoLogs.length,
+      icon: <Repeat size={24} />,
+      gradient: "linear-gradient(135deg, #a1c4fd, #c2e9fb)",
+      color: "#a1c4fd",
+      bgColor: "#f0f8ff",
+    },
     {
-      title: "Open",
+      title: "Service Open",
       value: stats.open,
       icon: <AlertCircle size={24} />,
       gradient: "linear-gradient(135deg, #f093fb, #f5576c)",
@@ -228,7 +494,7 @@ const ServiceDashboard = () => {
       bgColor: "#fff0f3",
     },
     {
-      title: "In Progress",
+      title: "Service In Progress",
       value: stats.inProgress,
       icon: <Clock size={24} />,
       gradient: "linear-gradient(135deg, #ffecd2, #fcb69f)",
@@ -236,15 +502,7 @@ const ServiceDashboard = () => {
       bgColor: "#fff8f0",
     },
     {
-      title: "Resolved",
-      value: stats.resolved,
-      icon: <CheckCircle size={24} />,
-      gradient: "linear-gradient(135deg, #a1c4fd, #c2e9fb)",
-      color: "#a1c4fd",
-      bgColor: "#f0f8ff",
-    },
-    {
-      title: "Closed",
+      title: "Service Closed",
       value: stats.closed,
       icon: <CheckCircle size={24} />,
       gradient: "linear-gradient(135deg, #84fab0, #8fd3f4)",
@@ -418,12 +676,6 @@ const ServiceDashboard = () => {
       </style>
       <div className="service-dashboard">
         <Container fluid style={{ padding: "30px" }}>
-          {/* Dashboard Header */}
-          <Row className="mb-4">
-            <Col md={12}>
-             
-            </Col>
-          </Row>
 
           {/* Dashboard Stats */}
           <Row className="mb-5" style={{ gap: "0", margin: "0 -10px" }}>
@@ -520,6 +772,58 @@ const ServiceDashboard = () => {
             />
           </div>
 
+          {/* Replacement Logs Section */}
+          <div style={{ marginBottom: "40px" }}>
+            <div className="section-header">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h4 className="section-title">
+                  Replacement Order Logs
+                </h4>
+                <div className="action-buttons" style={{ display: "flex", gap: "12px" }}>
+                  <Button
+                    className="action-btn refresh-btn"
+                    onClick={handleRefreshReplacementLogs}
+                    disabled={refreshingReplacementLogs}
+                  >
+                    <RefreshCw size={16} className={refreshingReplacementLogs ? "fa-spin" : ""} />
+                    {refreshingReplacementLogs ? "Refreshing..." : "Refresh"}
+                  </Button>
+                  <Button
+                    className="action-btn export-btn"
+                    onClick={handleExportReplacementLogs}
+                  >
+                    <Download size={16} />
+                    Export
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            {/* Replacement Logs Filters */}
+            <ReplacementDemoLogsFilters
+              searchTerm={replacementSearchTerm}
+              setSearchTerm={setReplacementSearchTerm}
+              approvalStatusFilter={replacementApprovalStatusFilter}
+              setApprovalStatusFilter={setReplacementApprovalStatusFilter}
+              startDate={replacementStartDate}
+              setStartDate={setReplacementStartDate}
+              endDate={replacementEndDate}
+              setEndDate={setReplacementEndDate}
+              filteredCount={filteredReplacementDemoLogs.length}
+            />
+            
+            <ReplacementDemoLogsTable
+              logs={filteredReplacementDemoLogs}
+              onView={handleViewReplacementDemoLog}
+              onEdit={handleEditReplacementDemoLog}
+              onApprove={handleApproveReplacementDemoLog}
+              onReject={handleRejectReplacementDemoLog}
+              onDelete={handleDeleteReplacementDemoLog}
+              loading={replacementDemoLoading}
+              userRole={userRole}
+            />
+          </div>
+
           {/* Modals */}
           <CallLogModal
             isOpen={showCallLogModal}
@@ -552,6 +856,28 @@ const ServiceDashboard = () => {
             isOpen={showManualRequestModal}
             onClose={() => setShowManualRequestModal(false)}
             onSuccess={handleManualRequestSuccess}
+          />
+
+          {/* Replacement/Demo Log Modals */}
+          <ViewReplacementDemoLog
+            isOpen={showViewReplacementDemoLog}
+            onClose={() => setShowViewReplacementDemoLog(false)}
+            log={selectedReplacementDemoLog}
+          />
+
+          <EditReplacementDemoLog
+            isOpen={showEditReplacementDemoLog}
+            onClose={() => setShowEditReplacementDemoLog(false)}
+            log={selectedReplacementDemoLog}
+            onUpdate={handleReplacementDemoLogUpdate}
+            userRole={userRole}
+          />
+
+          <DeleteReplacementDemoLogModal
+            isOpen={showDeleteReplacementDemoLog}
+            onClose={() => setShowDeleteReplacementDemoLog(false)}
+            log={selectedReplacementDemoLog}
+            onDelete={handleConfirmDeleteReplacementDemoLog}
           />
 
           {/* Reuse SO ViewEntry component */}

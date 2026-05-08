@@ -684,19 +684,22 @@ function DashBoard() {
     return true;
   };
 
-  const shouldCountMonthlyVisit = (ts) => {
-    if (!ts) return false;
-    const date = new Date(ts);
-    const now = new Date();
-    return (
-      date.getMonth() === now.getMonth() &&
-      date.getFullYear() === now.getFullYear()
-    );
-  };
-
   const applyStatsDelta = useCallback((prevEntry, nextEntry) => {
     const prevBucket = prevEntry ? categorizeStatus(prevEntry) : null;
     const nextBucket = nextEntry ? categorizeStatus(nextEntry) : null;
+    
+    // CRITICAL FIX: Define shouldCountMonthlyVisit INSIDE the callback
+    // This ensures it always uses fresh date/time values, not stale closures
+    const checkMonthlyVisit = (ts) => {
+      if (!ts) return false;
+      const date = new Date(ts);
+      const now = new Date();
+      return (
+        date.getMonth() === now.getMonth() &&
+        date.getFullYear() === now.getFullYear()
+      );
+    };
+    
     setBackendStats((prev) => {
       let s = { ...prev };
 
@@ -708,7 +711,7 @@ function DashBoard() {
         s[nextBucket] = (s[nextBucket] || 0) + 1;
       }
 
-      // FIXED: Handle visit count changes properly
+      // FIXED: Handle visit count changes properly with fresh date calculations
       const prevHistLen = Array.isArray(prevEntry?.history)
         ? prevEntry.history.length
         : 0;
@@ -723,7 +726,7 @@ function DashBoard() {
           const ts = h.timestamp;
           if (ts) {
             s.totalVisits = Math.max(0, (s.totalVisits || 0) - 1);
-            if (shouldCountMonthlyVisit(ts)) {
+            if (checkMonthlyVisit(ts)) {
               s.monthlyVisits = Math.max(0, (s.monthlyVisits || 0) - 1);
             }
           }
@@ -736,7 +739,7 @@ function DashBoard() {
           const ts = h.timestamp;
           if (ts) {
             s.totalVisits = (s.totalVisits || 0) + 1;
-            if (shouldCountMonthlyVisit(ts)) {
+            if (checkMonthlyVisit(ts)) {
               s.monthlyVisits = (s.monthlyVisits || 0) + 1;
             }
           }
@@ -745,7 +748,7 @@ function DashBoard() {
 
       return s;
     });
-  }, []);
+  }, []); // Empty deps array is correct - checkMonthlyVisit is defined inside
 
   const filteredData = entries; // Backend handles filtering
 
@@ -904,7 +907,7 @@ function DashBoard() {
       fetchAnalyticsEntries();
 
       setIsEditModalOpen(false);
-      toast.success("Entry updated successfully!");
+      // Toast removed - success message already shown by EditEntry component
     },
     [usernames, fetchAnalyticsEntries, applyStatsDelta, matchesContext],
   );
@@ -916,6 +919,7 @@ function DashBoard() {
   const wasRecentRef = useRef(wasRecent);
   const recordOpRef = useRef(recordOp);
   const getIdRef = useRef(getId);
+  const fetchAnalyticsEntriesRef = useRef(fetchAnalyticsEntries);
 
   useEffect(() => { matchesContextRef.current = matchesContext; }, [matchesContext]);
   useEffect(() => { matchesRoleAccessRef.current = matchesRoleAccess; }, [matchesRoleAccess]);
@@ -923,6 +927,7 @@ function DashBoard() {
   useEffect(() => { wasRecentRef.current = wasRecent; }, [wasRecent]);
   useEffect(() => { recordOpRef.current = recordOp; }, [recordOp]);
   useEffect(() => { getIdRef.current = getId; }, [getId]);
+  useEffect(() => { fetchAnalyticsEntriesRef.current = fetchAnalyticsEntries; }, [fetchAnalyticsEntries]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -1020,6 +1025,42 @@ function DashBoard() {
 
       socket.on("entryCreated", handleCreated);
       socket.on("entryUpdated", handleUpdated);
+      
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // NEW SOCKET HANDLERS - Separate events for different update types
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      
+      // Handle customer details update (NO analytics refresh needed)
+      socket.on("entryDetailsUpdated", ({ entry, requiresAnalyticsRefresh }) => {
+        console.log("Customer details updated (no visit increment):", entry._id);
+        handleUpdated(entry);
+        // NO analytics refetch - details update doesn't affect visit counts
+      });
+      
+      // Handle follow-up update (REQUIRES analytics refresh)
+      socket.on("entryFollowUpUpdated", ({ entry, requiresAnalyticsRefresh }) => {
+        console.log("Follow-up updated (visit incremented):", entry._id);
+        handleUpdated(entry);
+        
+        // Refetch analytics because visit count changed
+        if (requiresAnalyticsRefresh) {
+          fetchAnalyticsEntriesRef.current();
+        }
+      });
+      
+      // Handle products update (REQUIRES analytics refresh)
+      socket.on("entryProductsUpdated", ({ entry, requiresAnalyticsRefresh }) => {
+        console.log("Products updated (visit incremented):", entry._id);
+        handleUpdated(entry);
+        
+        // Refetch analytics because visit count changed
+        if (requiresAnalyticsRefresh) {
+          fetchAnalyticsEntriesRef.current();
+        }
+      });
+      
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      
       socket.on("entryDeleted", ({ _id }) => {
         const idStr = getIdRef.current({ _id });
         let existed = false;

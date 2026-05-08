@@ -586,62 +586,120 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entry }) {
 
     while (attempt < maxRetries) {
       try {
-        // Token check removed as api interceptor handles auth
+        let response;
+        
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // NEW LOGIC: Use different API endpoints based on view type
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        
+        if (view === "edit") {
+          // ═══════════════════════════════════════════════════════════════════
+          // EDIT FULL DETAILS - Update customer master details ONLY
+          // NO history creation, NO visit increment
+          // ═══════════════════════════════════════════════════════════════════
+          
+          const detailsPayload = {
+            customerName: data.customerName,
+            customerEmail: data.customerEmail,
+            mobileNumber: data.mobileNumber,
+            contactperson: data.contactperson,
+            firstdate: data.firstdate,
+            address: data.address,
+            state: data.state,
+            city: data.city,
+            organization: data.organization,
+            type: data.type,
+            category: data.category,
+            expectedClosingDate: data.expectedClosingDate,
+          };
 
-        const formDataToSend = new FormData();
-        const { attachment, ...restData } = data;
-        const payload = {
-          ...restData,
-          products: data.products.filter(
-            (p) => p.name && p.specification && p.size && p.quantity
-          ),
-          assignedTo: data.assignedTo.map((user) => user.value),
-        };
+          response = await api.put(
+            `/api/entry/${entry._id}/details`,
+            detailsPayload,
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+              timeout: 120000,
+            }
+          );
 
-        Object.keys(payload).forEach((key) => {
-          if (key === "products") {
-            payload[key].forEach((item, index) => {
-              Object.keys(item).forEach((subKey) => {
-                formDataToSend.append(
-                  `products[${index}][${subKey}]`,
-                  item[subKey]
-                );
+          toast.success("Customer details updated successfully!");
+          
+        } else if (view === "update") {
+          // ═══════════════════════════════════════════════════════════════════
+          // UPDATE FOLLOW-UP - Record customer interaction/visit
+          // CREATES history entry, INCREMENTS visits
+          // ═══════════════════════════════════════════════════════════════════
+          
+          const { attachment, ...restData } = data;
+          
+          // Validate location requirement for status changes
+          if (restData.status !== entry?.status && !restData.liveLocation) {
+            toast.error("Live location is required when updating status! Please fetch your location before submitting.");
+            setLoading(false);
+            setShowConfirm(false);
+            return;
+          }
+
+          const formDataToSend = new FormData();
+          
+          // Follow-up fields
+          const followUpPayload = {
+            status: restData.status,
+            followUpDate: restData.followUpDate,
+            remarks: restData.remarks,
+            liveLocation: restData.liveLocation,
+            nextAction: restData.nextAction,
+            estimatedValue: restData.estimatedValue,
+            closeamount: restData.closeamount,
+            closetype: restData.closetype,
+            firstPersonMeet: restData.firstPersonMeet,
+            secondPersonMeet: restData.secondPersonMeet,
+            thirdPersonMeet: restData.thirdPersonMeet,
+            fourthPersonMeet: restData.fourthPersonMeet,
+            assignedTo: data.assignedTo.map((user) => user.value),
+          };
+
+          // Append follow-up fields to FormData
+          Object.keys(followUpPayload).forEach((key) => {
+            if (key === "assignedTo") {
+              followUpPayload[key].forEach((item, index) => {
+                formDataToSend.append(`assignedTo[${index}]`, item);
               });
-            });
-          } else if (key === "assignedTo") {
-            payload[key].forEach((item, index) => {
-              formDataToSend.append(`assignedTo[${index}]`, item);
-            });
-          } else if (payload[key] !== undefined && payload[key] !== null) {
-            formDataToSend.append(key, payload[key]);
-          }
-        });
+            } else if (followUpPayload[key] !== undefined && followUpPayload[key] !== null && followUpPayload[key] !== "") {
+              formDataToSend.append(key, followUpPayload[key]);
+            }
+          });
 
-        if (attachment) {
-          if (attachment.size > 5 * 1024 * 1024) {
-            throw new Error("File too large! Max 5MB.");
+          // Handle attachment upload
+          if (attachment) {
+            if (attachment.size > 5 * 1024 * 1024) {
+              throw new Error("File too large! Max 5MB.");
+            }
+            formDataToSend.append("attachment", attachment);
           }
-          formDataToSend.append("attachment", attachment);
+
+          response = await api.put(
+            `/api/entry/${entry._id}/followup`,
+            formDataToSend,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+              timeout: 120000,
+            }
+          );
+
+          toast.success("Follow-up updated successfully! Visit recorded.");
+          
+        } else {
+          throw new Error("Invalid view type");
         }
 
-        if (payload.status !== entry?.status && !payload.liveLocation) {
-          // Location is now mandatory when updating status
-          toast.error("Live location is required when updating status! Please fetch your location before submitting.");
-          setLoading(false);
-          setShowConfirm(false);
-          return;
-        }
-
-        const response = await api.put(
-          `/api/editentry/${entry._id}`,
-          formDataToSend,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-            timeout: 120000,
-          }
-        );
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // Common response handling
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
         const updatedEntry = response.data.data || response.data;
         if (!updatedEntry || !updatedEntry._id) {
@@ -671,7 +729,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entry }) {
             const status = err.response.status;
             const serverMessage = err.response.data?.message || "";
             if (status === 400) {
-              errorMessage = "Please check the information you entered.";
+              errorMessage = serverMessage || "Please check the information you entered.";
             } else if (status === 401) {
               errorMessage = "Session expired. Please log in again.";
             } else if (status === 403) {

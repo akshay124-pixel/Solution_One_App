@@ -152,8 +152,12 @@ const OutFinishedGoodModal = ({
 
   const handleSubmit = async () => {
     if (!showConfirm) {
-      // Check approval status for Replacement orders ONLY (not Demo)
-      if (isReplacement && approvalStatus !== "Approved") {
+      // Check approval status for Replacement orders ONLY when trying to dispatch/deliver (not Demo)
+      if (
+        isReplacement && 
+        approvalStatus !== "Approved" && 
+        (formData.dispatchStatus === "Dispatched" || formData.dispatchStatus === "Delivered")
+      ) {
         setError(`Cannot dispatch ${entryToEdit?.orderType} order until it is approved by Global Admin. Current status: ${approvalStatus || "Pending"}`);
         toast.error(`${entryToEdit?.orderType} order must be approved before dispatch!`);
         return;

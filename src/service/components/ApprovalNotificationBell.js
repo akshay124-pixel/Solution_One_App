@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Badge, Dropdown, Button, Modal, Spinner } from "react-bootstrap";
 import { Bell, Check, X, Eye, Clock } from "lucide-react";
 import serviceApi from "../axiosSetup";
+import soApi from "../../so/axiosSetup";
+import furniApi from "../../furni/axiosSetup";
 import { toast } from "react-toastify";
 
 const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
@@ -67,6 +69,7 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
       const response = await serviceApi.get(`/replacement-demo-logs/${log._id}/full-order`);
       console.log("[NotificationBell] Full order response:", response.data);
       console.log("[NotificationBell] Order object:", response.data.order);
+      console.log("[NotificationBell] Order Source:", response.data.orderSource);
       console.log("[NotificationBell] Products:", response.data.order?.products);
       console.log("[NotificationBell] Shipping Address:", response.data.order?.shippingAddress);
       console.log("[NotificationBell] Billing Address:", response.data.order?.billingAddress);
@@ -74,7 +77,11 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
       console.log("[NotificationBell] Installation:", response.data.order?.installation, response.data.order?.installchargesstatus);
       console.log("[NotificationBell] Total:", response.data.order?.total);
       if (response.data.success) {
-        setFullOrderDetails(response.data.order);
+        // Store both order and orderSource
+        setFullOrderDetails({
+          ...response.data.order,
+          _orderSource: response.data.orderSource // Store orderSource for download logic
+        });
       }
     } catch (error) {
       console.error("[NotificationBell] Failed to fetch full order details:", error);
@@ -701,7 +708,7 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
 
               {/* Timeline */}
               <div style={{ 
-                marginBottom: "0", 
+                marginBottom: "24px", 
                 padding: "24px", 
                 background: "rgba(240, 249, 255, 0.9)",
                 backdropFilter: "blur(10px)",
@@ -722,6 +729,139 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
                   </div>
                 </div>
               </div>
+
+              {/* Remarks */}
+              {fullOrderDetails.remarks && (
+                <div style={{ 
+                  marginBottom: "24px", 
+                  padding: "24px", 
+                  background: "rgba(254, 249, 195, 0.9)",
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
+                  borderRadius: "0",
+                  border: "1px solid rgba(234, 179, 8, 0.2)",
+                  boxShadow: "0 8px 32px rgba(234, 179, 8, 0.08)",
+                }}>
+                  <h6 style={{ fontWeight: "700", marginBottom: "16px", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
+                    💬 Remarks
+                  </h6>
+                  <div style={{ 
+                    fontSize: "0.95rem", 
+                    color: "#1e293b", 
+                    lineHeight: "1.8",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word"
+                  }}>
+                    {fullOrderDetails.remarks}
+                  </div>
+                </div>
+              )}
+
+              {/* Attachment Download */}
+              {fullOrderDetails.poFilePath && (
+                <div style={{ 
+                  marginBottom: "0", 
+                  padding: "24px", 
+                  background: "rgba(243, 232, 255, 0.9)",
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
+                  borderRadius: "0",
+                  border: "1px solid rgba(168, 85, 247, 0.2)",
+                  boxShadow: "0 8px 32px rgba(168, 85, 247, 0.08)",
+                }}>
+                  <h6 style={{ fontWeight: "700", marginBottom: "16px", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
+                    📎 Attachment
+                  </h6>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        // Extract filename from path (e.g., /Uploads/filename.xlsx -> filename.xlsx)
+                        const fullPath = fullOrderDetails.poFilePath; // e.g., /Uploads/filename.xlsx
+                        const filename = fullPath.split('/').pop();
+                        
+                        if (!filename) {
+                          toast.error("Invalid file name!");
+                          return;
+                        }
+                        
+                        // Use orderSource to determine which API to use
+                        const orderSource = fullOrderDetails._orderSource || "SO";
+                        const api = orderSource === "Furni" ? furniApi : soApi;
+                        
+                        console.log("Downloading file:", filename);
+                        console.log("Full path from DB:", fullPath);
+                        console.log("Order Source:", orderSource);
+                        console.log("Using API:", orderSource === "Furni" ? "Furni" : "SO");
+                        
+                        // Try using the static uploads path first (matches the DB path structure)
+                        // DB stores: /Uploads/filename.xlsx
+                        // Static route: /api/so/Uploads/filename.xlsx or /api/furni/Uploads/filename.xlsx
+                        const response = await api.get(`${fullPath}`, {
+                          responseType: "blob"
+                        });
+                        
+                        // Create proper download filename
+                        const blob = response.data;
+                        const ext = filename.includes(".") ? "." + filename.split(".").pop() : "";
+                        const orderId = fullOrderDetails.orderId || selectedLog.orderId || "Order";
+                        const downloadFilename = `Approval_Attachment_${orderId}${ext}`;
+                        
+                        // Create download link
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = downloadFilename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                        
+                        toast.success("File downloaded successfully!");
+                      } catch (error) {
+                        console.error("Download error:", error);
+                        toast.error(error.response?.data?.message || "Failed to download file. Please try again.");
+                      }
+                    }}
+                    style={{
+                      background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+                      border: "none",
+                      padding: "12px 24px",
+                      borderRadius: "8px",
+                      fontWeight: "600",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      boxShadow: "0 4px 16px rgba(139, 92, 246, 0.3)",
+                      transition: "all 0.3s ease",
+                      color: "white",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                      e.currentTarget.style.boxShadow = "0 6px 20px rgba(139, 92, 246, 0.4)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "0 4px 16px rgba(139, 92, 246, 0.3)";
+                    }}
+                  >
+                    <svg 
+                      width="18" 
+                      height="18" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download Attachment
+                  </Button>
+                </div>
+              )}
             </>
           ) : (
             <div style={{ textAlign: "center", padding: "60px 20px", color: "#64748b" }}>

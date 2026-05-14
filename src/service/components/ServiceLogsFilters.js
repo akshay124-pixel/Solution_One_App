@@ -8,18 +8,22 @@ const ServiceLogsFilters = ({
   setStatusFilter,
   callTypeFilter,
   setCallTypeFilter,
+  stateFilter,
+  setStateFilter,
+  availableStates,
   startDate,
   setStartDate,
   endDate,
   setEndDate,
   filteredCount
 }) => {
-  const hasActiveFilters = serviceLogsSearch || statusFilter || callTypeFilter || startDate || endDate;
+  const hasActiveFilters = serviceLogsSearch || statusFilter || callTypeFilter || stateFilter || startDate || endDate;
 
   const clearAllFilters = () => {
     setServiceLogsSearch("");
     setStatusFilter("");
     setCallTypeFilter("");
+    setStateFilter("");
     setStartDate("");
     setEndDate("");
   };
@@ -109,6 +113,30 @@ const ServiceLogsFilters = ({
             <option value="">All Types</option>
             <option value="Software">💻 Software</option>
             <option value="Hardware">🔧 Hardware</option>
+          </select>
+        </div>
+
+        {/* State Filter */}
+        <div style={{ flex: "0 0 auto" }}>
+          <select
+            value={stateFilter}
+            onChange={(e) => setStateFilter(e.target.value)}
+            style={{
+              padding: "10px 12px",
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+              fontSize: "0.875rem",
+              background: "white",
+              minWidth: "140px",
+              cursor: "pointer"
+            }}
+          >
+            <option value="">All States</option>
+            {availableStates && availableStates.sort().map((state) => (
+              <option key={state} value={state}>
+                {state}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -230,6 +258,18 @@ const ServiceLogsFilters = ({
                 fontWeight: "500"
               }}>
                 Type: {callTypeFilter}
+              </span>
+            )}
+            {stateFilter && (
+              <span style={{
+                padding: "4px 10px",
+                background: "#6366f1",
+                color: "white",
+                borderRadius: "6px",
+                fontSize: "0.75rem",
+                fontWeight: "500"
+              }}>
+                State: {stateFilter}
               </span>
             )}
             {startDate && (

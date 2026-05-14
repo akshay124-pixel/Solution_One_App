@@ -10,6 +10,8 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
     contactNo: "",
     email: "",
     address: "",
+    city: "",
+    state: "",
     issue: "",
     warrantyStatus: "",
     callType: "",
@@ -42,9 +44,16 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
         "application/pdf",
         "application/msword",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+        "application/vnd.ms-excel", // .xls
       ];
-      if (!allowedTypes.includes(file.type)) {
-        setFileError("Only JPG, PNG, PDF, DOC, DOCX files are allowed");
+      
+      // Also check file extension as fallback
+      const allowedExtensions = ["jpg", "jpeg", "png", "pdf", "doc", "docx", "xlsx", "xls"];
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+      
+      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+        setFileError("Only JPG, PNG, PDF, DOC, DOCX, XLS, XLSX files are allowed");
         setServiceAttachment(null);
         e.target.value = "";
         return;
@@ -75,6 +84,8 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
       formDataToSend.append("serviceRequestMobile", formData.contactNo);
       formDataToSend.append("serviceRequestEmail", formData.email);
       formDataToSend.append("address", formData.address);
+      formDataToSend.append("city", formData.city);
+      formDataToSend.append("state", formData.state);
       formDataToSend.append("issue", formData.issue);
       formDataToSend.append("warrantyStatus", formData.warrantyStatus);
       formDataToSend.append("callType", formData.callType);
@@ -109,6 +120,8 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
       contactNo: "",
       email: "",
       address: "",
+      city: "",
+      state: "",
       issue: "",
       warrantyStatus: "",
       callType: "",
@@ -283,6 +296,34 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                   style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem", resize: "vertical" }}
                 />
               </Form.Group>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "12px" }}>
+                <Form.Group>
+                  <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                    City
+                  </Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => handleChange("city", e.target.value)}
+                    placeholder="Enter city"
+                    style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
+                  />
+                </Form.Group>
+
+                <Form.Group>
+                  <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                    State
+                  </Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.state}
+                    onChange={(e) => handleChange("state", e.target.value)}
+                    placeholder="Enter state"
+                    style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
+                  />
+                </Form.Group>
+              </div>
             </div>
 
             {/* Service Details */}
@@ -378,11 +419,11 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                 <Form.Control
                   type="file"
                   onChange={handleFileChange}
-                  accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                  accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
                   style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
                 />
                 <small style={{ color: "#6b7280", fontSize: "0.75rem", display: "block", marginTop: "6px" }}>
-                  Allowed: JPG, PNG, PDF, DOC, DOCX (Max 10MB)
+                  Allowed: JPG, PNG, PDF, DOC, DOCX, XLS, XLSX (Max 10MB)
                 </small>
                 {fileError && (
                   <Alert variant="danger" style={{ marginTop: "8px", padding: "8px 12px", fontSize: "0.75rem" }}>

@@ -38,6 +38,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   const [serviceLogsSearch, setServiceLogsSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [callTypeFilter, setCallTypeFilter] = useState("");
+  const [stateFilter, setStateFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [stats, setStats] = useState({
@@ -63,7 +64,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   const [replacementStartDate, setReplacementStartDate] = useState("");
   const [replacementEndDate, setReplacementEndDate] = useState("");
 
-  // Filter service logs based on search, status, call type, and date range
+  // Filter service logs based on search, status, call type, state, and date range
   const filteredServiceLogs = serviceLogs.filter((log) => {
     const matchesSearch = !serviceLogsSearch || 
       log.complaintNumber?.toLowerCase().includes(serviceLogsSearch.toLowerCase()) ||
@@ -75,6 +76,8 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
     const matchesStatus = !statusFilter || log.serviceStatus === statusFilter;
     
     const matchesCallType = !callTypeFilter || log.callType === callTypeFilter;
+    
+    const matchesState = !stateFilter || log.state === stateFilter;
     
     // Date range filter (based on createdAt)
     let matchesDateRange = true;
@@ -92,7 +95,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
       }
     }
     
-    return matchesSearch && matchesStatus && matchesCallType && matchesDateRange;
+    return matchesSearch && matchesStatus && matchesCallType && matchesState && matchesDateRange;
   });
   
   // Filter replacement/demo logs based on search, approval status, and date range
@@ -756,6 +759,9 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
               setStatusFilter={setStatusFilter}
               callTypeFilter={callTypeFilter}
               setCallTypeFilter={setCallTypeFilter}
+              stateFilter={stateFilter}
+              setStateFilter={setStateFilter}
+              availableStates={[...new Set(serviceLogs.map(log => log.state).filter(Boolean))]}
               startDate={startDate}
               setStartDate={setStartDate}
               endDate={endDate}

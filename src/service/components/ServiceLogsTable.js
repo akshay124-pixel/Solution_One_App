@@ -278,6 +278,20 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
                 textAlign: "center",
                 border: "none",
                 color: "white"
+              }}>State</th>
+              <th style={{ 
+                padding: "10px 15px", 
+                height: "50px",
+                lineHeight: "30px",
+                fontSize: "0.95rem",
+                fontWeight: "600",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                borderBottom: "2px solid rgba(255, 255, 255, 0.2)",
+                whiteSpace: "nowrap",
+                textAlign: "center",
+                border: "none",
+                color: "white"
               }}>Call Status</th>
               <th style={{ 
                 padding: "10px 15px", 
@@ -476,6 +490,19 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
                     ? (log.serviceRequestMobile || "-")
                     : (log.orderDetails?.contactNo || "-")
                   }
+                </td>
+                <td style={{ 
+                  padding: "10px 15px", 
+                  height: "50px",
+                  lineHeight: "30px",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  textAlign: "center",
+                  fontWeight: "500",
+                  color: "#1f2937"
+                }}>
+                  {log.state || "-"}
                 </td>
                 <td style={{ 
                   padding: "10px 15px", 

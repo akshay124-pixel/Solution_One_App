@@ -224,8 +224,12 @@ function Installation() {
       "Order ID": order.orderId || "N/A",
       "Product Details": Array.isArray(order.products) ? order.products.map((p) => `${p.productType || "N/A"} (${p.qty || "N/A"})`).join(", ") : "N/A",
       "Contact Person": order.name || "N/A", "Contact No": order.contactNo || "N/A",
+      "City" : order.city || "N/A",
+      "State" : order.state || "N/A",
+      "Sales Person": order.salesPerson || "N/A",
       "Shipping Address": order.shippingAddress || "N/A", "Installation Details": order.installation || "N/A",
       "Installation Status": order.installationStatus || "Pending",
+      
     }));
     await exportToExcel(exportData, "Installation Orders", `Installation_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
   };

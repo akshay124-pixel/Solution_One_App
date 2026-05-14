@@ -165,10 +165,11 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
           overflowY: "auto", 
           maxHeight: "600px",
           scrollbarWidth: "thin",
-          scrollbarColor: "#2575fc #e6f0fa"
+          scrollbarColor: "#2575fc #e6f0fa",
+          width: "100%"
         }}
       >
-        <Table hover responsive style={{ margin: 0 }}>
+        <Table hover style={{ margin: 0, minWidth: "1400px", width: "max-content" }}>
           <thead
             className="gradient-table-header"
             style={{
@@ -348,6 +349,23 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
                 border: "none",
                 color: "white"
               }}>Actions</th>
+              <th style={{ 
+                padding: "10px 15px", 
+                height: "50px",
+                lineHeight: "30px",
+                fontSize: "0.95rem",
+                fontWeight: "600",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                borderBottom: "2px solid rgba(255, 255, 255, 0.2)",
+                whiteSpace: "nowrap",
+                textAlign: "center",
+                border: "none",
+                color: "white",
+                width: "200px",
+                minWidth: "200px",
+                maxWidth: "200px"
+              }}>Remarks</th>
             </tr>
           </thead>
           <tbody>
@@ -674,6 +692,25 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
                     )}
                   </div>
                 </td>
+                <td
+                  style={{
+                    padding: "10px 15px",
+                    height: "50px",
+                    lineHeight: "30px",
+                    width: "200px",
+                    minWidth: "200px",
+                    maxWidth: "200px",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    textAlign: "center",
+                    color: "#6b7280",
+                    fontSize: "0.875rem"
+                  }}
+                  title={log.remarks || "No remarks"}
+                >
+                  {log.remarks || "-"}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -684,8 +721,8 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
         {`
           /* Custom scrollbar styling */
           .service-logs-table-container::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
           }
           .service-logs-table-container::-webkit-scrollbar-track {
             background: #e6f0fa;
@@ -694,9 +731,17 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
           .service-logs-table-container::-webkit-scrollbar-thumb {
             background: #2575fc;
             border-radius: 4px;
+            min-height: 40px;
+            min-width: 40px;
           }
           .service-logs-table-container::-webkit-scrollbar-thumb:hover {
             background: #1d5bb8;
+          }
+          
+          /* Ensure scrollbar is always visible */
+          .service-logs-table-container {
+            scrollbar-width: thin;
+            scrollbar-color: #2575fc #e6f0fa;
           }
           
           /* Gradient header styling */

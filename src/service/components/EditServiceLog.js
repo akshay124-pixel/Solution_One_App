@@ -11,6 +11,8 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
   const [serviceRequestName, setServiceRequestName] = useState("");
   const [serviceRequestMobile, setServiceRequestMobile] = useState("");
   const [serviceRequestEmail, setServiceRequestEmail] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
   const [warrantyStatus, setWarrantyStatus] = useState("");
   const [callType, setCallType] = useState("");
   const [issue, setIssue] = useState("");
@@ -140,6 +142,8 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
       setServiceRequestName(log.serviceRequestName || "");
       setServiceRequestMobile(log.serviceRequestMobile || "");
       setServiceRequestEmail(log.serviceRequestEmail || "");
+      setCity(log.city || "");
+      setState(log.state || "");
       setWarrantyStatus(log.warrantyStatus || "");
       setCallType(log.callType || "");
       setIssue(log.issue || "");
@@ -171,6 +175,8 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
       formData.append("serviceRequestName", serviceRequestName);
       formData.append("serviceRequestMobile", serviceRequestMobile);
       formData.append("serviceRequestEmail", serviceRequestEmail);
+      formData.append("city", city);
+      formData.append("state", state);
       formData.append("warrantyStatus", warrantyStatus);
       formData.append("callType", callType);
       formData.append("issue", issue);
@@ -209,6 +215,8 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
     setServiceRequestName(log?.serviceRequestName || "");
     setServiceRequestMobile(log?.serviceRequestMobile || "");
     setServiceRequestEmail(log?.serviceRequestEmail || "");
+    setCity(log?.city || "");
+    setState(log?.state || "");
     setWarrantyStatus(log?.warrantyStatus || "");
     setCallType(log?.callType || "");
     setIssue(log?.issue || "");
@@ -472,6 +480,74 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
                     value={serviceRequestEmail}
                     onChange={(e) => setServiceRequestEmail(e.target.value)}
                     placeholder="Enter email..."
+                    style={{
+                      borderRadius: "8px",
+                      border: "1px solid #d1d5db",
+                      padding: "10px 12px",
+                      fontSize: "0.875rem",
+                      transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                      background: "white",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#f59e0b";
+                      e.target.style.boxShadow = "0 0 0 3px rgba(245, 158, 11, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#d1d5db";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  />
+                </Form.Group>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+                <Form.Group>
+                  <Form.Label style={{ 
+                    fontWeight: "500", 
+                    color: "#374151",
+                    fontSize: "0.875rem",
+                    marginBottom: "6px"
+                  }}>
+                    City
+                  </Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Enter city..."
+                    style={{
+                      borderRadius: "8px",
+                      border: "1px solid #d1d5db",
+                      padding: "10px 12px",
+                      fontSize: "0.875rem",
+                      transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                      background: "white",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#f59e0b";
+                      e.target.style.boxShadow = "0 0 0 3px rgba(245, 158, 11, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#d1d5db";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  />
+                </Form.Group>
+
+                <Form.Group>
+                  <Form.Label style={{ 
+                    fontWeight: "500", 
+                    color: "#374151",
+                    fontSize: "0.875rem",
+                    marginBottom: "6px"
+                  }}>
+                    State
+                  </Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                    placeholder="Enter state..."
                     style={{
                       borderRadius: "8px",
                       border: "1px solid #d1d5db",

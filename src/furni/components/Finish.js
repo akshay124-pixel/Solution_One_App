@@ -14,6 +14,7 @@ import { isOrderComplete } from "../utils/orderUtils";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { FileText } from "lucide-react";
+import Pagination from "../../components/Pagination";
 
 const ModernFilterContainer = styled.div`
   display: flex; flex-direction: row; align-items: flex-end; gap: 12px;
@@ -64,7 +65,8 @@ const StyledDatePickerWrapper = styled.div`
 function Finish() {
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewOrder, setViewOrder] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -84,17 +86,48 @@ function Finish() {
   const [finishPdfLoading, setFinishPdfLoading] = useState(false);
   const finishPdfRef = useRef(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageLimit, setPageLimit] = useState(50);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    limit: 50,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
+
   const dispatchFromOptions = ["", "Patna", "Bareilly", "Ranchi", "Morinda", "Lucknow", "Delhi"];
 
-  const fetchFinishedGoods = useCallback(async () => {
+  const fetchFinishedGoods = useCallback(async (page = currentPage, limit = pageLimit) => {
     try {
-      const response = await furniApi.get("/api/finished-goods");
+      setLoading(true);
+      
+      // Build query params with all active filters
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      
+      // Add filters to query params
+      if (searchTerm) params.append('search', searchTerm);
+      if (startDate) params.append('startDate', startDate.toISOString());
+      if (endDate) params.append('endDate', endDate.toISOString());
+      if (freightStatusFilter) params.append('freightStatus', freightStatusFilter);
+      if (dispatchStatusFilter) params.append('dispatchStatus', dispatchStatusFilter);
+      if (orderTypeFilter) params.append('orderType', orderTypeFilter);
+      if (dispatchFromFilter) params.append('dispatchFrom', dispatchFromFilter);
+      if (dispatchedFilter) params.append('dispatched', dispatchedFilter);
+      if (productionStatusFilter) params.append('productionStatus', productionStatusFilter);
+      
+      const response = await furniApi.get(`/api/finished-goods?${params.toString()}`);
       if (response.data.success) {
         const sortedData = response.data.data
-          .map((order) => ({ ...order, fulfillingStatus: order.fulfillingStatus === "Fulfilled" ? "Completed" : order.fulfillingStatus }))
-          .sort((a, b) => { const dateA = a.soDate ? new Date(a.soDate) : new Date(0); const dateB = b.soDate ? new Date(b.soDate) : new Date(0); return dateB - dateA; });
+          .map((order) => ({ ...order, fulfillingStatus: order.fulfillingStatus === "Fulfilled" ? "Completed" : order.fulfillingStatus }));
         setOrders(sortedData);
         setFilteredOrders(sortedData);
+        setPagination(response.data.pagination);
       } else {
         throw new Error(response.data.message || "Failed to fetch finished goods data");
       }
@@ -106,63 +139,33 @@ function Finish() {
       else if (userFriendlyMessage.includes("404")) userFriendlyMessage = "We couldn't find the finished goods data.";
       else if (userFriendlyMessage.includes("500")) userFriendlyMessage = "The server is facing some issues. Please try again later.";
       toast.error(userFriendlyMessage, { position: "top-right", autoClose: 5000 });
+      setOrders([]);
+      setFilteredOrders([]);
+      setPagination({
+        currentPage: 1,
+        totalPages: 1,
+        totalCount: 0,
+        limit: pageLimit,
+        hasNextPage: false,
+        hasPrevPage: false,
+      });
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
+  }, [currentPage, pageLimit, searchTerm, startDate, endDate, freightStatusFilter, dispatchStatusFilter, orderTypeFilter, dispatchFromFilter, dispatchedFilter, productionStatusFilter]);
+
+  useEffect(() => { fetchFinishedGoods(currentPage, pageLimit); }, [fetchFinishedGoods]);
+
+  const handlePageChange = useCallback((newPage) => {
+    setCurrentPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  useEffect(() => { fetchFinishedGoods(); }, [fetchFinishedGoods]);
-
-  useEffect(() => {
-    let filtered = orders.filter((order) => !isOrderComplete(order));
-    let totalProductQuantity = 0;
-    if (freightStatusFilter) filtered = filtered.filter((order) => order.freightstatus === freightStatusFilter);
-    if (dispatchStatusFilter) filtered = filtered.filter((order) => order.dispatchStatus === dispatchStatusFilter);
-    if (orderTypeFilter) filtered = filtered.filter((order) => order.orderType === orderTypeFilter);
-    if (dispatchFromFilter) filtered = filtered.filter((order) => order.dispatchFrom === dispatchFromFilter);
-    if (dispatchedFilter) filtered = filtered.filter((order) => dispatchedFilter === "Dispatched" ? order.dispatchStatus === "Dispatched" || order.dispatchStatus === "Docket Awaited Dispatched" : order.dispatchStatus === "Not Dispatched");
-    if (productionStatusFilter) filtered = filtered.filter((order) => order.fulfillingStatus === productionStatusFilter);
-    if (startDate || endDate) {
-      filtered = filtered.filter((order) => {
-        const orderDate = order.soDate ? new Date(order.soDate) : null;
-        const startDateAdjusted = startDate ? new Date(startDate.setHours(0, 0, 0, 0)) : null;
-        const endDateAdjusted = endDate ? new Date(endDate.setHours(23, 59, 59, 999)) : null;
-        return (!startDateAdjusted || (orderDate && orderDate >= startDateAdjusted)) && (!endDateAdjusted || (orderDate && orderDate <= endDateAdjusted));
-      });
-    }
-    if (searchTerm) {
-      const lowerSearch = searchTerm.toLowerCase().trim();
-      filtered = filtered.filter((order) => {
-        const productDetails = order.products ? order.products.map((p) => `${p.productType} (${p.qty})`).join(", ").toLowerCase() : "";
-        const specDetails = order.products ? order.products.map((p) => p.spec || "N/A").join(", ").toLowerCase() : "";
-        const sizeDetails = order.products ? order.products.map((p) => p.size || "N/A").join(", ").toLowerCase() : "";
-        const totalQty = order.products ? order.products.reduce((sum, p) => sum + (p.qty || 0), 0).toString() : "N/A";
-        const modelNos = order.products ? order.products.flatMap((p) => p.modelNos || []).filter(Boolean).join(", ").toLowerCase() || "N/A" : "";
-        const matchingProducts = (order.products || []).filter((p) => p.productType?.toLowerCase().includes(lowerSearch));
-        if (matchingProducts.length > 0) totalProductQuantity += matchingProducts.reduce((sum, p) => sum + Math.floor(p.qty || 0), 0);
-        return (
-          (order.orderId || "N/A").toLowerCase().includes(lowerSearch) ||
-          (order.customername || "N/A").toLowerCase().includes(lowerSearch) ||
-          (order.contactNo || "N/A").toLowerCase().includes(lowerSearch) ||
-          (order.shippingAddress || "N/A").toLowerCase().includes(lowerSearch) ||
-          productDetails.includes(lowerSearch) || modelNos.includes(lowerSearch) ||
-          sizeDetails.includes(lowerSearch) || specDetails.includes(lowerSearch) ||
-          totalQty.includes(lowerSearch) ||
-          (order.salesPerson || "N/A").toLowerCase().includes(lowerSearch) ||
-          (order.freightstatus || "To Pay").toLowerCase().includes(lowerSearch) ||
-          (order.fulfillingStatus || "N/A").toLowerCase().includes(lowerSearch) ||
-          (order.dispatchStatus || "Not Dispatched").toLowerCase().includes(lowerSearch) ||
-          (order.orderType || "N/A").toLowerCase().includes(lowerSearch)
-        );
-      });
-    } else {
-      totalProductQuantity = filtered.reduce((sum, order) => sum + (order.products ? order.products.reduce((s, p) => s + Math.floor(p.qty || 0), 0) : 0), 0);
-    }
-    filtered = filtered.sort((a, b) => { const dateA = a.soDate ? new Date(a.soDate) : new Date(0); const dateB = b.soDate ? new Date(b.soDate) : new Date(0); return dateB - dateA; });
-    setFilteredOrders(filtered);
-    setTotalResults(filtered.length);
-    setProductQuantity(totalProductQuantity);
-  }, [freightStatusFilter, dispatchStatusFilter, orderTypeFilter, dispatchFromFilter, dispatchedFilter, productionStatusFilter, searchTerm, startDate, endDate, orders]);
+  const handleLimitChange = useCallback((newLimit) => {
+    setPageLimit(newLimit);
+    setCurrentPage(1); // Reset to first page when changing limit
+  }, []);
 
   const uniqueOrderTypes = ["", ...new Set(orders.map((order) => order.orderType || "N/A"))];
 
@@ -170,10 +173,7 @@ function Finish() {
     setFreightStatusFilter(""); setDispatchStatusFilter(""); setOrderTypeFilter("");
     setDispatchFromFilter(""); setDispatchedFilter(""); setProductionStatusFilter("");
     setSearchTerm(""); setStartDate(null); setEndDate(null);
-    const sortedOrders = [...orders].sort((a, b) => { const dateA = a.soDate ? new Date(a.soDate) : new Date(0); const dateB = b.soDate ? new Date(b.soDate) : new Date(0); return dateB - dateA; });
-    setFilteredOrders(sortedOrders);
-    setTotalResults(sortedOrders.length);
-    setProductQuantity(sortedOrders.reduce((sum, order) => sum + (order.products ? order.products.reduce((s, p) => s + Math.floor(p.qty || 0), 0) : 0), 0));
+    setCurrentPage(1); // Reset to first page
     toast.info("Filters reset!", { position: "top-right", autoClose: 3000 });
   };
 
@@ -245,26 +245,61 @@ function Finish() {
   }, [viewOrder]);
 
   const handleExportToXLSX = async () => {
-    const tableData = filteredOrders.map((order) => ({
-      "Order ID": order.orderId || "N/A", "Customer Name": order.customername || "N/A", "Contact No": order.contactNo || "N/A",
-      "Delivery Address": order.shippingAddress || "N/A",
-      "Product Name": order.products ? order.products.map((p) => `${p.productType} (${p.qty})`).join(", ") : "N/A",
-      "Model Nos": order.products ? order.products.flatMap((p) => p.modelNos || []).filter(Boolean).join(", ") || "N/A" : "N/A",
-      Spec: order.products ? order.products.map((p) => p.spec || "N/A").join(", ") : "N/A",
-      Size: order.products ? order.products.map((p) => p.size || "N/A").join(", ") : "N/A",
-      "Serial Nos": order.products ? order.products.map((p) => { const serials = (p.serialNos || []).filter(Boolean); return serials.length > 0 ? `${p.productType}: ${serials.join(", ")}` : null; }).filter(Boolean).join("; ") || "N/A" : "N/A",
-      Quantity: order.products ? order.products.reduce((sum, p) => sum + (p.qty || 0), 0) : "N/A",
-      "Sales Person": order.salesPerson || "N/A", "Production Remarks": order.remarksByProduction || "N/A",
-      "SO Date": order.soDate ? new Date(order.soDate).toLocaleDateString() : "N/A",
-      "Dispatch Date": order.dispatchDate ? new Date(order.dispatchDate).toLocaleDateString() : "N/A",
-      "Dispatch From": order.dispatchFrom || "N/A", "Billing Status": order.billStatus || "Pending",
-      "Freight Status": order.freightstatus || "To Pay", "Product Status": order.fulfillingStatus || "N/A",
-      "Dispatch Status": order.dispatchStatus || "Not Dispatched", "Dispatch Remarks": order.remarksBydispatch || "N/A",
-    }));
-    await exportToExcel(tableData, "Dispatch Data", "Dispatch_Dashboard.xlsx");
+    try {
+      toast.info("Preparing export, please wait...", { position: "top-right", autoClose: 2000 });
+      
+      // Build query params with all active filters for export
+      const params = new URLSearchParams({ export: 'true' });
+      
+      // Add all active filters to export query
+      if (searchTerm) params.append('search', searchTerm);
+      if (startDate) params.append('startDate', startDate.toISOString());
+      if (endDate) params.append('endDate', endDate.toISOString());
+      if (freightStatusFilter) params.append('freightStatus', freightStatusFilter);
+      if (dispatchStatusFilter) params.append('dispatchStatus', dispatchStatusFilter);
+      if (orderTypeFilter) params.append('orderType', orderTypeFilter);
+      if (dispatchFromFilter) params.append('dispatchFrom', dispatchFromFilter);
+      if (dispatchedFilter) params.append('dispatched', dispatchedFilter);
+      if (productionStatusFilter) params.append('productionStatus', productionStatusFilter);
+      
+      // Fetch ALL filtered records (no pagination) for export
+      const response = await furniApi.get(`/api/finished-goods?${params.toString()}`);
+      if (!response.data.success) throw new Error("Export fetch failed");
+
+      const allOrders = Array.isArray(response.data.data) ? response.data.data : [];
+      
+      const tableData = allOrders.map((order) => ({
+        "Order ID": order.orderId || "N/A", 
+        "Customer Name": order.customername || "N/A", 
+        "Contact No": order.contactNo || "N/A",
+        "Delivery Address": order.shippingAddress || "N/A",
+        "Product Name": order.products ? order.products.map((p) => `${p.productType} (${p.qty})`).join(", ") : "N/A",
+        "Model Nos": order.products ? order.products.flatMap((p) => p.modelNos || []).filter(Boolean).join(", ") || "N/A" : "N/A",
+        Spec: order.products ? order.products.map((p) => p.spec || "N/A").join(", ") : "N/A",
+        Size: order.products ? order.products.map((p) => p.size || "N/A").join(", ") : "N/A",
+        "Serial Nos": order.products ? order.products.map((p) => { const serials = (p.serialNos || []).filter(Boolean); return serials.length > 0 ? `${p.productType}: ${serials.join(", ")}` : null; }).filter(Boolean).join("; ") || "N/A" : "N/A",
+        Quantity: order.products ? order.products.reduce((sum, p) => sum + (p.qty || 0), 0) : "N/A",
+        "Sales Person": order.salesPerson || "N/A", 
+        "Production Remarks": order.remarksByProduction || "N/A",
+        "SO Date": order.soDate ? new Date(order.soDate).toLocaleDateString() : "N/A",
+        "Dispatch Date": order.dispatchDate ? new Date(order.dispatchDate).toLocaleDateString() : "N/A",
+        "Dispatch From": order.dispatchFrom || "N/A", 
+        "Billing Status": order.billStatus || "Pending",
+        "Freight Status": order.freightstatus || "To Pay", 
+        "Product Status": order.fulfillingStatus || "N/A",
+        "Dispatch Status": order.dispatchStatus || "Not Dispatched", 
+        "Dispatch Remarks": order.remarksBydispatch || "N/A",
+      }));
+      
+      await exportToExcel(tableData, "Dispatch Data", "Dispatch_Dashboard.xlsx");
+      toast.success(`Exported ${allOrders.length} records successfully!`, { position: "top-right", autoClose: 3000 });
+    } catch (err) {
+      console.error("Export error:", err);
+      toast.error("Export failed. Please try again.", { position: "top-right", autoClose: 4000 });
+    }
   };
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)" }}>
         <div style={{ width: "50px", height: "50px", border: "5px solid #2575fc", borderTop: "5px solid transparent", borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: "15px" }} />
@@ -331,8 +366,8 @@ function Finish() {
             </div>
           </ModernFilterContainer>
           <div style={{ display: "flex", gap: "15px", marginBottom: "20px", flexWrap: "wrap" }}>
-            <div style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", borderRadius: "25px", padding: "12px 20px", boxShadow: "0 5px 15px rgba(0,0,0,0.2)", color: "#fff", fontWeight: "700", fontSize: "0.9rem" }}>Total Orders: {totalResults}</div>
-            <div style={{ background: "linear-gradient(135deg, #28a745, #4cd964)", borderRadius: "25px", padding: "12px 20px", boxShadow: "0 5px 15px rgba(0,0,0,0.2)", color: "#fff", fontWeight: "700", fontSize: "0.9rem" }}>Total Product Quantity: {Math.floor(productQuantity)}</div>
+            <div style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", borderRadius: "25px", padding: "12px 20px", boxShadow: "0 5px 15px rgba(0,0,0,0.2)", color: "#fff", fontWeight: "700", fontSize: "0.9rem" }}>Total Orders: {pagination.totalCount || 0}</div>
+            <div style={{ background: "linear-gradient(135deg, #28a745, #4cd964)", borderRadius: "25px", padding: "12px 20px", boxShadow: "0 5px 15px rgba(0,0,0,0.2)", color: "#fff", fontWeight: "700", fontSize: "0.9rem" }}>Total Product Quantity: {pagination.totalProductQty || 0}</div>
           </div>
           {filteredOrders.length === 0 ? (
             <div style={{ background: "linear-gradient(135deg, #ff6b6b, #ff8787)", color: "#fff", padding: "20px", borderRadius: "10px", textAlign: "center", fontSize: "1.3rem", fontWeight: "500" }}>No Dispatch available at this time.</div>
@@ -347,7 +382,15 @@ function Finish() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.map((order, index) => {
+                  {loading ? (
+                    <tr>
+                      <td colSpan="20" style={{ padding: "40px", textAlign: "center", background: "linear-gradient(135deg, #f8f9fa, #e9ecef)" }}>
+                        <Spinner animation="border" style={{ width: "35px", height: "35px", color: "#2575fc", marginRight: "12px" }} />
+                        <span style={{ fontSize: "1rem", color: "#495057", fontWeight: "500" }}>Loading orders...</span>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredOrders.map((order, index) => {
                     const productDetails = order.products ? order.products.map((p) => `${p.productType} (${p.qty})`).join(", ") : "N/A";
                     const sizeDetails = order.products ? order.products.map((p) => p.size || "N/A").join(", ") : "N/A";
                     const specDetails = order.products ? order.products.map((p) => p.spec || "N/A").join(", ") : "N/A";
@@ -396,10 +439,26 @@ function Finish() {
                         </td>
                       </tr>
                     );
-                  })}
+                  })
+                  )}
                 </tbody>
               </table>
             </div>
+          )}
+
+          {/* Pagination Component */}
+          {pagination.totalCount > 0 && (
+            <Pagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              totalCount={pagination.totalCount}
+              limit={pagination.limit}
+              hasNextPage={pagination.hasNextPage}
+              hasPrevPage={pagination.hasPrevPage}
+              onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
+              pageSizeOptions={[10, 25, 50, 100, 200]}
+            />
           )}
         </div>
       </div>

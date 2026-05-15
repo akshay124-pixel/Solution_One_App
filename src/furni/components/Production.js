@@ -11,6 +11,7 @@ import DatePicker from "react-datepicker";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { FileText } from "lucide-react";
+import Pagination from "../../components/Pagination";
 
 const DatePickerWrapper = styled.div`
   display: flex; gap: 10px; align-items: center;
@@ -59,23 +60,45 @@ const Production = () => {
   const [orderTypeFilter, setOrderTypeFilter] = useState("All");
   const [prodPdfLoading, setProdPdfLoading] = useState(false);
   const prodPdfRef = React.useRef(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageLimit, setPageLimit] = useState(50);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    limit: 50,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
   const clearFilters = useCallback(() => {
     setSearchQuery(""); setStartDate(null); setEndDate(null);
     setStatusFilter("All"); setOrderTypeFilter("All");
+    setCurrentPage(1); // Reset to first page when clearing filters
   }, []);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async (page = currentPage, limit = pageLimit) => {
     setLoading(true); setError(null);
     try {
-      const response = await furniApi.get("/api/production-orders");
+      // Build query params with all active filters
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      
+      // Add filters to query params
+      if (searchQuery) params.append('search', searchQuery);
+      if (startDate) params.append('startDate', startDate.toISOString());
+      if (endDate) params.append('endDate', endDate.toISOString());
+      if (statusFilter && statusFilter !== 'All') params.append('status', statusFilter);
+      if (orderTypeFilter && orderTypeFilter !== 'All') params.append('orderType', orderTypeFilter);
+      
+      const response = await furniApi.get(`/api/production-orders?${params.toString()}`);
       if (response.data.success) {
-        const sortedOrders = response.data.data.sort((a, b) => {
-          const dateA = a.soDate ? new Date(a.soDate) : new Date(0);
-          const dateB = b.soDate ? new Date(b.soDate) : new Date(0);
-          return dateB - dateA;
-        });
-        setOrders(sortedOrders);
+        setOrders(response.data.data);
+        setPagination(response.data.pagination);
       } else {
         throw new Error(response.data.message || "Failed to fetch orders");
       }
@@ -87,59 +110,33 @@ const Production = () => {
         toast.error(errorMessage, { position: "top-right", autoClose: 5000, toastId: "fetch-error" });
       }
       setOrders([]);
+      setPagination({
+        currentPage: 1,
+        totalPages: 1,
+        totalCount: 0,
+        limit: pageLimit,
+        hasNextPage: false,
+        hasPrevPage: false,
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, pageLimit, searchQuery, startDate, endDate, statusFilter, orderTypeFilter]);
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => { fetchOrders(currentPage, pageLimit); }, [fetchOrders]);
 
-  const filteredOrders = useMemo(() => {
-    let filtered = orders.filter(
-      (order) => order.fulfillingStatus !== "Fulfilled" && order.fulfillingStatus !== "Order Cancel"
-    );
-    if (startDate || endDate) {
-      filtered = filtered.filter((order) => {
-        const orderDate = order.soDate ? new Date(order.soDate) : null;
-        const startDateAdjusted = startDate ? new Date(startDate.setHours(0, 0, 0, 0)) : null;
-        const endDateAdjusted = endDate ? new Date(endDate.setHours(23, 59, 59, 999)) : null;
-        return (!startDateAdjusted || (orderDate && orderDate >= startDateAdjusted)) &&
-          (!endDateAdjusted || (orderDate && orderDate <= endDateAdjusted));
-      });
-    }
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((order) => {
-        const productDetails = Array.isArray(order.products)
-          ? order.products.map((p) => `${p.productType || ""} (${p.qty || ""})`).join(", ") : "";
-        const firstProduct = Array.isArray(order.products) && order.products.length > 0 ? order.products[0] : {};
-        return (
-          (order.orderId || "").toLowerCase().includes(query) ||
-          (order.customername || "").toLowerCase().includes(query) ||
-          (order.shippingAddress || "").toLowerCase().includes(query) ||
-          (order.customerEmail || "").toLowerCase().includes(query) ||
-          (order.contactNo || "").toLowerCase().includes(query) ||
-          (order.orderType || "").toLowerCase().includes(query) ||
-          productDetails.toLowerCase().includes(query) ||
-          (firstProduct.size || "").toLowerCase().includes(query) ||
-          (firstProduct.spec || "").toLowerCase().includes(query) ||
-          (firstProduct.modelNos?.join(", ") || "").toLowerCase().includes(query) ||
-          (order.fulfillingStatus || "").toLowerCase().includes(query)
-        );
-      });
-    }
-    if (statusFilter !== "All") {
-      filtered = filtered.filter((order) => order.fulfillingStatus === statusFilter);
-    }
-    if (orderTypeFilter !== "All") {
-      filtered = filtered.filter((order) => order.orderType === orderTypeFilter);
-    }
-    return filtered.sort((a, b) => {
-      const dateA = a.soDate ? new Date(a.soDate) : new Date(0);
-      const dateB = b.soDate ? new Date(b.soDate) : new Date(0);
-      return dateB - dateA;
-    });
-  }, [orders, searchQuery, statusFilter, orderTypeFilter, startDate, endDate]);
+  const handlePageChange = useCallback((newPage) => {
+    setCurrentPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleLimitChange = useCallback((newLimit) => {
+    setPageLimit(newLimit);
+    setCurrentPage(1); // Reset to first page when changing limit
+  }, []);
+
+  // Backend handles filtering, so filteredOrders = orders
+  const filteredOrders = orders;
 
   const uniqueStatuses = ["All", "Under Process", "Pending", "Hold", "Order Cancel", "Partial Dispatch", "Fulfilled",
     ...new Set(orders.map((order) => order.fulfillingStatus || "Pending").filter(
@@ -245,28 +242,53 @@ const Production = () => {
   }, [viewOrder]);
 
   const handleExportExcel = useCallback(async () => {
-    const exportData = filteredOrders.map((order) => {
-      const firstProduct = Array.isArray(order.products) && order.products.length > 0 ? order.products[0] : {};
-      const productDetails = Array.isArray(order.products) ? order.products.map((p) => `${p.productType || "N/A"} (${p.qty || "N/A"})`).join(", ") : "N/A";
-      const totalQty = Array.isArray(order.products) ? order.products.reduce((sum, p) => sum + (p.qty || 0), 0) : "N/A";
-      return {
-        "Order ID": order.orderId || "N/A",
-        "So Date": order.soDate ? new Date(order.soDate).toLocaleDateString("en-IN") : "N/A",
-        "Customer Name": order.customername || "N/A",
-        "Shipping Address": order.shippingAddress || "N/A",
-        "Customer Email": order.customerEmail || "N/A",
-        "Contact No": order.contactNo || "N/A",
-        "Order Type": order.orderType || "N/A",
-        "Product Details": productDetails,
-        Size: firstProduct.size || "N/A",
-        Spec: firstProduct.spec || "N/A",
-        "Model Nos": firstProduct.modelNos?.length > 0 ? firstProduct.modelNos.join(", ") : "N/A",
-        "Production Status": order.fulfillingStatus || "Pending",
-        Quantity: totalQty,
-      };
-    });
-    await exportToExcel(exportData, "Production Orders", `Production_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
-  }, [filteredOrders]);
+    try {
+      toast.info("Preparing export, please wait...", { position: "top-right", autoClose: 2000 });
+      
+      // Build query params with all active filters for export
+      const params = new URLSearchParams({ export: 'true' });
+      
+      // Add all active filters to export query
+      if (searchQuery) params.append('search', searchQuery);
+      if (startDate) params.append('startDate', startDate.toISOString());
+      if (endDate) params.append('endDate', endDate.toISOString());
+      if (statusFilter && statusFilter !== 'All') params.append('status', statusFilter);
+      if (orderTypeFilter && orderTypeFilter !== 'All') params.append('orderType', orderTypeFilter);
+      
+      // Fetch ALL filtered records (no pagination) for export
+      const response = await furniApi.get(`/api/production-orders?${params.toString()}`);
+      if (!response.data.success) throw new Error("Export fetch failed");
+
+      const allOrders = Array.isArray(response.data.data) ? response.data.data : [];
+      
+      const exportData = allOrders.map((order) => {
+        const firstProduct = Array.isArray(order.products) && order.products.length > 0 ? order.products[0] : {};
+        const productDetails = Array.isArray(order.products) ? order.products.map((p) => `${p.productType || "N/A"} (${p.qty || "N/A"})`).join(", ") : "N/A";
+        const totalQty = Array.isArray(order.products) ? order.products.reduce((sum, p) => sum + (p.qty || 0), 0) : "N/A";
+        return {
+          "Order ID": order.orderId || "N/A",
+          "So Date": order.soDate ? new Date(order.soDate).toLocaleDateString("en-IN") : "N/A",
+          "Customer Name": order.customername || "N/A",
+          "Shipping Address": order.shippingAddress || "N/A",
+          "Customer Email": order.customerEmail || "N/A",
+          "Contact No": order.contactNo || "N/A",
+          "Order Type": order.orderType || "N/A",
+          "Product Details": productDetails,
+          Size: firstProduct.size || "N/A",
+          Spec: firstProduct.spec || "N/A",
+          "Model Nos": firstProduct.modelNos?.length > 0 ? firstProduct.modelNos.join(", ") : "N/A",
+          "Production Status": order.fulfillingStatus || "Pending",
+          Quantity: totalQty,
+        };
+      });
+      
+      await exportToExcel(exportData, "Production Orders", `Production_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
+      toast.success(`Exported ${allOrders.length} records successfully!`, { position: "top-right", autoClose: 3000 });
+    } catch (err) {
+      console.error("Export error:", err);
+      toast.error("Export failed. Please try again.", { position: "top-right", autoClose: 4000 });
+    }
+  }, [searchQuery, startDate, endDate, statusFilter, orderTypeFilter]);
 
   const isValidPoFilePath = (filePath) => filePath && typeof filePath === "string" && filePath.trim() !== "" && filePath !== "N/A" && filePath !== "/";
 
@@ -298,7 +320,6 @@ const Production = () => {
     }
   };
 
-  const totalPending = filteredOrders.filter((order) => order.fulfillingStatus === "Pending").length;
   const tdStyle = { padding: "15px", textAlign: "center", color: "#2c3e50", fontSize: "1rem", borderBottom: "1px solid #eee", height: "40px", lineHeight: "40px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "150px" };
 
   return (
@@ -365,8 +386,8 @@ const Production = () => {
           ) : (
             <>
               <div className="total-results" style={{ marginBottom: "20px" }}>
-                <span>Total Orders: {filteredOrders.length}</span>
-                <span>Total Pending: {totalPending}</span>
+                <span>Total Orders: {pagination.totalCount || 0}</span>
+                <span>Total Pending: {pagination.totalPendingCount || 0}</span>
               </div>
               <div style={{ overflowX: "auto", maxHeight: "550px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: "8px", backgroundColor: "rgba(255,255,255,0.8)", boxShadow: "0 4px 8px rgba(0,0,0,0.1)", backdropFilter: "blur(10px)" }}>
                 <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0" }}>
@@ -423,6 +444,19 @@ const Production = () => {
                   </tbody>
                 </table>
               </div>
+              
+              {/* Pagination Component */}
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalCount={pagination.totalCount}
+                limit={pagination.limit}
+                hasNextPage={pagination.hasNextPage}
+                hasPrevPage={pagination.hasPrevPage}
+                onPageChange={handlePageChange}
+                onLimitChange={handleLimitChange}
+                pageSizeOptions={[10, 25, 50, 100, 200]}
+              />
             </>
           )}
         </div>

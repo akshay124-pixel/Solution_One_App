@@ -5,6 +5,7 @@ import { FaEye, FaTimes } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { exportToExcel } from "../../utils/excelHelper";
 import ViewEntry from "./ViewEntry";
+import Pagination from "../../components/Pagination";
 
 function Accounts() {
   const [orders, setOrders] = useState([]);
@@ -30,19 +31,41 @@ function Accounts() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
-  const fetchAccountsOrders = useCallback(async () => {
-    if (orders.length === 0) {
-      setLoading(true);
-    }
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageLimit, setPageLimit] = useState(50);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    totalPendingCount: 0,
+    limit: 50,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
+
+  const fetchAccountsOrders = useCallback(async (page = currentPage, limit = pageLimit) => {
+    setLoading(true);
     setError(null);
 
     try {
-      const response = await furniApi.get("/api/accounts-orders");
+      // Build query params with all active filters
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      
+      // Add filters to query params
+      if (searchQuery) params.append('search', searchQuery);
+      if (statusFilter && statusFilter !== 'All') params.append('status', statusFilter);
+      
+      const response = await furniApi.get(`/api/accounts-orders?${params.toString()}`);
 
       if (response.data.success) {
         const data = Array.isArray(response.data.data) ? response.data.data : [];
         setOrders(data);
         setFilteredOrders(data);
+        setPagination(response.data.pagination);
       } else {
         throw new Error(response.data.message || "We couldn't load your orders right now.");
       }
@@ -65,11 +88,9 @@ function Accounts() {
       setError(errorMessage);
       toast.error(errorMessage, { position: "top-right", autoClose: 5000 });
     } finally {
-      if (orders.length === 0) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
-  }, [orders.length]);
+  }, [currentPage, pageLimit, searchQuery, statusFilter]);
 
   useEffect(() => {
     if (formData.paymentReceived === "Received") {
@@ -82,50 +103,8 @@ function Accounts() {
   }, [formData.paymentReceived]);
 
   useEffect(() => {
-    fetchAccountsOrders();
+    fetchAccountsOrders(currentPage, pageLimit);
   }, [fetchAccountsOrders]);
-
-  const filterOrders = useCallback(() => {
-    let filtered = [...orders];
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter((order) => {
-        const productDetails = Array.isArray(order.products)
-          ? order.products.map((p) => `${p.productType || ""} (${p.qty || ""})`).join(", ")
-          : "";
-        return (
-          (order.billNumber || "").toLowerCase().includes(query) ||
-          (order.dispatchDate ? new Date(order.dispatchDate).toLocaleDateString() : "").toLowerCase().includes(query) ||
-          (order.shippingAddress || "").toLowerCase().includes(query) ||
-          (order.customerEmail || "").toLowerCase().includes(query) ||
-          (order.contactNo || "").toLowerCase().includes(query) ||
-          (order.total?.toString() || "").toLowerCase().includes(query) ||
-          productDetails.toLowerCase().includes(query) ||
-          (order.paymentReceived || "").toLowerCase().includes(query) ||
-          (order.paymentMethod || "").toLowerCase().includes(query) ||
-          (order.paymentCollected?.toString() || "").toLowerCase().includes(query) ||
-          (order.paymentDue?.toString() || "").toLowerCase().includes(query) ||
-          (order.neftTransactionId || "").toLowerCase().includes(query) ||
-          (order.chequeId || "").toLowerCase().includes(query) ||
-          (order.invoiceDate ? new Date(order.invoiceDate).toLocaleDateString() : "").toLowerCase().includes(query) ||
-          (order.remarksByAccounts || "").toLowerCase().includes(query) ||
-          (order.products?.[0]?.gst?.toString() || "").toLowerCase().includes(query) ||
-          (order.products?.[0]?.serialNos?.join(", ") || "").toLowerCase().includes(query) ||
-          (order.products?.[0]?.modelNos?.join(", ") || "").toLowerCase().includes(query)
-        );
-      });
-    }
-    if (statusFilter !== "All") {
-      filtered = filtered.filter(
-        (order) => (order.paymentReceived || "Not Received") === statusFilter
-      );
-    }
-    setFilteredOrders(filtered);
-  }, [orders, searchQuery, statusFilter]);
-
-  useEffect(() => {
-    filterOrders();
-  }, [filterOrders]);
 
   const uniqueStatuses = [
     "All",
@@ -229,32 +208,64 @@ function Accounts() {
   };
 
   const handleExportExcel = useCallback(async () => {
-    const exportData = filteredOrders.map((order) => {
-      const productDetails = Array.isArray(order.products)
-        ? order.products.map((p) => `${p.productType || "N/A"} (${p.qty || "N/A"})`).join(", ")
-        : "N/A";
-      return {
-        "Order ID": order.orderId || "N/A",
-        "Customer Name": order.customername || "N/A",
-        "Bill Number": order.billNumber || "N/A",
-        "PI Number": order.piNumber || "N/A",
-        "Invoice Date": order.invoiceDate ? new Date(order.invoiceDate).toLocaleDateString() : "N/A",
-        Total: order.total ? `₹${order.total.toFixed(2)}` : "N/A",
-        "Payment Collected": order.paymentCollected ? `₹${order.paymentCollected}` : "N/A",
-        "Payment Due": order.paymentDue ? `₹${order.paymentDue}` : "N/A",
-        "Payment Method": order.paymentMethod || "N/A",
-        "Payment Terms": order.paymentTerms || "N/A",
-        "Payment Received": order.paymentReceived || "Not Received",
-        Products: productDetails,
-      };
-    });
-    await exportToExcel(exportData, "Accounts Orders", `Accounts_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
-  }, [filteredOrders]);
+    try {
+      toast.info("Preparing export, please wait...", { position: "top-right", autoClose: 2000 });
+      
+      // Build query params with all active filters for export
+      const params = new URLSearchParams({ export: 'true' });
+      
+      // Add all active filters to export query
+      if (searchQuery) params.append('search', searchQuery);
+      if (statusFilter && statusFilter !== 'All') params.append('status', statusFilter);
+      
+      // Fetch ALL filtered records (no pagination) for export
+      const response = await furniApi.get(`/api/accounts-orders?${params.toString()}`);
+      if (!response.data.success) throw new Error("Export fetch failed");
+
+      const allOrders = Array.isArray(response.data.data) ? response.data.data : [];
+      const exportData = allOrders.map((order) => {
+        const productDetails = Array.isArray(order.products)
+          ? order.products.map((p) => `${p.productType || "N/A"} (${p.qty || "N/A"})`).join(", ")
+          : "N/A";
+        return {
+          "Order ID": order.orderId || "N/A",
+          "Customer Name": order.customername || "N/A",
+          "Bill Number": order.billNumber || "N/A",
+          "PI Number": order.piNumber || "N/A",
+          "Invoice Date": order.invoiceDate ? new Date(order.invoiceDate).toLocaleDateString() : "N/A",
+          Total: order.total ? `₹${order.total.toFixed(2)}` : "N/A",
+          "Payment Collected": order.paymentCollected ? `₹${order.paymentCollected}` : "N/A",
+          "Payment Due": order.paymentDue ? `₹${order.paymentDue}` : "N/A",
+          "Payment Method": order.paymentMethod || "N/A",
+          "Payment Terms": order.paymentTerms || "N/A",
+          "Payment Received": order.paymentReceived || "Not Received",
+          Products: productDetails,
+        };
+      });
+      await exportToExcel(exportData, "Accounts Orders", `Accounts_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
+      toast.success(`Exported ${allOrders.length} records successfully!`, { position: "top-right", autoClose: 3000 });
+    } catch (err) {
+      console.error("Export error:", err);
+      toast.error("Export failed. Please try again.", { position: "top-right", autoClose: 4000 });
+    }
+  }, [searchQuery, statusFilter]);
 
   const handleClearFilters = () => {
     setSearchQuery("");
     setStatusFilter("All");
+    setCurrentPage(1);
   };
+
+  // Pagination handlers
+  const handlePageChange = useCallback((newPage) => {
+    setCurrentPage(newPage);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  const handleLimitChange = useCallback((newLimit) => {
+    setPageLimit(newLimit);
+    setCurrentPage(1);
+  }, []);
 
   if (loading && orders.length === 0) {
     return (
@@ -304,8 +315,8 @@ function Accounts() {
           </div>
 
           <div className="total-results" style={{ marginBottom: "20px" }}>
-            <span>Total Orders: {filteredOrders.length}</span>
-            <span>Total Pending: {filteredOrders.filter((o) => (o.paymentReceived || "Not Received") === "Not Received").length}</span>
+            <span>Total Orders: {pagination.totalCount}</span>
+            <span>Total Pending: {pagination.totalPendingCount}</span>
           </div>
 
           <div style={{ overflowX: "auto", maxHeight: "550px", border: "1px solid rgba(0, 0, 0, 0.1)", borderRadius: "8px", backgroundColor: "rgba(255, 255, 255, 0.8)", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)" }}>
@@ -363,6 +374,21 @@ function Accounts() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Component */}
+          {filteredOrders.length > 0 && (
+            <Pagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              totalCount={pagination.totalCount}
+              limit={pagination.limit}
+              hasNextPage={pagination.hasNextPage}
+              hasPrevPage={pagination.hasPrevPage}
+              onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
+              pageSizeOptions={[10, 25, 50, 100, 200]}
+            />
+          )}
         </div>
       </div>
 

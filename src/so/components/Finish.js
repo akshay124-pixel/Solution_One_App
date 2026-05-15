@@ -13,6 +13,7 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { useRef } from "react";
 import { salesPersonlist } from "./Options";
+import Pagination from "../../components/Pagination";
 
 // Helper function to get salesperson label from value
 const getSalesPersonLabel = (value) => {
@@ -52,7 +53,8 @@ const DatePickerWrapper = styled.div`
 
 function Finish() {
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewOrder, setViewOrder] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -71,6 +73,18 @@ function Finish() {
   const [salesPersonFilter, setSalesPersonFilter] = useState("All");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const pdfRef = useRef(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageLimit, setPageLimit] = useState(50);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    limit: 50,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
   // Debounce search term update
   useEffect(() => {
@@ -95,10 +109,11 @@ function Finish() {
     "Rajisthan",
   ];
 
-  const fetchFinishedGoods = useCallback(async () => {
+  const fetchFinishedGoods = useCallback(async (page = currentPage, limit = pageLimit) => {
+    setLoading(true);
     try {
       const response = await soApi.get(
-        `/api/finished-goods`
+        `/api/finished-goods?page=${page}&limit=${limit}&search=${encodeURIComponent(debouncedSearchTerm || '')}&startDate=${startDate ? startDate.toISOString() : ''}&endDate=${endDate ? endDate.toISOString() : ''}&freightStatus=${freightStatusFilter || ''}&dispatchStatus=${dispatchStatusFilter || ''}&orderType=${orderTypeFilter || ''}&dispatchFrom=${dispatchFromFilter || ''}&dispatched=${dispatchedFilter || ''}&productionStatus=${productionStatusFilter || ''}&salesPerson=${salesPersonFilter !== 'All' ? salesPersonFilter : ''}`
       );
       if (response.data.success) {
         // Map backend 'Fulfilled' to frontend 'Completed'
@@ -116,6 +131,7 @@ function Finish() {
             return dateB - dateA;
           });
         setOrders(sortedData);
+        setPagination(response.data.pagination);
         // Removed setFilteredOrders(sortedData) - derived state now handles it
       } else {
         throw new Error(
@@ -134,11 +150,12 @@ function Finish() {
       );
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
-  }, []);
+  }, [currentPage, pageLimit, debouncedSearchTerm, startDate, endDate, freightStatusFilter, dispatchStatusFilter, orderTypeFilter, dispatchFromFilter, dispatchedFilter, productionStatusFilter, salesPersonFilter]);
 
   useEffect(() => {
-    fetchFinishedGoods();
+    fetchFinishedGoods(currentPage, pageLimit);
   }, [fetchFinishedGoods]);
 
   // PERFORMANCE: Memoize dropdown options to prevent recalculation on every render
@@ -146,156 +163,10 @@ function Finish() {
     "All",
     ...new Set(orders.map((order) => order.salesPerson).filter(Boolean)),
   ], [orders]);
-  // Apply filters, search, and calculate results using useMemo
-  // PERFORMANCE: Pre-calculate display strings to avoid recalculating in every row render
+  // PERFORMANCE OPTIMIZATION: Pre-calculate display strings once here
+  // Backend now handles ALL filtering, so we only need to map display strings
   const filteredOrders = useMemo(() => {
-    let filtered = [...orders];
-
-    // Apply freight status filter
-    if (freightStatusFilter) {
-      filtered = filtered.filter(
-        (order) => order.freightstatus === freightStatusFilter
-      );
-    }
-    if (salesPersonFilter !== "All") {
-      filtered = filtered.filter(
-        (order) => order.salesPerson === salesPersonFilter
-      );
-    }
-    // Apply dispatch status filter
-    if (dispatchStatusFilter) {
-      filtered = filtered.filter(
-        (order) => order.dispatchStatus === dispatchStatusFilter
-      );
-    }
-
-    // Apply order type filter
-    if (orderTypeFilter) {
-      filtered = filtered.filter(
-        (order) => order.orderType === orderTypeFilter
-      );
-    }
-
-    // Apply dispatchFrom filter
-    if (dispatchFromFilter) {
-      filtered = filtered.filter(
-        (order) => order.dispatchFrom === dispatchFromFilter
-      );
-    }
-
-    // Apply dispatched filter
-    if (dispatchedFilter) {
-      filtered = filtered.filter((order) =>
-        dispatchedFilter === "Dispatched"
-          ? order.dispatchStatus === "Dispatched" ||
-          order.dispatchStatus === "Docket Awaited Dispatched"
-          : order.dispatchStatus === "Not Dispatched"
-      );
-    }
-
-    // Apply production status filter
-    if (productionStatusFilter) {
-      filtered = filtered.filter(
-        (order) => order.fulfillingStatus === productionStatusFilter
-      );
-    }
-
-    // Apply date range filter
-    if (startDate || endDate) {
-      filtered = filtered.filter((order) => {
-        const orderDate = order.soDate ? new Date(order.soDate) : null;
-        const startDateAdjusted = startDate
-          ? new Date(new Date(startDate).setHours(0, 0, 0, 0))
-          : null;
-        const endDateAdjusted = endDate
-          ? new Date(new Date(endDate).setHours(23, 59, 59, 999))
-          : null;
-        return (
-          (!startDateAdjusted ||
-            (orderDate && orderDate >= startDateAdjusted)) &&
-          (!endDateAdjusted || (orderDate && orderDate <= endDateAdjusted))
-        );
-      });
-    }
-
-    // Apply search filter
-    if (debouncedSearchTerm) {
-      const lowerSearch = debouncedSearchTerm.toLowerCase().trim();
-      filtered = filtered.filter((order) => {
-        const productDetails = order.products
-          ? order.products
-            .map((p) => `${p.productType} (${p.qty})`)
-            .join(", ")
-            .toLowerCase()
-          : "";
-        const specDetails = order.products
-          ? order.products
-            .map((p) => p.spec || "N/A")
-            .join(", ")
-            .toLowerCase()
-          : "";
-        const sizeDetails = order.products
-          ? order.products
-            .map((p) => p.size || "N/A")
-            .join(", ")
-            .toLowerCase()
-          : "";
-        const totalQty = order.products
-          ? order.products.reduce((sum, p) => sum + (p.qty || 0), 0).toString()
-          : "N/A";
-        const modelNos = order.products
-          ? order.products
-            .flatMap((p) => p.modelNos || [])
-            .filter(Boolean)
-            .join(", ")
-            .toLowerCase() || "N/A"
-          : "";
-        const soDate = order.soDate
-          ? new Date(order.soDate).toLocaleDateString().toLowerCase()
-          : "N/A";
-        const dispatchFrom = order.dispatchFrom
-          ? order.dispatchFrom.toLowerCase()
-          : "N/A";
-        const productStatus = order.fulfillingStatus || "N/A";
-        const orderType = order.orderType || "N/A";
-
-        return (
-          (order.orderId || "N/A").toLowerCase().includes(lowerSearch) ||
-          (order.customername || "N/A").toLowerCase().includes(lowerSearch) ||
-          (order.contactNo || "N/A").toLowerCase().includes(lowerSearch) ||
-          (order.shippingAddress || "N/A")
-            .toLowerCase()
-            .includes(lowerSearch) ||
-          productDetails.includes(lowerSearch) ||
-          modelNos.includes(lowerSearch) ||
-          sizeDetails.includes(lowerSearch) ||
-          specDetails.includes(lowerSearch) ||
-          totalQty.includes(lowerSearch) ||
-          (order.salesPerson || "N/A").toLowerCase().includes(lowerSearch) ||
-          soDate.includes(lowerSearch) ||
-          dispatchFrom.includes(lowerSearch) ||
-          (order.freightstatus || "To Pay")
-            .toLowerCase()
-            .includes(lowerSearch) ||
-          productStatus.toLowerCase().includes(lowerSearch) ||
-          (order.dispatchStatus || "Not Dispatched")
-            .toLowerCase()
-            .includes(lowerSearch) ||
-          orderType.toLowerCase().includes(lowerSearch)
-        );
-      });
-    }
-
-    // Sort filtered orders by soDate in descending order (newest first)
-    const sorted = filtered.sort((a, b) => {
-      const dateA = a.soDate ? new Date(a.soDate) : new Date(0);
-      const dateB = b.soDate ? new Date(b.soDate) : new Date(0);
-      return dateB - dateA;
-    });
-
-    // PERFORMANCE OPTIMIZATION: Pre-calculate display strings once here
-    // instead of recalculating in every row render (eliminates 2500+ operations per render)
-    return sorted.map((order) => ({
+    return orders.map((order) => ({
       ...order,
       _displayProductDetails: order.products
         ? order.products.map((p) => `${p.productType} (${p.qty})`).join(", ")
@@ -322,33 +193,7 @@ function Finish() {
         ? new Date(order.dispatchDate).toLocaleDateString()
         : "N/A",
     }));
-  }, [
-    freightStatusFilter,
-    dispatchStatusFilter,
-    orderTypeFilter,
-    dispatchFromFilter,
-    dispatchedFilter,
-    salesPersonFilter,
-    productionStatusFilter,
-    debouncedSearchTerm,
-    startDate,
-    endDate,
-    orders,
-  ]);
-
-  const totalResults = filteredOrders.length;
-
-  // PERFORMANCE: Simplified product quantity calculation
-  const productQuantity = useMemo(() => {
-    return filteredOrders.reduce((sum, order) => {
-      return (
-        sum +
-        (order.products
-          ? order.products.reduce((sum, p) => sum + Math.floor(p.qty || 0), 0)
-          : 0)
-      );
-    }, 0);
-  }, [filteredOrders]);
+  }, [orders]);
 
   // PERFORMANCE: Memoize order types to prevent recalculation
   const uniqueOrderTypes = useMemo(() => [
@@ -368,12 +213,24 @@ function Finish() {
     setDebouncedSearchTerm("");
     setStartDate(null);
     setEndDate(null);
+    setCurrentPage(1); // Reset to first page
 
     toast.info("Filters reset!", {
       position: "top-right",
       autoClose: 3000,
     });
   };
+
+  // Pagination handlers
+  const handlePageChange = useCallback((newPage) => {
+    setCurrentPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleLimitChange = useCallback((newLimit) => {
+    setPageLimit(newLimit);
+    setCurrentPage(1); // Reset to first page when changing limit
+  }, []);
 
   // PERFORMANCE: Stable callback references prevent unnecessary re-renders
   const handleEditClick = useCallback((order) => {
@@ -580,62 +437,91 @@ function Finish() {
   };
 
   const handleExportToXLSX = async () => {
-    const tableData = filteredOrders.map((order) => ({
-      "Order ID": order.orderId || "N/A",
-      "Customer Name": order.customername || "N/A",
-      "Contact No": order.contactNo || "N/A",
-      "Delivery Address": order.shippingAddress || "N/A",
-      "Product Name": order.products
-        ? order.products.map((p) => `${p.productType} (${p.qty})`).join(", ")
-        : "N/A",
-      "Model Nos": order.products
-        ? order.products
-          .flatMap((p) => p.modelNos || [])
-          .filter(Boolean)
-          .join(", ") || "N/A"
-        : "N/A",
-      Spec: order.products
-        ? order.products.map((p) => p.spec || "N/A").join(", ")
-        : "N/A",
-      Size: order.products
-        ? order.products.map((p) => p.size || "N/A").join(", ")
-        : "N/A",
-      "Serial Nos": order.products
-        ? order.products
-          .map((p) => {
-            const serials = (p.serialNos || []).filter(Boolean);
-            return serials.length > 0
-              ? `${p.productType}: ${serials.join(", ")}`
-              : null;
-          })
-          .filter(Boolean)
-          .join("; ") || "N/A"
-        : "N/A",
-      Quantity: order.products
-        ? order.products.reduce((sum, p) => sum + (p.qty || 0), 0)
-        : "N/A",
-      "Sales Person": getSalesPersonLabel(order.salesPerson),
-      "Production Remarks": order.remarksByProduction || "N/A",
-      "SO Date": order.soDate
-        ? new Date(order.soDate).toLocaleDateString()
-        : "N/A",
-      "Dispatch Date": order.dispatchDate
-        ? new Date(order.dispatchDate).toLocaleDateString()
-        : "N/A",
-      "Dispatch From": order.dispatchFrom || "N/A",
-      "Stamp Signed": order.stamp || "N/A",
-      "Docket No": order.docketNo || "N/A",
-      Transporter: order.transporter || "N/A",
-      "Billing Status": order.billStatus || "Pending",
-      "Freight Status": order.freightstatus || "To Pay",
-      "Product Status": order.fulfillingStatus || "N/A",
-      "Dispatch Status": order.dispatchStatus || "Not Dispatched",
-    }));
+    try {
+      toast.info("Preparing export, please wait...", { position: "top-right", autoClose: 2000 });
+      
+      // Build query params with all active filters for export
+      const params = new URLSearchParams({ export: 'true' });
+      
+      // Add all active filters to export query
+      if (debouncedSearchTerm) params.append('search', debouncedSearchTerm);
+      if (startDate) params.append('startDate', startDate.toISOString());
+      if (endDate) params.append('endDate', endDate.toISOString());
+      if (freightStatusFilter) params.append('freightStatus', freightStatusFilter);
+      if (dispatchStatusFilter) params.append('dispatchStatus', dispatchStatusFilter);
+      if (orderTypeFilter) params.append('orderType', orderTypeFilter);
+      if (dispatchFromFilter) params.append('dispatchFrom', dispatchFromFilter);
+      if (dispatchedFilter) params.append('dispatched', dispatchedFilter);
+      if (productionStatusFilter) params.append('productionStatus', productionStatusFilter);
+      if (salesPersonFilter && salesPersonFilter !== 'All') params.append('salesPerson', salesPersonFilter);
+      
+      // Fetch ALL filtered records (no pagination) for export
+      const response = await soApi.get(`/api/finished-goods?${params.toString()}`);
+      if (!response.data.success) throw new Error("Export fetch failed");
 
-    await exportToExcel(tableData, "Dispatch Data", "Dispatch_Dashboard.xlsx");
+      const allOrders = Array.isArray(response.data.data) ? response.data.data : [];
+      
+      const tableData = allOrders.map((order) => ({
+        "Order ID": order.orderId || "N/A",
+        "Customer Name": order.customername || "N/A",
+        "Contact No": order.contactNo || "N/A",
+        "Delivery Address": order.shippingAddress || "N/A",
+        "Product Name": order.products
+          ? order.products.map((p) => `${p.productType} (${p.qty})`).join(", ")
+          : "N/A",
+        "Model Nos": order.products
+          ? order.products
+            .flatMap((p) => p.modelNos || [])
+            .filter(Boolean)
+            .join(", ") || "N/A"
+          : "N/A",
+        Spec: order.products
+          ? order.products.map((p) => p.spec || "N/A").join(", ")
+          : "N/A",
+        Size: order.products
+          ? order.products.map((p) => p.size || "N/A").join(", ")
+          : "N/A",
+        "Serial Nos": order.products
+          ? order.products
+            .map((p) => {
+              const serials = (p.serialNos || []).filter(Boolean);
+              return serials.length > 0
+                ? `${p.productType}: ${serials.join(", ")}`
+                : null;
+            })
+            .filter(Boolean)
+            .join("; ") || "N/A"
+          : "N/A",
+        Quantity: order.products
+          ? order.products.reduce((sum, p) => sum + (p.qty || 0), 0)
+          : "N/A",
+        "Sales Person": getSalesPersonLabel(order.salesPerson),
+        "Production Remarks": order.remarksByProduction || "N/A",
+        "SO Date": order.soDate
+          ? new Date(order.soDate).toLocaleDateString()
+          : "N/A",
+        "Dispatch Date": order.dispatchDate
+          ? new Date(order.dispatchDate).toLocaleDateString()
+          : "N/A",
+        "Dispatch From": order.dispatchFrom || "N/A",
+        "Stamp Signed": order.stamp || "N/A",
+        "Docket No": order.docketNo || "N/A",
+        Transporter: order.transporter || "N/A",
+        "Billing Status": order.billStatus || "Pending",
+        "Freight Status": order.freightstatus || "To Pay",
+        "Product Status": order.fulfillingStatus || "N/A",
+        "Dispatch Status": order.dispatchStatus || "Not Dispatched",
+      }));
+
+      await exportToExcel(tableData, "Dispatch Data", "Dispatch_Dashboard.xlsx");
+      toast.success(`Exported ${allOrders.length} records successfully!`, { position: "top-right", autoClose: 3000 });
+    } catch (err) {
+      console.error("Export error:", err);
+      toast.error("Export failed. Please try again.", { position: "top-right", autoClose: 4000 });
+    }
   };
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <div
         style={{
@@ -1133,7 +1019,7 @@ function Finish() {
             }}
             title="Total number of matching orders"
           >
-            Total Orders: {totalResults}
+            Total Orders: {pagination.totalCount || 0}
           </div>
           <div
             style={{
@@ -1147,7 +1033,7 @@ function Finish() {
             }}
             title="Total quantity of matching products"
           >
-            Total Product Quantity: {Math.floor(productQuantity)}
+            Total Product Quantity: {pagination.totalProductQty || 0}
           </div>
         </div>
 
@@ -1234,19 +1120,64 @@ function Finish() {
                 </tr>
               </thead>
               <tbody>
-                {/* PERFORMANCE: Using memoized OrderRow component prevents 500+ unnecessary re-renders */}
-                {filteredOrders.map((order, index) => (
-                  <OrderRow
-                    key={order._id}
-                    order={order}
-                    index={index}
-                    onView={handleView}
-                    onEdit={handleEditClick}
-                  />
-                ))}
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan="20"
+                      style={{
+                        padding: "40px",
+                        textAlign: "center",
+                        background: "linear-gradient(135deg, #f8f9fa, #e9ecef)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "35px",
+                          height: "35px",
+                          border: "4px solid #2575fc",
+                          borderTop: "4px solid transparent",
+                          borderRadius: "50%",
+                          animation: "spin 1s linear infinite",
+                          display: "inline-block",
+                          marginRight: "12px",
+                          verticalAlign: "middle",
+                        }}
+                      />
+                      <span style={{ fontSize: "1rem", color: "#495057", fontWeight: "500", verticalAlign: "middle" }}>
+                        Loading orders...
+                      </span>
+                    </td>
+                  </tr>
+                ) : (
+                  /* PERFORMANCE: Using memoized OrderRow component prevents 500+ unnecessary re-renders */
+                  filteredOrders.map((order, index) => (
+                    <OrderRow
+                      key={order._id}
+                      order={order}
+                      index={index}
+                      onView={handleView}
+                      onEdit={handleEditClick}
+                    />
+                  ))
+                )}
               </tbody>
             </table>
           </div>
+        )}
+
+        {/* Pagination Component */}
+        {pagination.totalCount > 0 && (
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            totalCount={pagination.totalCount}
+            limit={pagination.limit}
+            hasNextPage={pagination.hasNextPage}
+            hasPrevPage={pagination.hasPrevPage}
+            onPageChange={handlePageChange}
+            onLimitChange={handleLimitChange}
+            pageSizeOptions={[10, 25, 50, 100, 200]}
+          />
         )}
       </div>
 

@@ -18,6 +18,7 @@ import debounce from "lodash/debounce";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { salesPersonlist } from "./Options";
+import Pagination from "../../components/Pagination";
 
 // Helper function to get salesperson label from value
 const getSalesPersonLabel = (value) => {
@@ -31,7 +32,8 @@ function Installation() {
   // Optimization: specific state for input vs filtering
   const [localSearch, setLocalSearch] = useState("");
   // const [filteredOrders, setFilteredOrders] = useState([]); // Removed: derived via useMemo
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewOrder, setViewOrder] = useState(null);
@@ -48,21 +50,44 @@ function Installation() {
   const [salesPersonFilter, setSalesPersonFilter] = useState("All");
   const [InstallationFilter, setInstallationFilter] = useState("All");
   const [orderTypeFilter, setOrderTypeFilter] = useState("");
-  const fetchInstallationOrders = useCallback(async () => {
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageLimit, setPageLimit] = useState(50);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    limit: 50,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
+
+  const fetchInstallationOrders = useCallback(async (page = currentPage, limit = pageLimit) => {
     setLoading(true);
     setError(null);
     try {
+      // Build query params with all active filters
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      
+      // Add filters to query params
+      if (searchQuery) params.append('search', searchQuery);
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+      if (statusFilter && statusFilter !== 'All') params.append('status', statusFilter);
+      if (salesPersonFilter && salesPersonFilter !== 'All') params.append('salesPerson', salesPersonFilter);
+      if (orderTypeFilter) params.append('orderType', orderTypeFilter);
+      if (InstallationFilter && InstallationFilter !== 'All') params.append('installationFilter', InstallationFilter);
+      
       const response = await soApi.get(
-        `/api/installation-orders`
+        `/api/installation-orders?${params.toString()}`
       );
       if (response.data.success) {
-        const filteredData = response.data.data.filter(
-          (doc) =>
-            doc.dispatchStatus === "Delivered" &&
-            doc.installchargesstatus !== "Not in Scope",
-        );
-
-        setOrders(filteredData);
+        setOrders(response.data.data);
+        setPagination(response.data.pagination);
       } else {
         throw new Error(
           response.data.message || "Could not load installation orders",
@@ -86,12 +111,13 @@ function Installation() {
       toast.error(friendlyMessage, { position: "top-right", autoClose: 5000 });
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
-  }, []);
+  }, [currentPage, pageLimit, searchQuery, startDate, endDate, statusFilter, salesPersonFilter, orderTypeFilter, InstallationFilter]);
 
   useEffect(() => {
     let isMounted = true;
-    fetchInstallationOrders().then(() => {
+    fetchInstallationOrders(currentPage, pageLimit).then(() => {
       if (!isMounted) setLoading(false);
     });
     return () => {
@@ -327,68 +353,8 @@ function Installation() {
     });
   }, [orders]);
 
-  // Optimization: Filter logic via useMemo using processed orders
-  const filteredOrders = useMemo(() => {
-    let filtered = processedOrders;
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((order) => order._searchStr.includes(query));
-    }
-    if (statusFilter !== "All") {
-      filtered = filtered.filter(
-        (order) => order.installationStatus === statusFilter,
-      );
-    }
-    if (orderTypeFilter) {
-      filtered = filtered.filter(
-        (order) => order.orderType === orderTypeFilter,
-      );
-    }
-
-    if (InstallationFilter !== "All") {
-      filtered = filtered.filter((order) => {
-        if (InstallationFilter === "Not Available") {
-          const installation = order._normalizedInstallation;
-          return (
-            !installation ||
-            installation === "0" ||
-            installation === "n/a" ||
-            installation === "null" ||
-            installation === ""
-          );
-        }
-        return order.installchargesstatus === InstallationFilter;
-      });
-    }
-
-    if (salesPersonFilter !== "All") {
-      filtered = filtered.filter(
-        (order) => order.salesPerson === salesPersonFilter,
-      );
-    }
-    if (startDate) {
-      filtered = filtered.filter((order) => {
-        const orderDate = new Date(order.dispatchDate);
-        return orderDate >= new Date(startDate);
-      });
-    }
-    if (endDate) {
-      filtered = filtered.filter((order) => {
-        const orderDate = new Date(order.dispatchDate);
-        return orderDate <= new Date(endDate);
-      });
-    }
-    return filtered;
-  }, [
-    processedOrders,
-    searchQuery,
-    statusFilter,
-    orderTypeFilter,
-    InstallationFilter,
-    salesPersonFilter,
-    startDate,
-    endDate,
-  ]);
+  // Backend handles filtering, so filteredOrders = processedOrders
+  const filteredOrders = processedOrders;
 
   // Optimization: Separate sorting from filtering and rendering
   const sortedOrders = useMemo(() => {
@@ -413,14 +379,6 @@ function Installation() {
     const diffInDays = (now - dispatch) / (1000 * 60 * 60 * 24);
     return diffInDays >= 15;
   }, []);
-
-  // Calculate total pending orders (billStatus === "Pending")
-  const totalPending = useMemo(
-    () =>
-      filteredOrders.filter((order) => order.installationStatus === "Pending")
-        .length,
-    [filteredOrders],
-  );
 
   // Get unique statuses for filter dropdown
   const uniqueStatuses = useMemo(
@@ -568,6 +526,18 @@ function Installation() {
       setMailingInProgress("");
     }
   }, []);
+
+  // Pagination handlers
+  const handlePageChange = useCallback((newPage) => {
+    setCurrentPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleLimitChange = useCallback((newLimit) => {
+    setPageLimit(newLimit);
+    setCurrentPage(1); // Reset to first page when changing limit
+  }, []);
+
   const handleClearFilters = () => {
     setLocalSearch(""); // Clear local input
     updateSearchQuery(""); // Clear debounce immediately
@@ -578,42 +548,69 @@ function Installation() {
     setInstallationFilter("All");
     setStartDate("");
     setEndDate("");
+    setCurrentPage(1); // Reset to first page
   };
 
   const handleExportExcel = async () => {
-    const exportData = filteredOrders.map((order) => {
-      const productDetails = Array.isArray(order.products)
-        ? order.products
-          .map((p) => `${p.productType || "N/A"} (${p.qty || "N/A"})`)
-          .join(", ")
-        : "N/A";
+    try {
+      toast.info("Preparing export, please wait...", { position: "top-right", autoClose: 2000 });
+      
+      // Build query params with all active filters for export
+      const params = new URLSearchParams({ export: 'true' });
+      
+      // Add all active filters to export query
+      if (searchQuery) params.append('search', searchQuery);
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+      if (statusFilter && statusFilter !== 'All') params.append('status', statusFilter);
+      if (salesPersonFilter && salesPersonFilter !== 'All') params.append('salesPerson', salesPersonFilter);
+      if (orderTypeFilter) params.append('orderType', orderTypeFilter);
+      if (InstallationFilter && InstallationFilter !== 'All') params.append('installationFilter', InstallationFilter);
+      
+      // Fetch ALL filtered records (no pagination) for export
+      const response = await soApi.get(`/api/installation-orders?${params.toString()}`);
+      if (!response.data.success) throw new Error("Export fetch failed");
 
-      // 👇 Calculate total quantity from products array
-      const totalProductQty = Array.isArray(order.products)
-        ? order.products.reduce((sum, p) => sum + (Number(p.qty) || 0), 0)
-        : 0;
+      const allOrders = Array.isArray(response.data.data) ? response.data.data : [];
+      
+      const exportData = allOrders.map((order) => {
+        const productDetails = Array.isArray(order.products)
+          ? order.products
+            .map((p) => `${p.productType || "N/A"} (${p.qty || "N/A"})`)
+            .join(", ")
+          : "N/A";
 
-      return {
-        "Order ID": order.orderId || "N/A",
-        "Order Type": order.orderType || "N/A",
-        "Product Details": productDetails,
-        "Total Quantity": totalProductQty,
-        "Contact Person": order.name || "N/A",
-        "Contact No": order.contactNo || "N/A",
-        "Shipping Address": order.shippingAddress || "N/A",
-        "Charges Status": order.installchargesstatus || "N/A",
-        Charges: order.installation || "N/A",
-        "Installation Status": order.installationStatus || "Pending",
-        "Sales Person": getSalesPersonLabel(order.salesPerson),
-        City: order.city || "N/A",
-        State: order.state || "N/A",
-        deliveredDate: order.deliveredDate
-          ? new Date(order.deliveredDate).toLocaleDateString("en-GB")
-          : "N/A",
-      };
-    });
+        // Calculate total quantity from products array
+        const totalProductQty = Array.isArray(order.products)
+          ? order.products.reduce((sum, p) => sum + (Number(p.qty) || 0), 0)
+          : 0;
 
-    await exportToExcel(exportData, "Installation Orders", `Installation_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
+        return {
+          "Order ID": order.orderId || "N/A",
+          "Order Type": order.orderType || "N/A",
+          "Product Details": productDetails,
+          "Total Quantity": totalProductQty,
+          "Contact Person": order.name || "N/A",
+          "Contact No": order.contactNo || "N/A",
+          "Shipping Address": order.shippingAddress || "N/A",
+          "Charges Status": order.installchargesstatus || "N/A",
+          Charges: order.installation || "N/A",
+          "Installation Status": order.installationStatus || "Pending",
+          "Sales Person": getSalesPersonLabel(order.salesPerson),
+          City: order.city || "N/A",
+          State: order.state || "N/A",
+          deliveredDate: order.deliveredDate
+            ? new Date(order.deliveredDate).toLocaleDateString("en-GB")
+            : "N/A",
+        };
+      });
+
+      await exportToExcel(exportData, "Installation Orders", `Installation_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
+      toast.success(`Exported ${allOrders.length} records successfully!`, { position: "top-right", autoClose: 3000 });
+    } catch (err) {
+      console.error("Export error:", err);
+      toast.error("Export failed. Please try again.", { position: "top-right", autoClose: 4000 });
+    }
   };
 
   // Optimization: Memoize the table to prevent re-renders on typing
@@ -677,23 +674,60 @@ function Installation() {
             </tr>
           </thead>
           <tbody>
-            {sortedOrders.map((order, index) => (
-              <InstallationRow
-                key={order._id}
-                order={order}
-                index={index}
-                isDispatchOverdue={isDispatchOverdue}
-                handleView={handleView}
-                handleEdit={handleEdit}
-                handleSendMail={handleSendMail}
-                mailingInProgress={mailingInProgress}
-              />
-            ))}
+            {loading ? (
+              <tr>
+                <td
+                  colSpan="11"
+                  style={{
+                    padding: "40px",
+                    textAlign: "center",
+                    background: "linear-gradient(135deg, #f8f9fa, #e9ecef)",
+                  }}
+                >
+                  <Spinner
+                    animation="border"
+                    style={{ width: "35px", height: "35px", color: "#2575fc", marginRight: "12px" }}
+                  />
+                  <span style={{ fontSize: "1rem", color: "#495057", fontWeight: "500" }}>
+                    Loading orders...
+                  </span>
+                </td>
+              </tr>
+            ) : sortedOrders.length === 0 ? (
+              <tr>
+                <td
+                  colSpan="11"
+                  style={{
+                    padding: "40px",
+                    textAlign: "center",
+                    color: "#6b7280",
+                    fontStyle: "italic",
+                    background: "linear-gradient(135deg, #f8f9fa, #e9ecef)",
+                  }}
+                >
+                  No installation orders available at this time.
+                </td>
+              </tr>
+            ) : (
+              sortedOrders.map((order, index) => (
+                <InstallationRow
+                  key={order._id}
+                  order={order}
+                  index={index}
+                  isDispatchOverdue={isDispatchOverdue}
+                  handleView={handleView}
+                  handleEdit={handleEdit}
+                  handleSendMail={handleSendMail}
+                  mailingInProgress={mailingInProgress}
+                />
+              ))
+            )}
           </tbody>
         </table>
       </div>
     ),
     [
+      loading,
       sortedOrders,
       isDispatchOverdue,
       handleView,
@@ -703,7 +737,7 @@ function Installation() {
     ],
   );
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <div
         style={{
@@ -1085,8 +1119,8 @@ function Installation() {
           </div>
         </div>
         <div className="total-results my-3">
-          <span>Total Orders: {filteredOrders.length}</span>
-          <span>Total Pending: {totalPending}</span>
+          <span>Total Orders: {pagination.totalCount || 0}</span>
+          <span>Total Pending: {pagination.totalPendingCount || 0}</span>
         </div>
         <div style={{ padding: "20px", flex: 1 }}>
           {error && (
@@ -1127,7 +1161,7 @@ function Installation() {
             </div>
           )}
 
-          {filteredOrders.length === 0 && !error ? (
+          {filteredOrders.length === 0 && !error && !loading ? (
             <div
               style={{
                 background: "linear-gradient(135deg, #ff6b6b, #ff8787)",
@@ -1143,7 +1177,24 @@ function Installation() {
               No installation orders available at this time.
             </div>
           ) : (
-            tableContent
+            <>
+              {tableContent}
+
+              {/* Pagination Component */}
+              {pagination.totalCount > 0 && (
+                <Pagination
+                  currentPage={pagination.currentPage}
+                  totalPages={pagination.totalPages}
+                  totalCount={pagination.totalCount}
+                  limit={pagination.limit}
+                  hasNextPage={pagination.hasNextPage}
+                  hasPrevPage={pagination.hasPrevPage}
+                  onPageChange={handlePageChange}
+                  onLimitChange={handleLimitChange}
+                  pageSizeOptions={[10, 25, 50, 100, 200]}
+                />
+              )}
+            </>
           )}
         </div>
         {/* View Modal */}

@@ -47,8 +47,20 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
     resolved: 0,
     closed: 0,
     total: 0,
+    callTypes: {
+      siteSurvey: 0,
+      installation: 0,
+      inspection: 0,
+      serviceRequest: 0
+    }
   });
   
+  // Pagination State for Service Logs
+  const [servicePage, setServicePage] = useState(1);
+  const [serviceLimit, setServiceLimit] = useState(20);
+  const [serviceTotalPages, setServiceTotalPages] = useState(1);
+  const [debouncedServiceLogsSearch, setDebouncedServiceLogsSearch] = useState("");
+
   // Replacement/Demo Logs State
   const [replacementDemoLogs, setReplacementDemoLogs] = useState([]);
   const [selectedReplacementDemoLog, setSelectedReplacementDemoLog] = useState(null);
@@ -64,74 +76,45 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   const [replacementStartDate, setReplacementStartDate] = useState("");
   const [replacementEndDate, setReplacementEndDate] = useState("");
 
-  // Filter service logs based on search, status, call type, state, and date range
-  const filteredServiceLogs = serviceLogs.filter((log) => {
-    const matchesSearch = !serviceLogsSearch || 
-      log.complaintNumber?.toLowerCase().includes(serviceLogsSearch.toLowerCase()) ||
-      log.orderId?.toLowerCase().includes(serviceLogsSearch.toLowerCase()) ||
-      log.orderDetails?.customername?.toLowerCase().includes(serviceLogsSearch.toLowerCase()) ||
-      log.orderDetails?.billNumber?.toLowerCase().includes(serviceLogsSearch.toLowerCase()) ||
-      log.issue?.toLowerCase().includes(serviceLogsSearch.toLowerCase());
-    
-    const matchesStatus = !statusFilter || log.serviceStatus === statusFilter;
-    
-    const matchesCallType = !callTypeFilter || log.callType === callTypeFilter;
-    
-    const matchesState = !stateFilter || log.state === stateFilter;
-    
-    // Date range filter (based on createdAt)
-    let matchesDateRange = true;
-    if (startDate || endDate) {
-      const logDate = new Date(log.createdAt);
-      if (startDate) {
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        matchesDateRange = matchesDateRange && logDate >= start;
-      }
-      if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        matchesDateRange = matchesDateRange && logDate <= end;
-      }
-    }
-    
-    return matchesSearch && matchesStatus && matchesCallType && matchesState && matchesDateRange;
-  });
-  
-  // Filter replacement/demo logs based on search, approval status, and date range
-  const filteredReplacementDemoLogs = replacementDemoLogs.filter((log) => {
-    const matchesSearch = !replacementSearchTerm || 
-      log.logNumber?.toLowerCase().includes(replacementSearchTerm.toLowerCase()) ||
-      log.orderId?.toLowerCase().includes(replacementSearchTerm.toLowerCase()) ||
-      log.orderDetails?.customername?.toLowerCase().includes(replacementSearchTerm.toLowerCase()) ||
-      log.orderDetails?.salesPerson?.toLowerCase().includes(replacementSearchTerm.toLowerCase());
-    
-    const matchesApprovalStatus = !replacementApprovalStatusFilter || log.approvalStatus === replacementApprovalStatusFilter;
-    
-    // Date range filter (based on createdAt)
-    let matchesDateRange = true;
-    if (replacementStartDate || replacementEndDate) {
-      const logDate = new Date(log.createdAt);
-      if (replacementStartDate) {
-        const start = new Date(replacementStartDate);
-        start.setHours(0, 0, 0, 0);
-        matchesDateRange = matchesDateRange && logDate >= start;
-      }
-      if (replacementEndDate) {
-        const end = new Date(replacementEndDate);
-        end.setHours(23, 59, 59, 999);
-        matchesDateRange = matchesDateRange && logDate <= end;
-      }
-    }
-    
-    return matchesSearch && matchesApprovalStatus && matchesDateRange;
+  // Pagination State for Replacement Logs
+  const [replacementPage, setReplacementPage] = useState(1);
+  const [replacementLimit, setReplacementLimit] = useState(20);
+  const [replacementTotalPages, setReplacementTotalPages] = useState(1);
+  const [debouncedReplacementSearch, setDebouncedReplacementSearch] = useState("");
+  const [replacementStats, setReplacementStats] = useState({
+    total: 0, pending: 0, proceedForApproval: 0, approved: 0, rejected: 0, closed: 0
   });
 
-  // Fetch service logs on mount
+  // Debounce searches
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedServiceLogsSearch(serviceLogsSearch), 500);
+    return () => clearTimeout(timer);
+  }, [serviceLogsSearch]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedReplacementSearch(replacementSearchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [replacementSearchTerm]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setServicePage(1);
+  }, [debouncedServiceLogsSearch, statusFilter, callTypeFilter, stateFilter, startDate, endDate]);
+
+  useEffect(() => {
+    setReplacementPage(1);
+  }, [debouncedReplacementSearch, replacementApprovalStatusFilter, replacementStartDate, replacementEndDate]);
+
+  // Fetch service logs on mount and when filters/pagination change
   useEffect(() => {
     fetchServiceLogs();
-    fetchDashboardStats();
+  }, [servicePage, serviceLimit, debouncedServiceLogsSearch, statusFilter, callTypeFilter, stateFilter, startDate, endDate]);
+
+  useEffect(() => {
     fetchReplacementDemoLogs();
+  }, [replacementPage, replacementLimit, debouncedReplacementSearch, replacementApprovalStatusFilter, replacementStartDate, replacementEndDate]);
+
+  useEffect(() => {
     fetchUserRole();
   }, []);
 
@@ -139,7 +122,6 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   useEffect(() => {
     if (refreshTrigger > 0) {
       fetchReplacementDemoLogs();
-      fetchDashboardStats();
     }
   }, [refreshTrigger]);
 
@@ -147,10 +129,25 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
     setLoading(true);
     try {
       const response = await serviceApi.get("/service-logs", {
-        params: { limit: 100 },
+        params: { 
+          page: servicePage,
+          limit: serviceLimit,
+          search: debouncedServiceLogsSearch,
+          status: statusFilter,
+          callType: callTypeFilter,
+          state: stateFilter,
+          startDate: startDate,
+          endDate: endDate
+        },
       });
       if (response.data.success) {
         setServiceLogs(response.data.logs);
+        if (response.data.pagination) {
+          setServiceTotalPages(response.data.pagination.pages);
+        }
+        if (response.data.counts) {
+          setStats(response.data.counts);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch service logs:", error);
@@ -160,28 +157,32 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
     }
   };
 
-  const fetchDashboardStats = async () => {
-    try {
-      const response = await serviceApi.get("/dashboard-stats");
-      if (response.data.success) {
-        setStats(response.data.stats);
-      }
-    } catch (error) {
-      console.error("Failed to fetch dashboard stats:", error);
-    }
-  };
-  
   const fetchReplacementDemoLogs = async () => {
     setReplacementDemoLoading(true);
     try {
-      const response = await serviceApi.get("/replacement-demo-logs");
+      const response = await serviceApi.get("/replacement-demo-logs", {
+        params: {
+          page: replacementPage,
+          limit: replacementLimit,
+          search: debouncedReplacementSearch,
+          approvalStatus: replacementApprovalStatusFilter,
+          startDate: replacementStartDate,
+          endDate: replacementEndDate
+        }
+      });
       if (response.data.success) {
-        setReplacementDemoLogs(response.data.data || []); // API returns 'data' not 'logs'
+        setReplacementDemoLogs(response.data.data || []);
+        if (response.data.pagination) {
+          setReplacementTotalPages(response.data.pagination.pages);
+        }
+        if (response.data.counts) {
+          setReplacementStats(response.data.counts);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch replacement logs:", error);
       toast.error("Failed to load replacement logs");
-      setReplacementDemoLogs([]); // Ensure we set an empty array on error
+      setReplacementDemoLogs([]); 
     } finally {
       setReplacementDemoLoading(false);
     }
@@ -207,7 +208,6 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
 
   const handleManualRequestSuccess = () => {
     fetchServiceLogs();
-    fetchDashboardStats();
     setShowManualRequestModal(false);
   };
 
@@ -223,7 +223,6 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
 
   const handleCallLogSuccess = () => {
     fetchServiceLogs();
-    fetchDashboardStats();
     setShowCallLogModal(false);
     // Toast is already shown in CallLogModal component
   };
@@ -240,7 +239,6 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
 
   const handleLogUpdate = () => {
     fetchServiceLogs();
-    fetchDashboardStats();
     setShowEditLogModal(false);
     // Toast is already shown in EditServiceLog component
   };
@@ -255,7 +253,6 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
       const response = await serviceApi.delete(`/service-logs/${log._id}`);
       if (response.data.success) {
         fetchServiceLogs();
-        fetchDashboardStats();
         toast.success("Service log deleted successfully!");
       }
     } catch (error) {
@@ -267,7 +264,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchServiceLogs(), fetchDashboardStats()]);
+    await fetchServiceLogs();
     setRefreshing(false);
     toast.success("Service logs refreshed successfully!");
   };
@@ -362,6 +359,14 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
     try {
       toast.info("Preparing export...");
       const response = await serviceApi.get("/export-logs", {
+        params: {
+          search: debouncedServiceLogsSearch,
+          status: statusFilter,
+          callType: callTypeFilter,
+          state: stateFilter,
+          startDate: startDate,
+          endDate: endDate
+        },
         responseType: "blob",
       });
 
@@ -384,78 +389,17 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   const handleExportReplacementLogs = async () => {
     try {
       toast.info("Preparing replacement logs export...");
-      
-      // Use ExcelJS for export
-      const ExcelJS = await import("exceljs");
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet("Replacement Logs");
-      
-      // Define columns
-      worksheet.columns = [
-        { header: "#", key: "index", width: 8 },
-        { header: "Log Number", key: "logNumber", width: 15 },
-        { header: "Order ID", key: "orderId", width: 15 },
-        { header: "Order Type", key: "orderType", width: 15 },
-        { header: "Customer Name", key: "customerName", width: 25 },
-        { header: "Sales Person", key: "salesPerson", width: 20 },
-        { header: "Approval Status", key: "approvalStatus", width: 20 },
-        { header: "Created Date", key: "createdDate", width: 15 },
-        { header: "Remarks", key: "remarks", width: 30 },
-        { header: "Total Amount", key: "totalAmount", width: 15 },
-      ];
-      
-      // Style header row
-      worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
-      worksheet.getRow(1).fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF667eea" },
-      };
-      worksheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
-      worksheet.getRow(1).height = 25;
-      
-      // Add data rows
-      filteredReplacementDemoLogs.forEach((log, index) => {
-        worksheet.addRow({
-          index: index + 1,
-          logNumber: log.logNumber || "N/A",
-          orderId: log.orderId || "N/A",
-          orderType: log.orderDetails?.orderType || "N/A",
-          customerName: log.orderDetails?.customername || "N/A",
-          salesPerson: log.orderDetails?.salesPerson || "N/A",
-          approvalStatus: log.approvalStatus || "N/A",
-          createdDate: log.createdAt 
-            ? new Date(log.createdAt).toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })
-            : "N/A",
-          remarks: log.remarks || "N/A",
-          totalAmount: log.orderDetails?.total || "N/A",
-        });
+      const response = await serviceApi.get("/replacement-demo-logs/export", {
+        params: {
+          search: debouncedReplacementSearch,
+          approvalStatus: replacementApprovalStatusFilter,
+          startDate: replacementStartDate,
+          endDate: replacementEndDate
+        },
+        responseType: "blob",
       });
-      
-      // Add borders to all cells
-      worksheet.eachRow((row, rowNumber) => {
-        row.eachCell((cell) => {
-          cell.border = {
-            top: { style: "thin" },
-            left: { style: "thin" },
-            bottom: { style: "thin" },
-            right: { style: "thin" },
-          };
-          if (rowNumber > 1) {
-            cell.alignment = { vertical: "middle", horizontal: "left" };
-          }
-        });
-      });
-      
-      // Generate buffer and download
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
+
+      const blob = response.data;
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
       link.download = `replacement-logs-${Date.now()}.xlsx`;
@@ -463,11 +407,11 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(link.href);
-      
+
       toast.success("Replacement logs exported successfully!");
     } catch (error) {
       toast.error("Failed to export replacement logs");
-      console.error(error);
+      console.error("Export error:", error);
     }
   };
 
@@ -766,15 +710,19 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
               setStartDate={setStartDate}
               endDate={endDate}
               setEndDate={setEndDate}
-              filteredCount={filteredServiceLogs.length}
+              filteredCount={stats.total}
             />
             
             <ServiceLogsTable
-              logs={filteredServiceLogs}
+              logs={serviceLogs}
               onView={handleViewLog}
               onEdit={handleEditLog}
               onDelete={handleDeleteLog}
               loading={loading}
+              page={servicePage}
+              setPage={setServicePage}
+              totalPages={serviceTotalPages}
+              totalRecords={stats.total}
             />
           </div>
 
@@ -815,11 +763,11 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
               setStartDate={setReplacementStartDate}
               endDate={replacementEndDate}
               setEndDate={setReplacementEndDate}
-              filteredCount={filteredReplacementDemoLogs.length}
+              filteredCount={replacementStats.total}
             />
             
             <ReplacementDemoLogsTable
-              logs={filteredReplacementDemoLogs}
+              logs={replacementDemoLogs}
               onView={handleViewReplacementDemoLog}
               onEdit={handleEditReplacementDemoLog}
               onApprove={handleApproveReplacementDemoLog}
@@ -827,6 +775,10 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
               onDelete={handleDeleteReplacementDemoLog}
               loading={replacementDemoLoading}
               userRole={userRole}
+              page={replacementPage}
+              setPage={setReplacementPage}
+              totalPages={replacementTotalPages}
+              totalRecords={replacementStats.total}
             />
           </div>
 

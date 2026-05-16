@@ -170,7 +170,7 @@ const DeleteServiceLogModal = ({ isOpen, onClose, onDelete, log }) => {
               <div>
                 <strong style={{ color: "#6b7280", fontSize: "0.75rem" }}>Customer:</strong>
                 <div style={{ color: "#1f2937", fontWeight: "500", fontSize: "0.875rem" }}>
-                  {log.orderDetails?.customername || "-"}
+                  {log.serviceRequestName || log.orderDetails?.customername || log.orderDetails?.name || "-"}
                 </div>
               </div>
             </div>

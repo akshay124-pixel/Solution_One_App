@@ -3,7 +3,7 @@ import { Table, Button, Badge } from "react-bootstrap";
 import { FaEye } from "react-icons/fa";
 import { Settings } from "lucide-react";
 
-const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
+const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPage, totalPages, totalRecords }) => {
   // Get user role from localStorage - only globaladmin can delete
   const userRole = localStorage.getItem("role")?.toLowerCase() || "";
   const isGlobalAdmin = userRole === "globaladmin";
@@ -66,86 +66,61 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
     return callStatusMap[callStatus] || { bg: "#6b7280", icon: "📋" };
   };
 
-  if (loading) {
-    return (
-      <div
+  const renderLoadingOverlay = () => (
+    <div style={{
+      position: "absolute",
+      top: "50px",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: "rgba(255, 255, 255, 0.6)",
+      backdropFilter: "blur(1px)",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 10
+    }}>
+      <div 
         style={{
-          textAlign: "center",
-          padding: "60px 40px",
-          background: "white",
-          borderRadius: "12px",
-          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-          border: "1px solid #e2e8f0",
+          width: "40px",
+          height: "40px",
+          border: "3px solid #f3f4f6",
+          borderTop: "3px solid #3b82f6",
+          borderRadius: "50%",
+          animation: "spin 1s linear infinite",
+          margin: "0 auto 16px",
         }}
-      >
-        <div 
-          style={{
-            width: "40px",
-            height: "40px",
-            border: "3px solid #f3f4f6",
-            borderTop: "3px solid #3b82f6",
-            borderRadius: "50%",
-            animation: "spin 1s linear infinite",
-            margin: "0 auto 16px",
-          }}
-        />
-        <p style={{ 
-          marginTop: "12px", 
-          color: "#6b7280", 
-          fontSize: "0.875rem",
-          fontWeight: "500"
-        }}>
-          Loading service logs...
-        </p>
-        <style>
-          {`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}
-        </style>
-      </div>
-    );
-  }
+      />
+      <p style={{ color: "#6b7280", fontSize: "0.875rem", fontWeight: "500", margin: 0 }}>
+        Loading service logs...
+      </p>
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+    </div>
+  );
 
-  if (!logs || logs.length === 0) {
-    return (
-      <div
-        style={{
-          textAlign: "center",
-          padding: "60px 40px",
-          background: "white",
-          borderRadius: "12px",
-          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-          border: "1px solid #e2e8f0",
-        }}
-      >
-        <Settings 
-          size={48} 
-          style={{ 
-            color: "#9ca3af", 
-            marginBottom: "16px"
-          }} 
-        />
-        <p style={{ 
-          color: "#6b7280", 
-          fontSize: "1rem", 
-          fontWeight: "500",
-          margin: 0
-        }}>
-          No service logs found
-        </p>
-        <p style={{ 
-          color: "#9ca3af", 
-          fontSize: "0.875rem",
-          margin: "8px 0 0 0"
-        }}>
-          Create a call log to get started with service tracking
-        </p>
-      </div>
-    );
-  }
+  const renderEmptyState = () => (
+    <tr>
+      <td colSpan="11" style={{ height: "400px", textAlign: "center", verticalAlign: "middle" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+          <Settings size={48} style={{ color: "#9ca3af", marginBottom: "16px" }} />
+          <p style={{ color: "#6b7280", fontSize: "1rem", fontWeight: "500", margin: 0 }}>
+            No service logs found
+          </p>
+          <p style={{ color: "#9ca3af", fontSize: "0.875rem", margin: "8px 0 0 0" }}>
+            Create a call log to get started with service tracking
+          </p>
+        </div>
+      </td>
+    </tr>
+  );
 
   return (
     <div
@@ -155,21 +130,25 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
         boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)",
         overflow: "hidden",
         border: "none",
-        maxHeight: "600px", // Fixed height
+        display: "flex",
+        flexDirection: "column",
+        position: "relative"
       }}
     >
+      {loading && renderLoadingOverlay()}
       <div 
         className="service-logs-table-container"
         style={{ 
           overflowX: "auto", 
           overflowY: "auto", 
-          maxHeight: "600px",
+          height: "600px",
           scrollbarWidth: "thin",
           scrollbarColor: "#2575fc #e6f0fa",
-          width: "100%"
+          width: "100%",
+          position: "relative"
         }}
       >
-        <Table hover style={{ margin: 0, minWidth: "1400px", width: "max-content" }}>
+        <Table hover style={{ margin: 0, width: "100%", minWidth: "1600px" }}>
           <thead
             className="gradient-table-header"
             style={{
@@ -383,7 +362,7 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
             </tr>
           </thead>
           <tbody>
-            {logs.map((log, index) => (
+            {(!logs || logs.length === 0) && !loading ? renderEmptyState() : logs.map((log, index) => (
               <tr 
                 key={log._id || index}
                 style={{
@@ -742,6 +721,88 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading }) => {
             ))}
           </tbody>
         </Table>
+      </div>
+      
+      {/* Pagination Controls */}
+      <div style={{ 
+        display: "flex", 
+        justifyContent: "space-between", 
+        alignItems: "center", 
+        padding: "15px 20px", 
+        borderTop: "1px solid #e2e8f0", 
+        background: "#f8fafc", 
+        borderBottomLeftRadius: "12px", 
+        borderBottomRightRadius: "12px",
+        flexWrap: "wrap",
+        gap: "15px"
+      }}>
+        <div style={{ fontSize: "0.875rem", color: "#64748b", display: "flex", alignItems: "center", gap: "15px" }}>
+          <span>
+            Total Records: <span style={{ fontWeight: "600", color: "#1e293b" }}>{totalRecords || 0}</span>
+          </span>
+          <span style={{ width: "1px", height: "14px", background: "#cbd5e1" }}></span>
+          <span>
+            Page <span style={{ fontWeight: "600", color: "#1e293b" }}>{page}</span> of <span style={{ fontWeight: "600", color: "#1e293b" }}>{Math.max(1, totalPages)}</span>
+          </span>
+        </div>
+        
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage(prev => Math.max(1, prev - 1))}
+            style={{ padding: "6px 12px", fontWeight: "500", background: "white", borderRadius: "6px", border: "1px solid #cbd5e1", color: "#475569" }}
+          >
+            Prev
+          </Button>
+          
+          <div style={{ display: "flex", gap: "4px" }}>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let startPage = Math.max(1, page - 2);
+              let endPage = Math.min(totalPages, startPage + 4);
+              if (endPage - startPage < 4) {
+                startPage = Math.max(1, endPage - 4);
+              }
+              const pageNum = startPage + i;
+              if (pageNum > totalPages) return null;
+              
+              return (
+                <Button
+                  key={pageNum}
+                  variant={pageNum === page ? "primary" : "outline-secondary"}
+                  size="sm"
+                  onClick={() => setPage(pageNum)}
+                  style={{ 
+                    width: "32px", 
+                    height: "32px",
+                    padding: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: pageNum === page ? "600" : "500",
+                    borderRadius: "6px",
+                    background: pageNum === page ? "#3b82f6" : "white",
+                    color: pageNum === page ? "white" : "#475569",
+                    border: pageNum === page ? "none" : "1px solid #cbd5e1"
+                  }}
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+          </div>
+
+          <Button
+            variant="outline-primary"
+            size="sm"
+            disabled={page >= totalPages}
+            onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+            style={{ padding: "6px 12px", fontWeight: "500", background: "white", borderRadius: "6px", border: "1px solid #93c5fd", color: "#2563eb" }}
+          >
+            Next
+          </Button>
+        </div>
       </div>
       
       <style>

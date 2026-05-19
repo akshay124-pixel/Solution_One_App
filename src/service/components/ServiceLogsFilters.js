@@ -1,5 +1,5 @@
-import React from "react";
-import { X } from "lucide-react";
+import React, { useState } from "react";
+import { X, ChevronDown } from "lucide-react";
 
 const ServiceLogsFilters = ({
   serviceLogsSearch,
@@ -15,9 +15,14 @@ const ServiceLogsFilters = ({
   setStartDate,
   endDate,
   setEndDate,
-  filteredCount
+  filteredCount,
+  salespersons = [],
+  salesPersonFilter,
+  setSalesPersonFilter
 }) => {
-  const hasActiveFilters = serviceLogsSearch || statusFilter || callTypeFilter || stateFilter || startDate || endDate;
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
+  const hasActiveFilters = serviceLogsSearch || statusFilter || callTypeFilter || stateFilter || salesPersonFilter || startDate || endDate;
 
   const clearAllFilters = () => {
     setServiceLogsSearch("");
@@ -26,10 +31,16 @@ const ServiceLogsFilters = ({
     setStateFilter("");
     setStartDate("");
     setEndDate("");
+    setSalesPersonFilter("");
+  };
+
+  const handleSalespersonSelect = (value) => {
+    setSalesPersonFilter(value);
+    setIsDropdownOpen(false);
   };
 
   return (
-    <div style={{ 
+    <div style={{
       marginBottom: "20px",
       background: "white",
       padding: "20px",
@@ -38,10 +49,10 @@ const ServiceLogsFilters = ({
       border: "1px solid #e2e8f0"
     }}>
       {/* Single Row with Search and All Filters */}
-      <div style={{ 
-        display: "flex", 
-        gap: "10px", 
-        alignItems: "center", 
+      <div style={{
+        display: "flex",
+        gap: "10px",
+        alignItems: "center",
         flexWrap: "wrap",
         marginBottom: hasActiveFilters ? "16px" : "0"
       }}>
@@ -140,6 +151,117 @@ const ServiceLogsFilters = ({
           </select>
         </div>
 
+        {/* Salesperson Filter */}
+        <div style={{ flex: "0 0 auto", position: "relative" }}>
+          <div
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            style={{
+              padding: "10px 12px",
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+              fontSize: "0.875rem",
+              background: "white",
+              minWidth: "220px",
+              width: "220px",
+              height: "42px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              userSelect: "none"
+            }}
+          >
+            <span style={{ color: salesPersonFilter ? "#000" : "#6b7280" }}>
+              {salesPersonFilter ? `👤 ${salesPersonFilter}` : "All Salespersons"}
+            </span>
+            <ChevronDown 
+              size={16} 
+              style={{ 
+                transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 0.2s ease"
+              }} 
+            />
+          </div>
+          
+          {isDropdownOpen && (
+            <>
+              <div 
+                style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 999
+                }}
+                onClick={() => setIsDropdownOpen(false)}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  background: "white",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "8px",
+                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+                  zIndex: 1000,
+                  maxHeight: "200px",
+                  overflowY: "auto",
+                  marginTop: "2px"
+                }}
+              >
+                <div
+                  onClick={() => handleSalespersonSelect("")}
+                  style={{
+                    padding: "10px 12px",
+                    cursor: "pointer",
+                    fontSize: "0.875rem",
+                    borderBottom: "1px solid #f3f4f6",
+                    background: !salesPersonFilter ? "#f8fafc" : "white",
+                    color: !salesPersonFilter ? "#3b82f6" : "#374151"
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!salesPersonFilter) return;
+                    e.target.style.background = "#f8fafc";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!salesPersonFilter) return;
+                    e.target.style.background = "white";
+                  }}
+                >
+                  All Salespersons
+                </div>
+                {salespersons.map((sp) => (
+                  <div
+                    key={sp.name}
+                    onClick={() => handleSalespersonSelect(sp.name)}
+                    style={{
+                      padding: "10px 12px",
+                      cursor: "pointer",
+                      fontSize: "0.875rem",
+                      borderBottom: "1px solid #f3f4f6",
+                      background: salesPersonFilter === sp.name ? "#f8fafc" : "white",
+                      color: salesPersonFilter === sp.name ? "#3b82f6" : "#374151"
+                    }}
+                    onMouseEnter={(e) => {
+                      if (salesPersonFilter === sp.name) return;
+                      e.target.style.background = "#f8fafc";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (salesPersonFilter === sp.name) return;
+                      e.target.style.background = "white";
+                    }}
+                  >
+                    👤 {sp.name}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
         {/* Start Date Filter */}
         <div style={{ flex: "0 0 auto" }}>
           <input
@@ -208,9 +330,9 @@ const ServiceLogsFilters = ({
 
       {/* Active Filters Display */}
       {hasActiveFilters && (
-        <div style={{ 
-          padding: "12px", 
-          background: "#f8fafc", 
+        <div style={{
+          padding: "12px",
+          background: "#f8fafc",
           borderRadius: "8px",
           border: "1px solid #e2e8f0"
         }}>
@@ -270,6 +392,18 @@ const ServiceLogsFilters = ({
                 fontWeight: "500"
               }}>
                 State: {stateFilter}
+              </span>
+            )}
+            {salesPersonFilter && (
+              <span style={{
+                padding: "4px 10px",
+                background: "#ec4899",
+                color: "white",
+                borderRadius: "6px",
+                fontSize: "0.75rem",
+                fontWeight: "500"
+              }}>
+                Salesperson: {salesPersonFilter}
               </span>
             )}
             {startDate && (

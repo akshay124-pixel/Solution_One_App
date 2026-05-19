@@ -22,6 +22,9 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
   const [serviceAttachment, setServiceAttachment] = useState(null);
   const [fileError, setFileError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [salespersons, setSalespersons] = useState([]);
+  const [salesPerson, setSalesPerson] = useState("");
+  const [address, setAddress] = useState("");
 
   const handleDownloadAttachment = async (filename) => {
     if (!filename) {
@@ -136,6 +139,20 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
   };
 
   useEffect(() => {
+    const fetchSalespersons = async () => {
+      try {
+        const response = await serviceApi.get("/salespersons");
+        if (response.data.success) {
+          setSalespersons(response.data.salespersons || []);
+        }
+      } catch (err) {
+        console.error("Failed to load salespersons:", err);
+      }
+    };
+    fetchSalespersons();
+  }, []);
+
+  useEffect(() => {
     if (log) {
       setServiceStatus(log.serviceStatus || "");
       setRemarks(log.remarks || "");
@@ -144,12 +161,14 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
       setServiceRequestEmail(log.serviceRequestEmail || "");
       setCity(log.city || "");
       setState(log.state || "");
+      setAddress(log.address || "");
       setWarrantyStatus(log.warrantyStatus || "");
       setCallType(log.callType || "");
       setIssue(log.issue || "");
       setFollowUpDate(log.followUpDate ? new Date(log.followUpDate).toISOString().split('T')[0] : "");
       setAssignedEngineers(log.assignedEngineers || []);
       setHardwareItems(log.hardwareItems || [{ description: "", quantity: "", price: "" }]);
+      setSalesPerson(log.orderDetails?.salesPerson || log.salesPerson || "");
       setServiceAttachment(null); // Reset file input for new uploads
       setFileError("");
     }
@@ -177,12 +196,14 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
       formData.append("serviceRequestEmail", serviceRequestEmail);
       formData.append("city", city);
       formData.append("state", state);
+      formData.append("address", address);
       formData.append("warrantyStatus", warrantyStatus);
       formData.append("callType", callType);
       formData.append("issue", issue);
       formData.append("followUpDate", followUpDate ? new Date(followUpDate).toISOString() : "");
       formData.append("assignedEngineers", JSON.stringify(assignedEngineers));
       formData.append("hardwareItems", JSON.stringify(callType === "Hardware" ? hardwareItems.filter(item => item.description && item.description.trim()) : []));
+      formData.append("salesPerson", salesPerson);
       
       if (serviceAttachment) {
         formData.append("serviceAttachment", serviceAttachment);
@@ -217,12 +238,14 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
     setServiceRequestEmail(log?.serviceRequestEmail || "");
     setCity(log?.city || "");
     setState(log?.state || "");
+    setAddress(log?.address || "");
     setWarrantyStatus(log?.warrantyStatus || "");
     setCallType(log?.callType || "");
     setIssue(log?.issue || "");
     setFollowUpDate(log?.followUpDate ? new Date(log.followUpDate).toISOString().split('T')[0] : "");
     setAssignedEngineers(log?.assignedEngineers || []);
     setHardwareItems(log?.hardwareItems || [{ description: "", quantity: "", price: "" }]);
+    setSalesPerson(log?.orderDetails?.salesPerson || log?.salesPerson || "");
     setServiceAttachment(null);
     setFileError("");
     onClose();
@@ -381,38 +404,78 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
                 Service Request Details
               </h6>
               
-              <Form.Group className="mb-3">
-                <Form.Label style={{ 
-                  fontWeight: "500", 
-                  color: "#374151",
-                  fontSize: "0.875rem",
-                  marginBottom: "6px"
-                }}>
-                  Customer Name
-                </Form.Label>
-                <Form.Control
-                  type="text"
-                  value={serviceRequestName}
-                  onChange={(e) => setServiceRequestName(e.target.value)}
-                  placeholder="Enter customer name..."
-                  style={{
-                    borderRadius: "8px",
-                    border: "1px solid #d1d5db",
-                    padding: "10px 12px",
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+                <Form.Group>
+                  <Form.Label style={{ 
+                    fontWeight: "500", 
+                    color: "#374151",
                     fontSize: "0.875rem",
-                    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
-                    background: "white",
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = "#f59e0b";
-                    e.target.style.boxShadow = "0 0 0 3px rgba(245, 158, 11, 0.1)";
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = "#d1d5db";
-                    e.target.style.boxShadow = "none";
-                  }}
-                />
-              </Form.Group>
+                    marginBottom: "6px"
+                  }}>
+                    Customer Name
+                  </Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={serviceRequestName}
+                    onChange={(e) => setServiceRequestName(e.target.value)}
+                    placeholder="Enter customer name..."
+                    style={{
+                      borderRadius: "8px",
+                      border: "1px solid #d1d5db",
+                      padding: "10px 12px",
+                      fontSize: "0.875rem",
+                      transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                      background: "white",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#f59e0b";
+                      e.target.style.boxShadow = "0 0 0 3px rgba(245, 158, 11, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#d1d5db";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  />
+                </Form.Group>
+
+                <Form.Group>
+                  <Form.Label style={{ 
+                    fontWeight: "500", 
+                    color: "#374151",
+                    fontSize: "0.875rem",
+                    marginBottom: "6px"
+                  }}>
+                    Salesperson
+                  </Form.Label>
+                  <Form.Select
+                    value={salesPerson}
+                    onChange={(e) => setSalesPerson(e.target.value)}
+                    style={{
+                      borderRadius: "8px",
+                      border: "1px solid #d1d5db",
+                      padding: "10px 12px",
+                      fontSize: "0.875rem",
+                      transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                      background: "white",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#f59e0b";
+                      e.target.style.boxShadow = "0 0 0 3px rgba(245, 158, 11, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#d1d5db";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  >
+                    <option value="">Select Salesperson</option>
+                    {salespersons.map((sp) => (
+                      <option key={sp.name} value={sp.name}>
+                        👤 {sp.name} ({sp.email || "No email"})
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
                 <Form.Group>
@@ -499,6 +562,41 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
                   />
                 </Form.Group>
               </div>
+
+              <Form.Group className="mb-3">
+                <Form.Label style={{ 
+                  fontWeight: "500", 
+                  color: "#374151",
+                  fontSize: "0.875rem",
+                  marginBottom: "6px"
+                }}>
+                  Address
+                </Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={2}
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Enter address..."
+                  style={{
+                    borderRadius: "8px",
+                    border: "1px solid #d1d5db",
+                    padding: "10px 12px",
+                    fontSize: "0.875rem",
+                    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                    background: "white",
+                    resize: "vertical",
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = "#f59e0b";
+                    e.target.style.boxShadow = "0 0 0 3px rgba(245, 158, 11, 0.1)";
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = "#d1d5db";
+                    e.target.style.boxShadow = "none";
+                  }}
+                />
+              </Form.Group>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
                 <Form.Group>

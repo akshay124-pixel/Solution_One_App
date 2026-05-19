@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Modal, Form, Button, Alert } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { FileText, X, Save } from "lucide-react";
@@ -16,10 +16,26 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
     warrantyStatus: "",
     callType: "",
     followUpDate: "",
+    salesPerson: "",
   });
   const [serviceAttachment, setServiceAttachment] = useState(null);
   const [fileError, setFileError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [salespersons, setSalespersons] = useState([]);
+
+  useEffect(() => {
+    const fetchSalespersons = async () => {
+      try {
+        const response = await serviceApi.get("/salespersons");
+        if (response.data.success) {
+          setSalespersons(response.data.salespersons || []);
+        }
+      } catch (err) {
+        console.error("Failed to load salespersons:", err);
+      }
+    };
+    fetchSalespersons();
+  }, []);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -90,6 +106,7 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
       formDataToSend.append("warrantyStatus", formData.warrantyStatus);
       formDataToSend.append("callType", formData.callType);
       formDataToSend.append("followUpDate", formData.followUpDate);
+      formDataToSend.append("salesPerson", formData.salesPerson);
       
       if (serviceAttachment) {
         formDataToSend.append("serviceAttachment", serviceAttachment);
@@ -126,6 +143,7 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
       warrantyStatus: "",
       callType: "",
       followUpDate: "",
+      salesPerson: "",
     });
     setServiceAttachment(null);
     setFileError("");
@@ -386,17 +404,37 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                 />
               </Form.Group>
 
-              <Form.Group className="mb-0">
-                <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
-                  Follow-up Date <span style={{ color: "#ef4444" }}>*</span>
-                </Form.Label>
-                <Form.Control
-                  type="date"
-                  value={formData.followUpDate}
-                  onChange={(e) => handleChange("followUpDate", e.target.value)}
-                  style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
-                />
-              </Form.Group>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <Form.Group className="mb-0">
+                  <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                    Follow-up Date <span style={{ color: "#ef4444" }}>*</span>
+                  </Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={formData.followUpDate}
+                    onChange={(e) => handleChange("followUpDate", e.target.value)}
+                    style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-0">
+                  <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                    Salesperson
+                  </Form.Label>
+                  <Form.Select
+                    value={formData.salesPerson}
+                    onChange={(e) => handleChange("salesPerson", e.target.value)}
+                    style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
+                  >
+                    <option value="">Select Salesperson</option>
+                    {salespersons.map((sp) => (
+                      <option key={sp.name} value={sp.name}>
+                        👤 {sp.name} ({sp.email || "No email"})
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </div>
             </div>
 
             {/* Service Attachment */}

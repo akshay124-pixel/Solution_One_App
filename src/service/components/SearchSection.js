@@ -117,7 +117,7 @@ const SearchSection = ({ onSearch, onClear, onManualRequest }) => {
             left: 0;
             right: 0;
             height: 3px;
-            background: linear-gradient(90deg, #2575fc, #6a11cb, #f093fb);
+            background: linear-gradient(90deg, #2575fc, #6a11cb);
           }
           .search-header {
             background: linear-gradient(135deg, #2575fc, #6a11cb);

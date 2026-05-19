@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense } from "react";
-import { Container, Row, Col, Card, Button } from "react-bootstrap";
-import { Download, RefreshCw, TrendingUp, Clock, CheckCircle, AlertCircle, Repeat } from "lucide-react";
+import { Container, Row, Col, Card, Button, Modal, Form, Spinner } from "react-bootstrap";
+import { Download, RefreshCw, TrendingUp, Clock, CheckCircle, AlertCircle, Repeat, X, Check } from "lucide-react";
 import SearchSection from "./SearchSection";
 import SearchResultsTable from "./SearchResultsTable";
 import ServiceLogsTable from "./ServiceLogsTable";
@@ -35,6 +35,12 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshingReplacementLogs, setRefreshingReplacementLogs] = useState(false);
+
+  // Rejection states for Replacement/Demo Logs
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [rejectionRemarks, setRejectionRemarks] = useState("");
+  const [logToReject, setLogToReject] = useState(null);
+
   const [serviceLogsSearch, setServiceLogsSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [callTypeFilter, setCallTypeFilter] = useState("");
@@ -58,6 +64,8 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   // Pagination State for Service Logs
   const [servicePage, setServicePage] = useState(1);
   const [serviceLimit, setServiceLimit] = useState(20);
+  const [salespersons, setSalespersons] = useState([]);
+  const [salesPersonFilter, setSalesPersonFilter] = useState("");
   const [serviceTotalPages, setServiceTotalPages] = useState(1);
   const [debouncedServiceLogsSearch, setDebouncedServiceLogsSearch] = useState("");
 
@@ -99,16 +107,31 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   // Reset pagination when filters change
   useEffect(() => {
     setServicePage(1);
-  }, [debouncedServiceLogsSearch, statusFilter, callTypeFilter, stateFilter, startDate, endDate]);
+  }, [debouncedServiceLogsSearch, statusFilter, callTypeFilter, stateFilter, salesPersonFilter, startDate, endDate]);
 
   useEffect(() => {
     setReplacementPage(1);
   }, [debouncedReplacementSearch, replacementApprovalStatusFilter, replacementStartDate, replacementEndDate]);
 
+  // Fetch active salespersons list on mount
+  useEffect(() => {
+    const fetchSalespersons = async () => {
+      try {
+        const response = await serviceApi.get("/salespersons");
+        if (response.data.success) {
+          setSalespersons(response.data.salespersons || []);
+        }
+      } catch (err) {
+        console.error("Failed to load salespersons:", err);
+      }
+    };
+    fetchSalespersons();
+  }, []);
+
   // Fetch service logs on mount and when filters/pagination change
   useEffect(() => {
     fetchServiceLogs();
-  }, [servicePage, serviceLimit, debouncedServiceLogsSearch, statusFilter, callTypeFilter, stateFilter, startDate, endDate]);
+  }, [servicePage, serviceLimit, debouncedServiceLogsSearch, statusFilter, callTypeFilter, stateFilter, salesPersonFilter, startDate, endDate]);
 
   useEffect(() => {
     fetchReplacementDemoLogs();
@@ -136,6 +159,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
           status: statusFilter,
           callType: callTypeFilter,
           state: stateFilter,
+          salesPerson: salesPersonFilter,
           startDate: startDate,
           endDate: endDate
         },
@@ -332,18 +356,27 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
     }
   };
   
-  const handleRejectReplacementDemoLog = async (log) => {
-    const remarks = prompt("Please enter rejection reason:");
-    if (!remarks || remarks.trim() === "") {
+  const handleRejectReplacementDemoLog = (log) => {
+    setLogToReject(log);
+    setRejectionRemarks("");
+    setShowRejectionModal(true);
+  };
+
+  const handleConfirmRejectReplacementDemoLog = async () => {
+    if (!rejectionRemarks || rejectionRemarks.trim() === "") {
       toast.warning("Rejection reason is required");
       return;
     }
     
     try {
-      const response = await serviceApi.post(`/replacement-demo-logs/${log._id}/reject`, { remarks });
+      const response = await serviceApi.post(`/replacement-demo-logs/${logToReject._id}/reject`, { 
+        remarks: rejectionRemarks 
+      });
+      
       if (response.data.success) {
         fetchReplacementDemoLogs();
         toast.success("Log rejected successfully!");
+        setShowRejectionModal(false);
         // Trigger notification bell refresh
         if (onApprovalAction) {
           onApprovalAction();
@@ -436,9 +469,9 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
       title: "Service Open",
       value: stats.open,
       icon: <AlertCircle size={24} />,
-      gradient: "linear-gradient(135deg, #f093fb, #f5576c)",
-      color: "#f5576c",
-      bgColor: "#fff0f3",
+      gradient: "linear-gradient(135deg, #6a11cb, #2575fc)",
+      color: "#2575fc",
+      bgColor: "#f0f4ff",
     },
     {
       title: "Service In Progress",
@@ -711,6 +744,9 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
               endDate={endDate}
               setEndDate={setEndDate}
               filteredCount={stats.total}
+              salespersons={salespersons}
+              salesPersonFilter={salesPersonFilter}
+              setSalesPersonFilter={setSalesPersonFilter}
             />
             
             <ServiceLogsTable
@@ -837,6 +873,78 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
             log={selectedReplacementDemoLog}
             onDelete={handleConfirmDeleteReplacementDemoLog}
           />
+
+          {/* Rejection Reason Modal */}
+          <Modal 
+            show={showRejectionModal} 
+            onHide={() => setShowRejectionModal(false)} 
+            centered
+            backdrop="static"
+            size="md"
+          >
+            <Modal.Header 
+              closeButton 
+              style={{ 
+                background: "linear-gradient(135deg, #ef4444, #dc2626)", 
+                color: "white",
+                border: "none"
+              }}
+            >
+              <Modal.Title style={{ fontWeight: "700", display: "flex", alignItems: "center", gap: "10px" }}>
+                <X size={24} />
+                Rejection Reason
+              </Modal.Title>
+            </Modal.Header>
+            <Modal.Body style={{ padding: "24px", background: "#f8fafc" }}>
+              <p style={{ color: "#475569", marginBottom: "16px", fontSize: "0.95rem" }}>
+                Please provide a detailed reason for rejecting this replacement order. This will be visible to the team.
+              </p>
+              <Form.Group>
+                <Form.Control
+                  as="textarea"
+                  rows={4}
+                  placeholder="Enter rejection reason here..."
+                  value={rejectionRemarks}
+                  onChange={(e) => setRejectionRemarks(e.target.value)}
+                  style={{
+                    borderRadius: "12px",
+                    padding: "16px",
+                    border: "1px solid #cbd5e1",
+                    fontSize: "0.95rem",
+                    boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.02)",
+                    resize: "none"
+                  }}
+                />
+              </Form.Group>
+            </Modal.Body>
+            <Modal.Footer style={{ border: "none", padding: "16px 24px", background: "#f8fafc" }}>
+              <Button 
+                variant="outline-secondary" 
+                onClick={() => setShowRejectionModal(false)}
+                style={{ borderRadius: "10px", fontWeight: "600", padding: "10px 20px" }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleConfirmRejectReplacementDemoLog}
+                disabled={!rejectionRemarks.trim()}
+                style={{ 
+                  background: "linear-gradient(135deg, #ef4444, #dc2626)", 
+                  border: "none", 
+                  borderRadius: "10px", 
+                  fontWeight: "600", 
+                  padding: "10px 24px",
+                  boxShadow: "0 4px 12px rgba(239, 68, 68, 0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px"
+                }}
+              >
+                <Check size={18} />
+                Confirm Rejection
+              </Button>
+            </Modal.Footer>
+          </Modal>
 
           {/* Reuse SO ViewEntry component */}
           <Suspense fallback={

@@ -268,7 +268,7 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
           </Alert>
 
           {/* Service Request Details */}
-          {(log.serviceRequestName || log.serviceRequestMobile || log.serviceRequestEmail) && (
+          {(log.serviceRequestName || log.serviceRequestMobile || log.serviceRequestEmail || log.orderDetails?.salesPerson || log.salesPerson) && (
             <Alert 
               style={{ 
                 marginBottom: "24px",
@@ -304,9 +304,15 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                   </div>
                 )}
                 {log.serviceRequestEmail && (
-                  <div style={{ gridColumn: "1 / -1" }}>
+                  <div style={{ gridColumn: (log.orderDetails?.salesPerson || log.salesPerson) ? "auto" : "1 / -1" }}>
                     <strong style={{ color: "#92400e", fontSize: "0.875rem" }}>Email:</strong>
                     <div style={{ color: "#1f2937", fontWeight: "500" }}>{log.serviceRequestEmail}</div>
+                  </div>
+                )}
+                {(log.orderDetails?.salesPerson || log.salesPerson) && (
+                  <div>
+                    <strong style={{ color: "#92400e", fontSize: "0.875rem" }}>Salesperson:</strong>
+                    <div style={{ color: "#1f2937", fontWeight: "500" }}>{log.orderDetails?.salesPerson || log.salesPerson}</div>
                   </div>
                 )}
               </div>

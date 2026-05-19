@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Modal, Form, Button, Alert } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { Phone, User, MessageSquare, Calendar, Send, X } from "lucide-react";
@@ -18,6 +18,31 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
   const [serviceAttachment, setServiceAttachment] = useState(null);
   const [fileError, setFileError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [salespersons, setSalespersons] = useState([]);
+  const [selectedSalesperson, setSelectedSalesperson] = useState("");
+
+  useEffect(() => {
+    const fetchSalespersons = async () => {
+      try {
+        const response = await serviceApi.get("/salespersons");
+        if (response.data.success) {
+          setSalespersons(response.data.salespersons || []);
+        }
+      } catch (err) {
+        console.error("Failed to load salespersons:", err);
+      }
+    };
+    fetchSalespersons();
+  }, []);
+
+  // When order changes, set default selectedSalesperson
+  useEffect(() => {
+    if (order?.salesPerson) {
+      setSelectedSalesperson(order.salesPerson);
+    } else {
+      setSelectedSalesperson("");
+    }
+  }, [order]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -92,6 +117,7 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
       formData.append("issue", issue);
       formData.append("remarks", remarks);
       formData.append("followUpDate", followUpDate);
+      formData.append("salesPerson", selectedSalesperson);
       
       if (serviceAttachment) {
         formData.append("serviceAttachment", serviceAttachment);
@@ -114,6 +140,7 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
         setIssue("");
         setRemarks("");
         setFollowUpDate("");
+        setSelectedSalesperson(order?.salesPerson || "");
         setServiceAttachment(null);
         setFileError("");
         onSuccess();
@@ -138,6 +165,7 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
     setIssue("");
     setRemarks("");
     setFollowUpDate("");
+    setSelectedSalesperson(order?.salesPerson || "");
     setServiceAttachment(null);
     setFileError("");
     onClose();
@@ -550,6 +578,44 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
                     <option value="">Select Warranty</option>
                     <option value="In Warranty">✅ In Warranty</option>
                     <option value="Out of Warranty">❌ Out of Warranty</option>
+                  </Form.Select>
+                </Form.Group>
+
+                <Form.Group>
+                  <Form.Label style={{ 
+                    fontWeight: "500", 
+                    color: "#374151",
+                    fontSize: "0.875rem",
+                    marginBottom: "6px"
+                  }}>
+                    Salesperson
+                  </Form.Label>
+                  <Form.Select
+                    value={selectedSalesperson}
+                    onChange={(e) => setSelectedSalesperson(e.target.value)}
+                    style={{
+                      borderRadius: "8px",
+                      border: "1px solid #d1d5db",
+                      padding: "10px 12px",
+                      fontSize: "0.875rem",
+                      transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                      background: "white",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#6366f1";
+                      e.target.style.boxShadow = "0 0 0 3px rgba(99, 102, 241, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#d1d5db";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  >
+                    <option value="">Select Salesperson</option>
+                    {salespersons.map((sp) => (
+                      <option key={sp.name} value={sp.name}>
+                        👤 {sp.name} ({sp.email || "No email"})
+                      </option>
+                    ))}
                   </Form.Select>
                 </Form.Group>
               </div>

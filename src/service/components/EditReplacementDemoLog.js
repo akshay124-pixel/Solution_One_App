@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form } from "react-bootstrap";
+import { Modal, Button, Form, Spinner } from "react-bootstrap";
 import { toast } from "react-toastify";
+import { X, Check, AlertCircle } from "lucide-react";
 import serviceApi from "../axiosSetup";
 
 const EditReplacementDemoLog = ({ isOpen, onClose, log, onUpdate, userRole }) => {
@@ -9,6 +10,10 @@ const EditReplacementDemoLog = ({ isOpen, onClose, log, onUpdate, userRole }) =>
   });
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  
+  // Rejection states
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [rejectionRemarks, setRejectionRemarks] = useState("");
 
   // Check if user is GlobalAdmin
   const normalizedRole = userRole?.toLowerCase() || "";
@@ -74,20 +79,28 @@ const EditReplacementDemoLog = ({ isOpen, onClose, log, onUpdate, userRole }) =>
     }
   };
 
-  const handleReject = async () => {
-    const remarks = prompt("Please enter rejection reason:");
-    if (!remarks || remarks.trim() === "") {
+  const handleReject = () => {
+    setRejectionRemarks("");
+    setShowRejectionModal(true);
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectionRemarks || rejectionRemarks.trim() === "") {
       toast.warning("Rejection reason is required");
       return;
     }
 
     setActionLoading(true);
     try {
-      const response = await serviceApi.post(`/replacement-demo-logs/${log._id}/reject`, { remarks });
+      const response = await serviceApi.post(`/replacement-demo-logs/${log._id}/reject`, { 
+        remarks: rejectionRemarks 
+      });
+      
       if (response.data.success) {
         toast.success("Order rejected successfully!");
         onUpdate();
         onClose();
+        setShowRejectionModal(false);
       }
     } catch (error) {
       console.error("Failed to reject:", error);
@@ -100,47 +113,74 @@ const EditReplacementDemoLog = ({ isOpen, onClose, log, onUpdate, userRole }) =>
   if (!log) return null;
 
   return (
-    <Modal show={isOpen} onHide={onClose} centered backdrop="static">
-      <style>
-        {`
-          @keyframes fadeIn {
-            0% { opacity: 0; transform: translateY(10px); }
-            100% { opacity: 1; transform: translateY(0); }
-          }
-          .edit-log-modal .modal-content {
-            animation: fadeIn 0.3s ease-out;
-            border: none;
-            border-radius: 16px;
-            overflow: hidden;
-          }
-        `}
-      </style>
-      <div className="edit-log-modal">
-        <Modal.Header
-          closeButton
-          style={{
-            background: "linear-gradient(135deg, #f59e0b, #d97706)",
-            color: "#fff",
-            padding: "20px 24px",
-            borderBottom: "none",
-          }}
-        >
-          <Modal.Title
+    <>
+      <Modal show={isOpen} onHide={onClose} centered backdrop="static" size="lg">
+        <style>
+          {`
+            @keyframes fadeIn {
+              0% { opacity: 0; transform: translateY(10px); }
+              100% { opacity: 1; transform: translateY(0); }
+            }
+            .edit-log-modal .modal-content {
+              animation: fadeIn 0.3s ease-out;
+              border: none;
+              border-radius: 16px;
+              overflow: hidden;
+            }
+            .rejection-banner {
+              background: #fee2e2;
+              border-left: 5px solid #ef4444;
+              padding: 16px 20px;
+              border-radius: 8px;
+              margin-bottom: 24px;
+              display: flex;
+              align-items: flex-start;
+              gap: 12px;
+              box-shadow: 0 4px 12px rgba(239, 68, 68, 0.05);
+            }
+          `}
+        </style>
+        <div className="edit-log-modal">
+          <Modal.Header
+            closeButton
             style={{
-              fontWeight: "700",
-              fontSize: "1.5rem",
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
+              background: "linear-gradient(135deg, #f59e0b, #d97706)",
+              color: "#fff",
+              padding: "20px 24px",
+              borderBottom: "none",
             }}
           >
-            <span style={{ fontSize: "1.3rem" }}>✏️</span>
-            Edit {log.orderType} Order Log
-          </Modal.Title>
-        </Modal.Header>
+            <Modal.Title
+              style={{
+                fontWeight: "700",
+                fontSize: "1.5rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+              }}
+            >
+              <span style={{ fontSize: "1.3rem" }}>✏️</span>
+              Edit {log.orderType} Order Log
+            </Modal.Title>
+          </Modal.Header>
 
-        <Modal.Body style={{ padding: "30px", background: "#fff" }}>
-          <Form onSubmit={handleSubmit}>
+          <Modal.Body style={{ padding: "30px", background: "#fff" }}>
+            {/* Show rejection reason at the top if status is Rejected */}
+            {log.approvalStatus === "Rejected" && log.remarks && (
+              <div className="rejection-banner">
+                <AlertCircle size={24} color="#ef4444" style={{ marginTop: "2px" }} />
+                <div>
+                  <h6 style={{ color: "#991b1b", fontWeight: "700", marginBottom: "4px", fontSize: "0.95rem" }}>
+                    Order Rejected
+                  </h6>
+                  <p style={{ color: "#b91c1c", fontSize: "0.9rem", margin: 0, lineHeight: "1.5" }}>
+                    <strong>Reason:</strong> {log.remarks}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <Form onSubmit={handleSubmit}>
             {/* Order Information Display */}
             <div
               style={{
@@ -345,6 +385,79 @@ const EditReplacementDemoLog = ({ isOpen, onClose, log, onUpdate, userRole }) =>
         </Modal.Body>
       </div>
     </Modal>
+
+    {/* Rejection Reason Modal */}
+    <Modal 
+      show={showRejectionModal} 
+      onHide={() => setShowRejectionModal(false)} 
+      centered
+      backdrop="static"
+      size="md"
+    >
+      <Modal.Header 
+        closeButton 
+        style={{ 
+          background: "linear-gradient(135deg, #ef4444, #dc2626)", 
+          color: "white",
+          border: "none"
+        }}
+      >
+        <Modal.Title style={{ fontWeight: "700", display: "flex", alignItems: "center", gap: "10px" }}>
+          <X size={24} />
+          Rejection Reason
+        </Modal.Title>
+      </Modal.Header>
+      <Modal.Body style={{ padding: "24px", background: "#f8fafc" }}>
+        <p style={{ color: "#475569", marginBottom: "16px", fontSize: "0.95rem" }}>
+          Please provide a detailed reason for rejecting this replacement order. This will be visible to the team.
+        </p>
+        <Form.Group>
+          <Form.Control
+            as="textarea"
+            rows={4}
+            placeholder="Enter rejection reason here..."
+            value={rejectionRemarks}
+            onChange={(e) => setRejectionRemarks(e.target.value)}
+            style={{
+              borderRadius: "12px",
+              padding: "16px",
+              border: "1px solid #cbd5e1",
+              fontSize: "0.95rem",
+              boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.02)",
+              resize: "none"
+            }}
+          />
+        </Form.Group>
+      </Modal.Body>
+      <Modal.Footer style={{ border: "none", padding: "16px 24px", background: "#f8fafc" }}>
+        <Button 
+          variant="outline-secondary" 
+          onClick={() => setShowRejectionModal(false)}
+          style={{ borderRadius: "10px", fontWeight: "600", padding: "10px 20px" }}
+        >
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleConfirmReject}
+          disabled={actionLoading || !rejectionRemarks.trim()}
+          style={{ 
+            background: "linear-gradient(135deg, #ef4444, #dc2626)", 
+            border: "none", 
+            borderRadius: "10px", 
+            fontWeight: "600", 
+            padding: "10px 24px",
+            boxShadow: "0 4px 12px rgba(239, 68, 68, 0.2)",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px"
+          }}
+        >
+          {actionLoading ? <Spinner animation="border" size="sm" /> : <Check size={18} />}
+          Confirm Rejection
+        </Button>
+      </Modal.Footer>
+    </Modal>
+  </>
   );
 };
 

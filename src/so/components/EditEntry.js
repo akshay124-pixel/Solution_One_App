@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { Modal, Form, Spinner, Alert } from "react-bootstrap";
 import soApi from "../../so/axiosSetup";
+import serviceApi from "../../service/axiosSetup";
 import { toast } from "react-toastify";
 import { useForm, Controller } from "react-hook-form";
 import styled from "styled-components";
@@ -224,6 +225,9 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
 
   const [, setFormData] = useState(initialFormData);
   const [poFile, setPoFile] = useState(null);
+  const [replacementApprovalStatus, setReplacementApprovalStatus] = useState(null);
+  const [fetchingReplacementStatus, setFetchingReplacementStatus] = useState(false);
+  const isReplacement = entryToEdit?.orderType === "Replacement";
   const [installationFile, setInstallationFile] = useState(null);
   const [fileError, setFileError] = useState("");
   const [installationFileError, setInstallationFileError] = useState("");
@@ -237,6 +241,28 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   useEffect(() => {
     setUserRole(localStorage.getItem("role") || "");
   }, [isOpen]);
+
+  useEffect(() => {
+    const fetchReplacementStatus = async () => {
+      if (isReplacement && entryToEdit?._id && isOpen) {
+        setFetchingReplacementStatus(true);
+        try {
+          const response = await serviceApi.get(`/replacement-demo-logs/order/${entryToEdit._id}`);
+          if (response.data.success && response.data.log) {
+            setReplacementApprovalStatus(response.data.log.approvalStatus);
+          } else {
+            setReplacementApprovalStatus("Pending");
+          }
+        } catch (error) {
+          console.error("Failed to fetch replacement approval status:", error);
+          setReplacementApprovalStatus("Pending");
+        } finally {
+          setFetchingReplacementStatus(false);
+        }
+      }
+    };
+    fetchReplacementStatus();
+  }, [isReplacement, entryToEdit?._id, isOpen]);
 
   const {
     register,
@@ -555,6 +581,10 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   };
 
   const onEditSubmit = async (data) => {
+    if (isReplacement && data.sostatus === "Approved" && replacementApprovalStatus !== "Approved") {
+      toast.error("Cannot approve replacement order without Global Admin approval!");
+      return;
+    }
     if (!showConfirm) {
       setShowConfirm(true);
       return;
@@ -764,6 +794,10 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   };
 
   const onUpdateSubmit = async () => {
+    if (isReplacement && updateData.sostatus === "Approved" && replacementApprovalStatus !== "Approved") {
+      toast.error("Cannot approve replacement order without Global Admin approval!");
+      return;
+    }
     if (!showConfirm) {
       setShowConfirm(true);
       return;
@@ -3331,12 +3365,19 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
           >
             <option value="Pending for Approval">Pending for Approval</option>
             <option value="Accounts Approved">Accounts Approved</option>
-            <option value="Approved">Approved</option>
+            <option value="Approved" disabled={isReplacement && replacementApprovalStatus !== "Approved"}>
+              Approved {isReplacement && replacementApprovalStatus !== "Approved" && "(Requires Global Admin Approval)"}
+            </option>
             <option value="Order on Hold Due to Low Price">
               On Hold
             </option>
             <option value="Order Cancelled">Order Cancelled</option>
           </Form.Select>
+          {isReplacement && replacementApprovalStatus !== "Approved" && (
+            <Form.Text className="text-danger">
+              ⚠️ {fetchingReplacementStatus ? "Checking replacement approval..." : `Replacement order is not yet approved by Global Admin (Current: ${replacementApprovalStatus || "Pending"}).`}
+            </Form.Text>
+          )}
         </Form.Group>
         {(userRole === "Admin" || userRole === "SuperAdmin" || userRole === "GlobalAdmin") && (
           <Form.Group controlId="productno">

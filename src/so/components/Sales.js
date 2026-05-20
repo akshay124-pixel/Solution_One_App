@@ -420,6 +420,7 @@ const Row = React.memo(({ index, style, data }) => {
 
   const getRowBackground = () => {
     if (order.dispatchStatus === "Order Cancelled") return "#ffebee";
+    if (order.orderType === "Replacement" && order.sostatus === "Pending for Approval") return "#fff3e0"; // Light orange for Pending Replacement
 
     if (isOrderComplete(order)) return "#ffffff";
 
@@ -445,6 +446,8 @@ const Row = React.memo(({ index, style, data }) => {
 
   const getHoverBackground = () => {
     if (order.dispatchStatus === "Order Cancelled") return "#ffcdd2";
+    if (order.orderType === "Replacement" && order.sostatus === "Pending for Approval") return "#ffe0b2"; // Slightly darker orange hover for Pending Replacement
+
     if (isOrderComplete(order)) return "#f0f7ff";
     if (order.sostatus === "Approved") return "#d1f7dc";
     if (order.sostatus === "Accounts Approved") return "#d1e4ff";

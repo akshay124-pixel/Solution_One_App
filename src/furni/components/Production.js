@@ -185,7 +185,16 @@ const Production = () => {
       const response = await furniApi.put(`/api/edit/${editOrder?._id}`, submitData);
       if (response.data.success) {
         const updatedOrder = response.data.data;
-        setOrders((prevOrders) => prevOrders.map((order) => order._id === editOrder._id ? updatedOrder : order));
+        const shouldRemove = ["Fulfilled", "Order Cancel"].includes(updatedOrder.fulfillingStatus);
+
+        setOrders((prevOrders) => {
+          if (shouldRemove) {
+            return prevOrders.filter((order) => order._id !== editOrder._id);
+          } else {
+            return prevOrders.map((order) => order._id === editOrder._id ? updatedOrder : order);
+          }
+        });
+
         setShowEditModal(false);
         toast.success("Order updated successfully!", { position: "top-right", autoClose: 3000, toastId: "update-success" });
       } else {

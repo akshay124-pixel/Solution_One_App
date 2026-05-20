@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Modal, Form, Spinner, Alert } from "react-bootstrap";
 import furniApi from "../axiosSetup";
+import serviceApi from "../../service/axiosSetup";
 import { toast } from "react-toastify";
 import { useForm, Controller } from "react-hook-form";
 import styled from "styled-components";
@@ -67,6 +68,31 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [replacementApprovalStatus, setReplacementApprovalStatus] = useState(null);
+  const [fetchingReplacementStatus, setFetchingReplacementStatus] = useState(false);
+  const isReplacement = entryToEdit?.orderType === "Replacement";
+
+  useEffect(() => {
+    const fetchReplacementStatus = async () => {
+      if (isReplacement && entryToEdit?._id && isOpen) {
+        setFetchingReplacementStatus(true);
+        try {
+          const response = await serviceApi.get(`/replacement-demo-logs/order/${entryToEdit._id}`);
+          if (response.data.success && response.data.log) {
+            setReplacementApprovalStatus(response.data.log.approvalStatus);
+          } else {
+            setReplacementApprovalStatus("Pending");
+          }
+        } catch (error) {
+          console.error("Failed to fetch replacement approval status:", error);
+          setReplacementApprovalStatus("Pending");
+        } finally {
+          setFetchingReplacementStatus(false);
+        }
+      }
+    };
+    fetchReplacementStatus();
+  }, [isReplacement, entryToEdit?._id, isOpen]);
   const [userRole, setUserRole] = useState(localStorage.getItem("role") || "");
   const [installationFile, setInstallationFile] = useState(null);
   const [installationFileError, setInstallationFileError] = useState("");
@@ -140,6 +166,10 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   const handleUpdateInputChange = useCallback((e) => { const { name, value } = e.target; setUpdateData((prev) => ({ ...prev, [name]: value })); }, []);
 
   const onEditSubmit = async (data) => {
+    if (isReplacement && data.sostatus === "Approved" && replacementApprovalStatus !== "Approved") {
+      toast.error("Cannot approve replacement order without Global Admin approval!");
+      return;
+    }
     if (!showConfirm) { setShowConfirm(true); return; }
     setLoading(true);
     try {
@@ -187,6 +217,10 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   };
 
   const onUpdateSubmit = async () => {
+    if (isReplacement && updateData.sostatus === "Approved" && replacementApprovalStatus !== "Approved") {
+      toast.error("Cannot approve replacement order without Global Admin approval!");
+      return;
+    }
     if (!showConfirm) { setShowConfirm(true); return; }
     setLoading(true);
     try {
@@ -424,7 +458,23 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   const renderUpdateForm = () => (
     <Form onSubmit={handleSubmit(onUpdateSubmit)}>
       <FormSection>
-        <Form.Group controlId="sostatus"><Form.Label>📋 SO Status</Form.Label><Form.Select value={updateData.sostatus} onChange={handleUpdateInputChange} name="sostatus"><option value="Pending for Approval">Pending for Approval</option><option value="Order Cancelled">Order Cancel</option><option value="Accounts Approved">Accounts Approved</option><option value="Approved">Approved</option><option value="Hold By Production">On Hold</option></Form.Select></Form.Group>
+        <Form.Group controlId="sostatus">
+          <Form.Label>📋 SO Status</Form.Label>
+          <Form.Select value={updateData.sostatus} onChange={handleUpdateInputChange} name="sostatus">
+            <option value="Pending for Approval">Pending for Approval</option>
+            <option value="Order Cancelled">Order Cancel</option>
+            <option value="Accounts Approved">Accounts Approved</option>
+            <option value="Approved" disabled={isReplacement && replacementApprovalStatus !== "Approved"}>
+              Approved {isReplacement && replacementApprovalStatus !== "Approved" && "(Requires Global Admin Approval)"}
+            </option>
+            <option value="Hold By Production">On Hold</option>
+          </Form.Select>
+          {isReplacement && replacementApprovalStatus !== "Approved" && (
+            <Form.Text className="text-danger">
+              ⚠️ {fetchingReplacementStatus ? "Checking replacement approval..." : `Replacement order is not yet approved by Global Admin (Current: ${replacementApprovalStatus || "Pending"}).`}
+            </Form.Text>
+          )}
+        </Form.Group>
         <Form.Group controlId="remarks"><Form.Label>✏️ Remarks</Form.Label><Form.Control as="textarea" rows={3} value={updateData.remarks} onChange={handleUpdateInputChange} name="remarks" maxLength={500} placeholder="Enter your remarks here..." /><Form.Text>{updateData.remarks.length}/500</Form.Text></Form.Group>
       </FormSection>
     </Form>

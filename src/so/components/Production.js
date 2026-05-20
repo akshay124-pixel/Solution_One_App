@@ -389,29 +389,33 @@ const Production = () => {
         submitData
       );
       if (response.data.success) {
-        setOrders((prevOrders) => {
-          if (response.data.data.fulfillingStatus === "Fulfilled") {
+        const updatedOrder = response.data.data;
+        const isFulfilled = updatedOrder.fulfillingStatus === "Fulfilled";
+
+        const updateState = (prev) => {
+          if (isFulfilled) {
             // Remove the order if its status is Fulfilled
-            const updatedOrders = prevOrders.filter(
-              (order) => order._id !== editOrder._id
-            );
-            return updatedOrders.sort((a, b) => {
-              const dateA = a.soDate ? new Date(a.soDate) : new Date(0);
-              const dateB = b.soDate ? new Date(b.soDate) : new Date(0);
-              return dateB - dateA;
-            });
+            return prev.filter((order) => order._id !== editOrder._id);
           } else {
             // Update the order in place if not Fulfilled
-            const updatedOrders = prevOrders.map((order) =>
-              order._id === editOrder._id ? response.data.data : order
+            return prev.map((order) =>
+              order._id === editOrder._id ? updatedOrder : order
             );
-            return updatedOrders.sort((a, b) => {
-              const dateA = a.soDate ? new Date(a.soDate) : new Date(0);
-              const dateB = b.soDate ? new Date(b.soDate) : new Date(0);
-              return dateB - dateA;
-            });
           }
-        });
+        };
+
+        setOrders((prev) => updateState(prev).sort((a, b) => {
+          const dateA = a.soDate ? new Date(a.soDate) : new Date(0);
+          const dateB = b.soDate ? new Date(b.soDate) : new Date(0);
+          return dateB - dateA;
+        }));
+
+        setFilteredOrders((prev) => updateState(prev).sort((a, b) => {
+          const dateA = a.soDate ? new Date(a.soDate) : new Date(0);
+          const dateB = b.soDate ? new Date(b.soDate) : new Date(0);
+          return dateB - dateA;
+        }));
+
         setShowEditModal(false);
         toast.success("Order updated successfully!", {
           position: "top-right",

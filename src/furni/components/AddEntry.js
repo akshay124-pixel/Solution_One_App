@@ -21,7 +21,7 @@ function AddEntry({ onSubmit, onClose }) {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState({ productType: "", size: "", spec: "", qty: "", modelNos: "", unitPrice: "", gst: "18", customProduct: "" });
   const [formData, setFormData] = useState({
-    soDate: new Date().toISOString().split("T")[0], name: "", city: "", state: "", pinCode: "", contactNo: "", alterno: "",
+    soDate: new Date().toISOString(), name: "", city: "", state: "", pinCode: "", contactNo: "", alterno: "",
     customerEmail: "", customername: "", report: "", freightcs: "", freightstatus: "Extra", installchargesstatus: "Extra",
     gstno: "", installation: "", remarks: "", productRemarks: "", salesPerson: "", company: "", shippingAddress: "", billingAddress: "",
     sameAddress: false, orderType: "B2C", paymentCollected: "", paymentMethod: "", paymentDue: "", neftTransactionId: "",
@@ -254,7 +254,7 @@ function AddEntry({ onSubmit, onClose }) {
   };
 
   const orderDetailsFields = [
-    { label: "SO Date *", name: "soDate", type: "date", required: true, disabled: true, value: formData.soDate, placeholder: "Select SO Date", ariaLabel: "Sales Order Date" },
+    { label: "SO Date *", name: "soDate", type: "date", required: true, disabled: true, value: formData.soDate ? formData.soDate.split("T")[0] : "", placeholder: "Select SO Date", ariaLabel: "Sales Order Date" },
     { label: "Financial Year", name: "financialYear", type: "text", disabled: true, value: financialYear, placeholder: "Financial Year", ariaLabel: "Financial Year" },
     { label: "Order Type *", name: "orderType", type: "select", options: orderTypeOptions, required: true, placeholder: "Select Order Type", ariaLabel: "Order Type" },
     { label: "Sales Person", name: "salesPerson", type: "select", options: salesPersonlist, placeholder: "Select Sales Person", ariaLabel: "Sales Person" },

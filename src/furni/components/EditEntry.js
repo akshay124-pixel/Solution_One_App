@@ -113,7 +113,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   useEffect(() => {
     if (isOpen && entryToEdit) {
       const newFormData = {
-        soDate: entryToEdit.soDate ? new Date(entryToEdit.soDate).toISOString().split("T")[0] : "",
+        soDate: entryToEdit.soDate ? new Date(entryToEdit.soDate).toISOString() : "",
         dispatchFrom: entryToEdit.dispatchFrom || "", dispatchDate: entryToEdit.dispatchDate ? new Date(entryToEdit.dispatchDate).toISOString().split("T")[0] : "",
         name: entryToEdit.name || "", city: entryToEdit.city || "", state: entryToEdit.state || "", pinCode: entryToEdit.pinCode || "",
         contactNo: entryToEdit.contactNo || "", alterno: entryToEdit.alterno || "", customerEmail: entryToEdit.customerEmail || "",
@@ -310,7 +310,36 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
     <Form onSubmit={handleSubmit(onEditSubmit)}>
       <FormSection>
         <Form.Group controlId="createdBy"><Form.Label>👤 Created By</Form.Label><Form.Control {...register("createdBy")} readOnly disabled /></Form.Group>
-        <Form.Group controlId="soDate"><Form.Label>📅 SO Date *</Form.Label><Form.Control type="date" {...register("soDate", { required: "SO Date is required" })} onChange={(e) => { setValue("soDate", e.target.value, { shouldDirty: true, shouldValidate: true }); debouncedHandleInputChange("soDate", e.target.value); }} isInvalid={!!errors.soDate} /><Form.Control.Feedback type="invalid">{errors.soDate?.message}</Form.Control.Feedback></Form.Group>
+        <Form.Group controlId="soDate">
+          <Form.Label>📅 SO Date *</Form.Label>
+          <Controller
+            name="soDate"
+            control={control}
+            rules={{ required: "SO Date is required" }}
+            render={({ field }) => (
+              <Form.Control
+                type="date"
+                {...field}
+                value={field.value ? field.value.split("T")[0] : ""}
+                onChange={(e) => {
+                  const dateVal = e.target.value;
+                  let finalValue = dateVal;
+                  if (dateVal) {
+                    const now = new Date();
+                    const timePart = now.toISOString().split("T")[1];
+                    finalValue = `${dateVal}T${timePart}`;
+                  }
+                  field.onChange(finalValue);
+                  debouncedHandleInputChange("soDate", finalValue);
+                }}
+                isInvalid={!!errors.soDate}
+              />
+            )}
+          />
+          <Form.Control.Feedback type="invalid">
+            {errors.soDate?.message}
+          </Form.Control.Feedback>
+        </Form.Group>
         <Form.Group controlId="financialYear"><Form.Label>Financial Year</Form.Label><Form.Control value={currentFinancialYear || ""} readOnly disabled /></Form.Group>
         <Form.Group controlId="dispatchFrom"><Form.Label>📍 Dispatch From</Form.Label><Form.Select {...register("dispatchFrom")} onChange={(e) => {
           const newVal = e.target.value;

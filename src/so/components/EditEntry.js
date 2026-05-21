@@ -289,7 +289,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
     if (isOpen && entryToEdit) {
       const newFormData = {
         soDate: entryToEdit.soDate
-          ? new Date(entryToEdit.soDate).toISOString().split("T")[0]
+          ? new Date(entryToEdit.soDate).toISOString()
           : "",
         dispatchFrom: entryToEdit.dispatchFrom || "",
         dispatchDate: entryToEdit.dispatchDate
@@ -957,17 +957,29 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
         </Form.Group>
         <Form.Group controlId="soDate">
           <Form.Label>📅 SO Date *</Form.Label>
-          <Form.Control
-            type="date"
-            {...register("soDate", { required: "SO Date is required" })}
-            onChange={(e) => {
-              setValue("soDate", e.target.value, {
-                shouldDirty: true,
-                shouldValidate: true,
-              });
-              debouncedHandleInputChange("soDate", e.target.value);
-            }}
-            isInvalid={!!errors.soDate}
+          <Controller
+            name="soDate"
+            control={control}
+            rules={{ required: "SO Date is required" }}
+            render={({ field }) => (
+              <Form.Control
+                type="date"
+                {...field}
+                value={field.value ? field.value.split("T")[0] : ""}
+                onChange={(e) => {
+                  const dateVal = e.target.value;
+                  let finalValue = dateVal;
+                  if (dateVal) {
+                    const now = new Date();
+                    const timePart = now.toISOString().split("T")[1];
+                    finalValue = `${dateVal}T${timePart}`;
+                  }
+                  field.onChange(finalValue);
+                  debouncedHandleInputChange("soDate", finalValue);
+                }}
+                isInvalid={!!errors.soDate}
+              />
+            )}
           />
           <Form.Control.Feedback type="invalid">
             {errors.soDate?.message}

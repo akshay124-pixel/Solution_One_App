@@ -45,7 +45,7 @@ function AddEntry({ onSubmit, onClose }) {
   });
 
   const [formData, setFormData] = useState({
-    soDate: new Date().toISOString().split("T")[0],
+    soDate: new Date().toISOString(),
     name: "",
     city: "",
     state: "",
@@ -734,7 +734,7 @@ function AddEntry({ onSubmit, onClose }) {
                   type: "date",
                   required: true,
                   disabled: true,
-                  value: formData.soDate,
+                  value: formData.soDate ? formData.soDate.split("T")[0] : "",
                 },
                 {
                   label: "Financial Year",

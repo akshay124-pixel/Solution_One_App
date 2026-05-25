@@ -3,21 +3,16 @@ import styled from "styled-components";
 import { Button, Dropdown, Spinner } from "react-bootstrap";
 import { X, Download, Calendar, ArrowRight } from "lucide-react";
 import furniApi from "../../axiosSetup";
-import { io } from "socket.io-client";
 import { toast } from "react-toastify";
+import {
+  createAuthenticatedSocket,
+  bindJoinOnConnect,
+  teardownSocket,
+} from "../../../utils/moduleSocket";
 import { exportToExcel } from "../../../utils/excelHelper";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { FINANCIAL_YEAR_OPTIONS, getCurrentFinancialYear } from "../../../shared/financialYear";
-
-const FURNI_BASE = process.env.REACT_APP_FURNI_URL || "http://localhost:5050/api/furni";
-const socketOrigin = (() => {
-  try {
-    return new URL(FURNI_BASE).origin;
-  } catch {
-    return FURNI_BASE;
-  }
-})();
 
 // Styled Components
 const DrawerOverlay = styled.div`
@@ -228,39 +223,13 @@ const SalesDashboardDrawer = ({ isOpen, onClose, userRole }) => {
     if (isOpen) {
       fetchOrders();
       
-      // Get access token from localStorage
-      let accessToken = localStorage.getItem("accessToken");
-      
-      // If no token, try to get it from session or other sources
-      if (!accessToken) {
-        console.warn("[Furni Socket] No access token found in localStorage, attempting to retrieve...");
-        // Try to get from sessionStorage as fallback
-        accessToken = sessionStorage.getItem("accessToken");
-      }
-      
-      // If still no token, don't connect yet - wait for user to be authenticated
-      if (!accessToken) {
-        console.warn("[Furni Socket] No access token available, skipping Socket.IO connection");
-        return;
-      }
-      
-      const socket = io(socketOrigin, {
-        path: "/furni/socket.io",
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        withCredentials: true,
-        transports: ["websocket", "polling"],
-        auth: {
-          token: `Bearer ${accessToken}`,
-        },
-      });
+      const userId = localStorage.getItem("furniUserId");
+      const role = localStorage.getItem("furniRole");
+      const socket = createAuthenticatedSocket({ path: "/furni/socket.io" });
+      const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role }));
 
       socket.on("connect", () => {
-        const userId = localStorage.getItem("furniUserId");
-        const role = localStorage.getItem("furniRole");
         console.log(`[Furni Socket] Client connected — socketId=${socket.id} userId=${userId} username=${role}`);
-        socket.emit("join", { userId, role });
       });
 
       socket.on("disconnect", (reason) => {
@@ -286,7 +255,10 @@ const SalesDashboardDrawer = ({ isOpen, onClose, userRole }) => {
 
       socket.on("reconnect", () => { fetchOrders(); });
 
-      return () => { socket.disconnect(); };
+      return () => {
+        unbindJoin();
+        teardownSocket(socket, ["connect", "disconnect", "orderUpdate", "reconnect", "connect_error"]);
+      };
     }
   }, [isOpen]);
 

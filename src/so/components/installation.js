@@ -11,7 +11,11 @@ import { FaEye, FaTimes, FaDownload } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { exportToExcel } from "../../utils/excelHelper";
 import "../App.css";
-import io from "socket.io-client";
+import {
+  createAuthenticatedSocket,
+  bindJoinOnConnect,
+  teardownSocket,
+} from "../../utils/moduleSocket";
 import InstallationEditModal from "./InstallationEditModal";
 import InstallationRow from "./InstallationRow";
 import debounce from "lodash/debounce";
@@ -129,25 +133,8 @@ function Installation() {
   useEffect(() => {
     const userId = localStorage.getItem("userId");
     const userRole = localStorage.getItem("role");
-    const baseOrigin = (() => {
-      try {
-        const url = new URL(
-          process.env.REACT_APP_SO_URL || window.location.origin,
-        );
-        return `${url.protocol}//${url.host}`;
-      } catch (_) {
-        return window.location.origin;
-      }
-    })();
-
-    const socket = io(baseOrigin, {
-      path: "/sales/socket.io",
-      transports: ["websocket", "polling"],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      withCredentials: true,
-    });
+    const socket = createAuthenticatedSocket({ path: "/sales/socket.io" });
+    const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role: userRole }));
 
     const meetsInstallation = (doc) =>
       doc?.dispatchStatus === "Delivered" &&
@@ -155,7 +142,6 @@ function Installation() {
 
     socket.on("connect", () => {
       console.log(`[SO Socket] Client connected — socketId=${socket.id} userId=${userId} username=${userRole}`);
-      socket.emit("join", { userId, role: userRole });
     });
 
     socket.on("disconnect", (reason) => {
@@ -201,9 +187,8 @@ function Installation() {
     });
 
     return () => {
-      socket.off("connect");
-      socket.off("orderUpdate");
-      socket.disconnect();
+      unbindJoin();
+      teardownSocket(socket, ["connect", "disconnect", "orderUpdate", "connect_error"]);
     };
   }, []);
 

@@ -10,7 +10,11 @@ import { toast } from "react-toastify";
 import { exportToExcel, readExcelFile } from "../../utils/excelHelper";
 import { BarChart2, Upload, Download, Users } from "lucide-react";
 // analytics icon: BarChart2 | upload icon: Upload | download icon: Download
-import io from "socket.io-client";
+import {
+  createAuthenticatedSocket,
+  bindJoinOnConnect,
+  teardownSocket,
+} from "../../utils/moduleSocket";
 import styled from "styled-components";
 import { FixedSizeList as List } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -400,18 +404,24 @@ const Sales = () => {
   }, [financialYearFilter]);
 
   useEffect(() => {
-    const socket = io(`${socketOrigin}`, { path: "/furni/socket.io", transports: ["websocket", "polling"], reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 1000, withCredentials: true });
-    socket.on("connect", () => { 
+    const socket = createAuthenticatedSocket({ path: "/furni/socket.io" });
+    const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role: userRole }));
+    socket.on("connect", () => {
       console.log(`[Furni Socket] Client connected — socketId=${socket.id} userId=${userId} username=${userRole}`);
-      socket.emit("join", { userId, role: userRole }); 
     });
-    socket.on("connect_error", (error) => {});
+    socket.on("connect_error", (error) => {
+      console.error("[Furni Socket] Connection error:", error?.message || error);
+    });
     socket.on("disconnect", (reason) => {
       console.log(`[Furni Socket] Client disconnected — socketId=${socket.id} userId=${userId} reason=${reason}`);
     });
     socket.on("deleteOrder", ({ _id, createdBy, assignedTo }) => {
-      const owners = [createdBy, assignedTo].filter(Boolean);
-      if (!owners.includes(userId)) return;
+      const isAdmin =
+        userRole === "SuperAdmin" ||
+        userRole === "GlobalAdmin" ||
+        userRole === "Admin";
+      const owners = [createdBy, assignedTo].filter(Boolean).map(String);
+      if (!isAdmin && !owners.includes(String(userId))) return;
       setOrders((prev) => prev.filter((o) => o._id !== _id));
       fetchDashboardCounts();
     });    socket.on("notification", (notif) => {
@@ -428,8 +438,12 @@ const Sales = () => {
       });
     });
     socket.on("orderUpdate", ({ operationType, documentId, fullDocument, createdBy, assignedTo }) => {
-      const owners = [createdBy, assignedTo].filter(Boolean);
-      if (!owners.includes(userId)) return;
+      const isAdmin =
+        userRole === "SuperAdmin" ||
+        userRole === "GlobalAdmin" ||
+        userRole === "Admin";
+      const owners = [createdBy, assignedTo].filter(Boolean).map(String);
+      if (!isAdmin && !owners.includes(String(userId))) return;
       if (operationType === "insert" && fullDocument) {
         setOrders((prev) => { if (prev.some((o) => o._id === documentId)) return prev; return [fullDocument, ...prev]; });
       }
@@ -452,9 +466,8 @@ const Sales = () => {
       finally { setIsLoading(false); }
     })();
     return () => {
-      socket.off("connect"); socket.off("connect_error"); socket.off("notification");
-      socket.off("orderUpdate"); socket.off("deleteOrder"); socket.off("dashboardCounts");
-      socket.disconnect();
+      unbindJoin();
+      teardownSocket(socket, ["connect", "connect_error", "disconnect", "notification", "orderUpdate", "deleteOrder", "dashboardCounts"]);
     };
   }, [fetchPaginatedOrders, fetchNotifications, userRole, userId, fetchDashboardCounts]);
 

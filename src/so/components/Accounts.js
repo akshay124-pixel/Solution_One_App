@@ -6,7 +6,11 @@ import { toast } from "react-toastify";
 import { exportToExcel } from "../../utils/excelHelper";
 import ViewEntry from "./ViewEntry";
 import EditAccountForm from "./EditAccountForm";
-import io from "socket.io-client";
+import {
+  createAuthenticatedSocket,
+  bindJoinOnConnect,
+  teardownSocket,
+} from "../../utils/moduleSocket";
 import debounce from "lodash/debounce";
 import Pagination from "../../components/Pagination";
 // Check Staging
@@ -87,25 +91,8 @@ function Accounts() {
   useEffect(() => {
     const userId = localStorage.getItem("userId");
     const userRole = localStorage.getItem("role");
-    const baseOrigin = (() => {
-      try {
-        const url = new URL(
-          process.env.REACT_APP_SO_URL || window.location.origin
-        );
-        return `${url.protocol}//${url.host}`;
-      } catch (_) {
-        return window.location.origin;
-      }
-    })();
-
-    const socket = io(baseOrigin, {
-      path: "/sales/socket.io",
-      transports: ["websocket", "polling"],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      withCredentials: true,
-    });
+    const socket = createAuthenticatedSocket({ path: "/sales/socket.io" });
+    const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role: userRole }));
 
     const meetsAccounts = (doc) =>
       doc?.installationStatus === "Completed" &&
@@ -113,7 +100,6 @@ function Accounts() {
 
     socket.on("connect", () => {
       console.log(`[SO Socket] Client connected — socketId=${socket.id} userId=${userId} username=${userRole}`);
-      socket.emit("join", { userId, role: userRole });
     });
 
     socket.on("disconnect", (reason) => {
@@ -156,9 +142,8 @@ function Accounts() {
     });
 
     return () => {
-      socket.off("connect");
-      socket.off("orderUpdate");
-      socket.disconnect();
+      unbindJoin();
+      teardownSocket(socket, ["connect", "disconnect", "orderUpdate", "connect_error"]);
     };
   }, []);
 

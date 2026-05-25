@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Button, Form, Badge } from "react-bootstrap";
 import { FaEye } from "react-icons/fa";
-import io from "socket.io-client";
 import ViewEntry from "./ViewEntry";
 import EditProductionApproval from "./EditProductionApproval";
 import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import { exportToExcel } from "../../utils/excelHelper";
-import { getPortalAccessToken } from "../../portal/PortalAuthContext";
+import {
+  createAuthenticatedSocket,
+  bindJoinOnConnect,
+  teardownSocket,
+} from "../../utils/moduleSocket";
 
 const ProductionApproval = () => {
   const [orders, setOrders] = useState([]);
@@ -35,29 +38,13 @@ const ProductionApproval = () => {
 
   // Socket.IO integration for real-time updates
   useEffect(() => {
-    const baseOrigin = (() => {
-      try {
-        return new URL(process.env.REACT_APP_SO_URL).origin;
-      } catch {
-        return process.env.REACT_APP_SO_URL;
-      }
-    })();
-
-    const socket = io(baseOrigin, {
-      path: "/sales/socket.io",
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      transports: ["websocket", "polling"],
-      withCredentials: true,
-      auth: { token: getPortalAccessToken() },
-    });
+    const userId = localStorage.getItem("userId");
+    const role = localStorage.getItem("role");
+    const socket = createAuthenticatedSocket({ path: "/sales/socket.io" });
+    const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role }));
 
     socket.on("connect", () => {
-      const userId = localStorage.getItem("userId");
-      const role = localStorage.getItem("role");
       console.log(`[SO Socket] Client connected — socketId=${socket.id} userId=${userId} username=${role}`);
-      socket.emit("join", { userId, role });
     });
 
     socket.on("disconnect", (reason) => {
@@ -101,15 +88,9 @@ const ProductionApproval = () => {
       });
     });
 
-    socket.on("disconnect", () => {
-    });
-
     return () => {
-      // Hinglish: Cleanup listeners to avoid duplicates / memory leaks
-      socket.off("connect");
-      socket.off("orderUpdate");
-      socket.off("disconnect");
-      socket.disconnect();
+      unbindJoin();
+      teardownSocket(socket, ["connect", "orderUpdate", "disconnect", "connect_error"]);
     };
   }, [meetsApproval]);
 

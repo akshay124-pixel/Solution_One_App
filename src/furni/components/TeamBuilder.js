@@ -4,7 +4,11 @@ import { Modal, Button, Spinner, Alert, Badge } from "react-bootstrap";
 import furniApi from "../axiosSetup";
 import { toast } from "react-toastify";
 import styled from "styled-components";
-import io from "socket.io-client";
+import {
+  createAuthenticatedSocket,
+  bindJoinOnConnect,
+  teardownSocket,
+} from "../../utils/moduleSocket";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users,
@@ -177,27 +181,13 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
   // Socket.IO for live team updates
   useEffect(() => {
     if (!isOpen) return;
-    const baseOrigin = (() => {
-      try { return new URL(process.env.REACT_APP_FURNI_URL || "http://localhost:5050").origin; }
-      catch { return "http://localhost:5050"; }
-    })();
-    const socket = io(baseOrigin, {
-      path: "/furni/socket.io",
-      transports: ["websocket", "polling"],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      withCredentials: true,
-    });
-    socket.on("connect", () => {
-      console.log(`[Furni Socket] Client connected — socketId=${socket.id} userId=${userId} username=salesperson`);
-      socket.emit("join", { userId, role: "salesperson" });
-    });
-    socket.on("disconnect", (reason) => {
-      console.log(`[Furni Socket] Client disconnected — socketId=${socket.id} userId=${userId} reason=${reason}`);
-    });
+    const socket = createAuthenticatedSocket({ path: "/furni/socket.io" });
+    const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role: localStorage.getItem("furniRole") || "salesperson" }));
     socket.on("teamUpdate", ({ leaderId }) => { if (leaderId === userId) handleRefresh(); });
-    return () => socket.disconnect();
+    return () => {
+      unbindJoin();
+      teardownSocket(socket, ["teamUpdate", "connect", "disconnect", "connect_error"]);
+    };
   }, [isOpen, userId, handleRefresh]);
 
   const getUserInitials = (username) =>

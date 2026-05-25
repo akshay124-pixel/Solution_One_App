@@ -4,8 +4,11 @@ import { Modal, Button, Spinner, Alert, Badge } from "react-bootstrap";
 import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import styled from "styled-components";
-import io from "socket.io-client";
-import { getPortalAccessToken } from "../../portal/PortalAuthContext";
+import {
+  createAuthenticatedSocket,
+  bindJoinOnConnect,
+  teardownSocket,
+} from "../../utils/moduleSocket";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users,
@@ -574,41 +577,19 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
   useEffect(() => {
     if (!isOpen) return;
 
-    const baseOrigin = (() => {
-      try {
-        return new URL(process.env.REACT_APP_SO_URL || "http://localhost:5050").origin;
-      } catch {
-        return "http://localhost:5050";
-      }
-    })();
+    const socket = createAuthenticatedSocket({ path: "/sales/socket.io" });
+    const unbindJoin = bindJoinOnConnect(socket, () => ({
+      userId,
+      role: localStorage.getItem("role") || "salesperson",
+    }));
 
-    const socket = io(baseOrigin, {
-      path: "/sales/socket.io",
-      transports: ["websocket", "polling"],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      withCredentials: true,
-      auth: { token: getPortalAccessToken() },
-    });
-
-    socket.on("connect", () => {
-      console.log(`[SO Socket] Client connected — socketId=${socket.id} userId=${userId} username=salesperson`);
-      socket.emit("join", { userId, role: "salesperson" });
-    });
-
-    socket.on("disconnect", (reason) => {
-      console.log(`[SO Socket] Client disconnected — socketId=${socket.id} userId=${userId} reason=${reason}`);
-    });
-
-    socket.on("teamUpdate", ({ userId: updatedUserId, leaderId, action }) => {
-      if (leaderId === userId) {
-        handleRefresh();
-      }
+    socket.on("teamUpdate", ({ leaderId }) => {
+      if (leaderId === userId) handleRefresh();
     });
 
     return () => {
-      socket.disconnect();
+      unbindJoin();
+      teardownSocket(socket, ["teamUpdate", "connect", "disconnect", "connect_error"]);
     };
   }, [isOpen, userId, handleRefresh]);
 

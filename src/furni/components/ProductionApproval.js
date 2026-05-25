@@ -1,21 +1,16 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Button, Form, Badge } from "react-bootstrap";
 import { FaEye } from "react-icons/fa";
-import { io } from "socket.io-client";
 import ViewEntry from "./ViewEntry";
 import EditProductionApproval from "./EditProductionApproval";
 import furniApi from "../axiosSetup";
 import { toast } from "react-toastify";
 import { exportToExcel } from "../../utils/excelHelper";
-
-const FURNI_BASE = process.env.REACT_APP_FURNI_URL || "http://localhost:5050/api/furni";
-const socketOrigin = (() => {
-  try {
-    return new URL(FURNI_BASE).origin;
-  } catch {
-    return FURNI_BASE;
-  }
-})();
+import {
+  createAuthenticatedSocket,
+  bindJoinOnConnect,
+  teardownSocket,
+} from "../../utils/moduleSocket";
 
 const ProductionApproval = () => {
   const [orders, setOrders] = useState([]);
@@ -28,46 +23,32 @@ const ProductionApproval = () => {
 
   // Socket.IO — real-time updates
   useEffect(() => {
-    const socket = io(socketOrigin, {
-      path: "/furni/socket.io",
-      transports: ["websocket", "polling"],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      withCredentials: true,
-    });
+    const userId = localStorage.getItem("furniUserId");
+    const role = localStorage.getItem("furniRole");
+    const socket = createAuthenticatedSocket({ path: "/furni/socket.io" });
+    const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role }));
 
-    socket.on("connect", () => {
-      const userId = localStorage.getItem("furniUserId");
-      const role = localStorage.getItem("furniRole");
-      console.log(`[Furni Socket] Client connected — socketId=${socket.id} userId=${userId} username=${role}`);
-      socket.emit("join", { userId, role });
-    });
+    socket.on("orderUpdate", ({ operationType, documentId, fullDocument }) => {
+      const id = String(documentId || fullDocument?._id || "");
+      if (!id || !fullDocument) return;
 
-    socket.on("disconnect", (reason) => {
-      const userId = localStorage.getItem("furniUserId");
-      console.log(`[Furni Socket] Client disconnected — socketId=${socket.id} userId=${userId} reason=${reason}`);
-    });
-
-    socket.on("updateOrder", ({ _id, customername, orderId, notification }) => {
       setOrders((prevOrders) => {
-        const nextStatus = notification?.sostatus;
-        if (nextStatus && nextStatus !== "Pending for Approval") {
-          return prevOrders.filter((o) => o._id !== _id);
+        const pending = fullDocument.sostatus === "Pending for Approval";
+        if (operationType === "delete" || !pending) {
+          return prevOrders.filter((o) => String(o._id) !== id);
         }
-        return prevOrders.map((order) =>
-          order._id === _id ? { ...order, ...notification, customername, orderId } : order
-        );
+        const idx = prevOrders.findIndex((o) => String(o._id) === id);
+        if (idx === -1) return [fullDocument, ...prevOrders];
+        const next = prevOrders.slice();
+        next[idx] = fullDocument;
+        return next;
       });
-      toast.info(`Order ${orderId} updated: ${notification?.message || "Updated"}`);
-    });
-
-    socket.on("disconnect", () => {
-      console.log("ProductionApproval: socket disconnected");
+      toast.info(`Order ${fullDocument.orderId || id} updated`);
     });
 
     return () => {
-      socket.disconnect();
+      unbindJoin();
+      teardownSocket(socket, ["orderUpdate", "connect", "disconnect", "connect_error"]);
     };
   }, []);
 

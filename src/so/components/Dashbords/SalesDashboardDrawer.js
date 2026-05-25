@@ -3,8 +3,12 @@ import styled from "styled-components";
 import { Button, Form } from "react-bootstrap";
 import { X, Download, Calendar } from "lucide-react";
 import soApi from "../../../so/axiosSetup";
-import { io } from "socket.io-client";
 import { toast } from "react-toastify";
+import {
+  createAuthenticatedSocket,
+  bindJoinOnConnect,
+  teardownSocket,
+} from "../../../utils/moduleSocket";
 import { exportToExcel } from "../../../utils/excelHelper";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -606,45 +610,11 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
           );
         }
       })();
-      const baseOrigin = (() => {
-        try {
-          return new URL(process.env.REACT_APP_SO_URL).origin;
-        } catch {
-          return process.env.REACT_APP_SO_URL;
-        }
-      })();
-      
-      // Get access token from localStorage
-      let accessToken = localStorage.getItem("accessToken");
-      
-      // If no token, try to get it from session or other sources
-      if (!accessToken) {
-        console.warn("[SO Socket] No access token found in localStorage, attempting to retrieve...");
-        // Try to get from sessionStorage as fallback
-        accessToken = sessionStorage.getItem("accessToken");
-      }
-      
-      // If still no token, don't connect yet - wait for user to be authenticated
-      if (!accessToken) {
-        console.warn("[SO Socket] No access token available, skipping Socket.IO connection");
-        return;
-      }
-      
-      const socket = io(baseOrigin, {
-        path: "/sales/socket.io",
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        withCredentials: true,
-        transports: ["websocket", "polling"],
-        auth: {
-          token: `Bearer ${accessToken}`,
-        },
-      });
+      const socket = createAuthenticatedSocket({ path: "/sales/socket.io" });
+      const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role: userRole }));
 
       socket.on("connect", () => {
         console.log(`[SO Socket] Client connected — socketId=${socket.id} userId=${userId} username=${userRole}`);
-        socket.emit("join", { userId, role: userRole });
         toast.success("Connected to real-time updates!");
       });
 
@@ -674,12 +644,8 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
       });
 
       return () => {
-        socket.off("connect");
-        socket.off("orderUpdate");
-        socket.off("connect_error");
-        socket.off("disconnect");
-        socket.off("reconnect");
-        socket.disconnect();
+        unbindJoin();
+        teardownSocket(socket, ["connect", "orderUpdate", "deleteOrder", "connect_error", "disconnect", "reconnect"]);
       };
     }
   }, [isOpen]);

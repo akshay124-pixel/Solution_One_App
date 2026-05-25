@@ -10,8 +10,11 @@ import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import { exportToExcel, readExcelFile } from "../../utils/excelHelper";
 import { BarChart2, Upload, Download,Users } from "lucide-react";
-import io from "socket.io-client";
-import { getPortalAccessToken } from "../../portal/PortalAuthContext";
+import {
+  createAuthenticatedSocket,
+  bindJoinOnConnect,
+  teardownSocket,
+} from "../../utils/moduleSocket";
 import styled from "styled-components";
 import { FixedSizeList as List } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -1344,27 +1347,11 @@ const Sales = () => {
 
   // WebSocket setup + initial data load
   useEffect(() => {
-    const baseOrigin = (() => {
-      try {
-        return new URL(process.env.REACT_APP_SO_URL).origin;
-      } catch {
-        return process.env.REACT_APP_SO_URL;
-      }
-    })();
-
-    const socket = io(baseOrigin, {
-      path: "/sales/socket.io",
-      transports: ["websocket", "polling"],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      withCredentials: true,
-      auth: { token: getPortalAccessToken() },
-    });
+    const socket = createAuthenticatedSocket({ path: "/sales/socket.io" });
+    const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role: userRole }));
 
     socket.on("connect", () => {
       console.log(`[SO Socket] Client connected — socketId=${socket.id} userId=${userId} username=${userRole}`);
-      socket.emit("join", { userId, role: userRole });
     });
 
     socket.on("connect_error", (error) => {
@@ -1457,12 +1444,8 @@ const Sales = () => {
     })();
 
     return () => {
-      socket.off("connect");
-      socket.off("connect_error");
-      socket.off("notification");
-      socket.off("orderUpdate");
-      socket.off("deleteOrder");
-      socket.disconnect();
+      unbindJoin();
+      teardownSocket(socket, ["connect", "connect_error", "disconnect", "notification", "orderUpdate", "deleteOrder"]);
     };
   }, [fetchOrders, fetchNotifications, userRole, userId, fetchDashboardCounts]);
 

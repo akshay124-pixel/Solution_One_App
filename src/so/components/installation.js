@@ -133,7 +133,7 @@ function Installation() {
   useEffect(() => {
     const userId = localStorage.getItem("userId");
     const userRole = localStorage.getItem("role");
-    const socket = createAuthenticatedSocket({ path: "/sales/socket.io" });
+    const socket = createAuthenticatedSocket({ module: "sales" });
     const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role: userRole }));
 
     const meetsInstallation = (doc) =>

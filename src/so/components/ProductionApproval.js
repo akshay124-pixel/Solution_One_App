@@ -40,7 +40,7 @@ const ProductionApproval = () => {
   useEffect(() => {
     const userId = localStorage.getItem("userId");
     const role = localStorage.getItem("role");
-    const socket = createAuthenticatedSocket({ path: "/sales/socket.io" });
+    const socket = createAuthenticatedSocket({ module: "sales" });
     const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role }));
 
     socket.on("connect", () => {

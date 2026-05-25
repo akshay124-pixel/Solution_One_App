@@ -25,7 +25,7 @@ const ProductionApproval = () => {
   useEffect(() => {
     const userId = localStorage.getItem("furniUserId");
     const role = localStorage.getItem("furniRole");
-    const socket = createAuthenticatedSocket({ path: "/furni/socket.io" });
+    const socket = createAuthenticatedSocket({ module: "furni" });
     const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role }));
 
     socket.on("orderUpdate", ({ operationType, documentId, fullDocument }) => {

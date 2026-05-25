@@ -945,11 +945,12 @@ function DashBoard() {
       socket = io(baseOrigin, {
         auth: { token: `Bearer ${token}` },
         path: process.env.REACT_APP_CRM_SOCKET_PATH || "/crm/socket.io",
+        transports: ["polling", "websocket"],
         withCredentials: true,
         reconnection: true,
-        reconnectionAttempts: 5,
+        reconnectionAttempts: 8,
         reconnectionDelay: 2000,
-        reconnectionDelayMax: 10000,
+        reconnectionDelayMax: 30000,
       });
 
       // Stop reconnecting if the server rejects auth (expired/invalid token)

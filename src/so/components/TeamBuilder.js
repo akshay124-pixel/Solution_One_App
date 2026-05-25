@@ -577,7 +577,7 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
   useEffect(() => {
     if (!isOpen) return;
 
-    const socket = createAuthenticatedSocket({ path: "/sales/socket.io" });
+    const socket = createAuthenticatedSocket({ module: "sales" });
     const unbindJoin = bindJoinOnConnect(socket, () => ({
       userId,
       role: localStorage.getItem("role") || "salesperson",

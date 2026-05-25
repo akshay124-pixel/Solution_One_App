@@ -14,7 +14,9 @@ import {
   createAuthenticatedSocket,
   bindJoinOnConnect,
   teardownSocket,
+  getModuleSocketPath,
 } from "../../utils/moduleSocket";
+import { useNotificationSync } from "../../utils/notificationSync";
 import styled from "styled-components";
 import { FixedSizeList as List } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -1345,84 +1347,14 @@ const Sales = () => {
     }
   }, []);
 
-  // WebSocket setup + initial data load
+  const salesSocketPath = getModuleSocketPath("sales");
+  const [salesSocket, setSalesSocket] = useState(null);
+  const fetchDashboardCountsRef = React.useRef(fetchDashboardCounts);
+  fetchDashboardCountsRef.current = fetchDashboardCounts;
+
+  useNotificationSync({ fetchNotifications, socket: salesSocket });
+
   useEffect(() => {
-    const socket = createAuthenticatedSocket({ path: "/sales/socket.io" });
-    const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role: userRole }));
-
-    socket.on("connect", () => {
-      console.log(`[SO Socket] Client connected — socketId=${socket.id} userId=${userId} username=${userRole}`);
-    });
-
-    socket.on("connect_error", (error) => {
-      console.error("Socket.IO connection error:", error);
-    });
-
-    socket.on("disconnect", (reason) => {
-      console.log(`[SO Socket] Client disconnected — socketId=${socket.id} userId=${userId} reason=${reason}`);
-    });
-
-    socket.on("deleteOrder", ({ _id, createdBy, assignedTo }) => {
-      const currentUserId = userId;
-      const owners = [createdBy, assignedTo].filter(Boolean);
-      if (!owners.includes(currentUserId)) return;
-      setOrders((prev) => prev.filter((o) => o._id !== _id));
-      fetchDashboardCounts();
-    });
-
-    socket.on("notification", (notif) => {
-      setNotifications((prev) => {
-        if (notif?._id && prev.some((n) => n._id === notif._id)) return prev;
-        const next = [notif, ...prev].slice(0, 50);
-        return next;
-      });
-      if (notif?.message) {
-        const toastMsg = notif.changes && notif.changes.length > 0
-          ? `Order ${notif.orderId || ""}: ${notif.changes[0].label} changed to ${notif.changes[0].newValue}`
-          : notif.message;
-        toast.info(toastMsg, { autoClose: 4000 });
-      }
-    });
-
-    socket.on(
-      "orderUpdate",
-      ({ operationType, documentId, fullDocument, createdBy, assignedTo }) => {
-        const currentUserId = userId;
-        const isAdmin = userRole === "GlobalAdmin" || userRole === "SuperAdmin" || userRole === "Watch";
-        const owners = [createdBy, assignedTo].filter(Boolean);
-
-        // Admins see everything, others see only owned/assigned
-        if (!isAdmin && !owners.includes(currentUserId)) return;
-
-        // Normalize createdBy when backend sends only an id (change stream)
-        try {
-          const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-          const localId = String(localStorage.getItem("userId") || "");
-          if (
-            fullDocument &&
-            fullDocument.createdBy &&
-            typeof fullDocument.createdBy !== "object" &&
-            String(fullDocument.createdBy) === localId
-          ) {
-            fullDocument = {
-              ...fullDocument,
-              createdBy: { _id: localId, username: currentUser.username || currentUser.name || "You" },
-            };
-          }
-        } catch (e) {
-          // ignore
-        }
-
-        if (operationType === "insert" && fullDocument) {
-          setOrders((prev) => {
-            if (prev.some((o) => o._id === documentId)) return prev;
-            return [fullDocument, ...prev];
-          });
-        }
-        fetchDashboardCounts();
-      }
-    );
-
     (async () => {
       try {
         setLoading(true);
@@ -1436,18 +1368,96 @@ const Sales = () => {
           fetchNotifications(),
           fetchDashboardCounts(initFY),
         ]);
-      } catch (e) {
-        // errors handled elsewhere
       } finally {
         setLoading(false);
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    const socket = createAuthenticatedSocket({ module: "sales" });
+    setSalesSocket(socket);
+    const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role: userRole }));
+
+    socket.on("connect", () => {
+      console.log(`[SO Socket] connected socketId=${socket.id} userId=${userId}`);
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error("[SO Socket] connection error:", error?.message || error);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log(`[SO Socket] disconnected socketId=${socket.id} reason=${reason}`);
+    });
+
+    socket.on("deleteOrder", ({ _id, createdBy, assignedTo }) => {
+      const owners = [createdBy, assignedTo].filter(Boolean);
+      if (!owners.includes(userId)) return;
+      setOrders((prev) => prev.filter((o) => o._id !== _id));
+      fetchDashboardCountsRef.current();
+    });
+
+    socket.on("notification", (notif) => {
+      setNotifications((prev) => {
+        if (notif?._id && prev.some((n) => n._id === notif._id)) return prev;
+        return [notif, ...prev].slice(0, 50);
+      });
+      if (notif?.message) {
+        const toastMsg =
+          notif.changes?.length > 0
+            ? `Order ${notif.orderId || ""}: ${notif.changes[0].label} changed to ${notif.changes[0].newValue}`
+            : notif.message;
+        toast.info(toastMsg, { autoClose: 4000 });
+      }
+    });
+
+    socket.on("orderUpdate", ({ operationType, documentId, fullDocument, createdBy, assignedTo }) => {
+      const isAdmin =
+        userRole === "GlobalAdmin" || userRole === "SuperAdmin" || userRole === "Watch";
+      const owners = [createdBy, assignedTo].filter(Boolean);
+      if (!isAdmin && !owners.includes(userId)) return;
+
+      let doc = fullDocument;
+      try {
+        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const localId = String(localStorage.getItem("userId") || "");
+        if (
+          doc?.createdBy &&
+          typeof doc.createdBy !== "object" &&
+          String(doc.createdBy) === localId
+        ) {
+          doc = {
+            ...doc,
+            createdBy: {
+              _id: localId,
+              username: currentUser.username || currentUser.name || "You",
+            },
+          };
+        }
+      } catch {
+        /* ignore */
+      }
+
+      if (operationType === "insert" && doc) {
+        setOrders((prev) => {
+          if (prev.some((o) => o._id === documentId)) return prev;
+          return [doc, ...prev];
+        });
+      }
+      fetchDashboardCountsRef.current();
+    });
 
     return () => {
       unbindJoin();
-      teardownSocket(socket, ["connect", "connect_error", "disconnect", "notification", "orderUpdate", "deleteOrder"]);
+      teardownSocket(
+        socket,
+        ["connect", "connect_error", "disconnect", "notification", "orderUpdate", "deleteOrder"],
+        salesSocketPath
+      );
+      setSalesSocket(null);
     };
-  }, [fetchOrders, fetchNotifications, userRole, userId, fetchDashboardCounts]);
+  }, [userId, userRole, salesSocketPath]);
 
   // Ref to skip filter effect on first render (mount effect already fetches with correct FY)
   const filterEffectMounted = React.useRef(false);

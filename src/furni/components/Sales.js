@@ -14,7 +14,9 @@ import {
   createAuthenticatedSocket,
   bindJoinOnConnect,
   teardownSocket,
+  getModuleSocketPath,
 } from "../../utils/moduleSocket";
+import { useNotificationSync } from "../../utils/notificationSync";
 import styled from "styled-components";
 import { FixedSizeList as List } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -403,8 +405,18 @@ const Sales = () => {
     }
   }, [financialYearFilter]);
 
+  const furniSocketPath = getModuleSocketPath("furni");
+  const [furniSocket, setFurniSocket] = useState(null);
+  const fetchDashboardCountsRef = React.useRef(fetchDashboardCounts);
+  fetchDashboardCountsRef.current = fetchDashboardCounts;
+  const fetchPaginatedOrdersRef = React.useRef(fetchPaginatedOrders);
+  fetchPaginatedOrdersRef.current = fetchPaginatedOrders;
+
+  useNotificationSync({ fetchNotifications, socket: furniSocket });
+
   useEffect(() => {
-    const socket = createAuthenticatedSocket({ path: "/furni/socket.io" });
+    const socket = createAuthenticatedSocket({ module: "furni" });
+    setFurniSocket(socket);
     const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role: userRole }));
     socket.on("connect", () => {
       console.log(`[Furni Socket] Client connected — socketId=${socket.id} userId=${userId} username=${userRole}`);
@@ -423,8 +435,9 @@ const Sales = () => {
       const owners = [createdBy, assignedTo].filter(Boolean).map(String);
       if (!isAdmin && !owners.includes(String(userId))) return;
       setOrders((prev) => prev.filter((o) => o._id !== _id));
-      fetchDashboardCounts();
-    });    socket.on("notification", (notif) => {
+      fetchDashboardCountsRef.current();
+    });
+    socket.on("notification", (notif) => {
       setNotifications((prev) => {
         if (notif?._id && prev.some((n) => n._id === notif._id)) return prev;
         const next = [notif, ...prev].slice(0, 50);
@@ -447,29 +460,38 @@ const Sales = () => {
       if (operationType === "insert" && fullDocument) {
         setOrders((prev) => { if (prev.some((o) => o._id === documentId)) return prev; return [fullDocument, ...prev]; });
       }
-      fetchDashboardCounts();
+      fetchDashboardCountsRef.current();
     });
     socket.on("dashboardCounts", (counts) => {
       if (counts && typeof counts === "object") {
         setDashboardCounts((prev) => ({ all: Number(counts.all) || 0, installation: Number(counts.installation) || 0, production: Number(counts.production) || 0, dispatch: Number(counts.dispatch) || 0 }));
       }
     });
+    return () => {
+      unbindJoin();
+      teardownSocket(
+        socket,
+        ["connect", "connect_error", "disconnect", "notification", "orderUpdate", "deleteOrder", "dashboardCounts"],
+        furniSocketPath
+      );
+      setFurniSocket(null);
+    };
+  }, [userId, userRole, furniSocketPath]);
+
+  useEffect(() => {
     (async () => {
       try {
         const initFY = getCurrentFinancialYear();
         await Promise.all([
-          fetchPaginatedOrders({ page: 1, financialYear: initFY, dashboardFilter: "all" }),
+          fetchPaginatedOrdersRef.current({ page: 1, financialYear: initFY, dashboardFilter: "all" }),
           fetchNotifications(),
           fetchDashboardCounts(initFY),
         ]);
+      } finally {
+        setIsLoading(false);
       }
-      finally { setIsLoading(false); }
     })();
-    return () => {
-      unbindJoin();
-      teardownSocket(socket, ["connect", "connect_error", "disconnect", "notification", "orderUpdate", "deleteOrder", "dashboardCounts"]);
-    };
-  }, [fetchPaginatedOrders, fetchNotifications, userRole, userId, fetchDashboardCounts]);
+  }, []);
 
   const calculateTotalResults = useMemo(() => totalProductQty, [totalProductQty]);
 

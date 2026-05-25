@@ -181,7 +181,7 @@ const TeamBuilder = ({ isOpen, onClose, userId }) => {
   // Socket.IO for live team updates
   useEffect(() => {
     if (!isOpen) return;
-    const socket = createAuthenticatedSocket({ path: "/furni/socket.io" });
+    const socket = createAuthenticatedSocket({ module: "furni" });
     const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role: localStorage.getItem("furniRole") || "salesperson" }));
     socket.on("teamUpdate", ({ leaderId }) => { if (leaderId === userId) handleRefresh(); });
     return () => {

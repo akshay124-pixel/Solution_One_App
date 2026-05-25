@@ -2,14 +2,17 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Container, Row, Col, Card, Button, Spinner } from "react-bootstrap";
 import { RefreshCw, Package, CheckCircle, AlertCircle, Clock, TrendingUp, ArrowLeft, Download } from "lucide-react";
-import { io } from "socket.io-client";
+import {
+  createAuthenticatedSocket,
+  teardownSocket,
+  getModuleSocketPath,
+} from "../../utils/moduleSocket";
 import PartReplacementLogsTable from "./PartReplacementLogsTable";
 import PartReplacementLogsFilters from "./PartReplacementLogsFilters";
 import EditPartReplacementLog from "./EditPartReplacementLog";
 import ViewPartReplacementLog from "./ViewPartReplacementLog";
 import DeletePartReplacementLogModal from "./DeletePartReplacementLogModal";
-import serviceApi, { BASE_URL } from "../axiosSetup";
-import { getPortalAccessToken } from "../../portal/PortalAuthContext";
+import serviceApi from "../axiosSetup";
 import { toast } from "react-toastify";
 
 const PartReplacementDashboard = () => {
@@ -90,13 +93,8 @@ const PartReplacementDashboard = () => {
 
   // Real-time refresh when parts are created or status changes
   useEffect(() => {
-    const socketUrl = BASE_URL.replace("/api/service", "");
-    const token = getPortalAccessToken();
-    const socket = io(socketUrl, {
-      path: "/service/socket.io",
-      auth: { token },
-      transports: ["websocket", "polling"],
-    });
+    const socketPath = getModuleSocketPath("service");
+    const socket = createAuthenticatedSocket({ module: "service" });
 
     const refreshTable = () => fetchLogs(true);
 
@@ -106,7 +104,7 @@ const PartReplacementDashboard = () => {
     return () => {
       socket.off("newPartReplacementRequest", refreshTable);
       socket.off("partReplacementUpdate", refreshTable);
-      socket.disconnect();
+      teardownSocket(socket, [], socketPath);
     };
   }, [fetchLogs]);
 

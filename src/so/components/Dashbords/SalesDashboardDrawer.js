@@ -610,7 +610,7 @@ const SalesDashboardDrawer = ({ isOpen, onClose }) => {
           );
         }
       })();
-      const socket = createAuthenticatedSocket({ path: "/sales/socket.io" });
+      const socket = createAuthenticatedSocket({ module: "sales" });
       const unbindJoin = bindJoinOnConnect(socket, () => ({ userId, role: userRole }));
 
       socket.on("connect", () => {

@@ -2,12 +2,15 @@ import React, { useState, useEffect } from "react";
 import { Badge, Dropdown, Button, Modal, Spinner, Form } from "react-bootstrap";
 import { Bell, Check, X, Eye, Clock, AlertCircle, Download, RotateCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { io } from "socket.io-client";
-import serviceApi, { BASE_URL } from "../axiosSetup";
+import serviceApi from "../axiosSetup";
+import {
+  createAuthenticatedSocket,
+  teardownSocket,
+  getModuleSocketPath,
+} from "../../utils/moduleSocket";
 import soApi from "../../so/axiosSetup";
 import furniApi from "../../furni/axiosSetup";
 import { toast } from "react-toastify";
-import { getPortalAccessToken } from "../../portal/PortalAuthContext";
 
 const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
   const navigate = useNavigate();
@@ -48,16 +51,8 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
 
     if (!isGlobalAdmin && !isSuperAdmin) return;
 
-    // Initialize Socket.io connection
-    const socketUrl = BASE_URL.replace("/api/service", "");
-    const token = getPortalAccessToken();
-    
-    console.log("[ServiceSocket] Connecting to:", socketUrl);
-    const socket = io(socketUrl, {
-      path: "/service/socket.io",
-      auth: { token },
-      transports: ["websocket", "polling"],
-    });
+    const socketPath = getModuleSocketPath("service");
+    const socket = createAuthenticatedSocket({ module: "service" });
 
     socket.on("connect", () => {
       console.log("[ServiceSocket] Connected to real-time server");
@@ -118,8 +113,11 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
     });
 
     return () => {
-      console.log("[ServiceSocket] Disconnecting...");
-      socket.disconnect();
+      teardownSocket(
+        socket,
+        ["connect", "connect_error", "followUpNotification", "newPartReplacementRequest", "partReplacementUpdate", "approvalNotification"],
+        socketPath
+      );
     };
   }, [isGlobalAdmin, isSuperAdmin]);
 

@@ -48,10 +48,11 @@ const Navbar = () => {
       const socketInstance = io(baseOrigin, {
         auth: { token: `Bearer ${getAccessToken()}` },
         path: process.env.REACT_APP_CRM_SOCKET_PATH || "/crm/socket.io",
+        transports: ["polling", "websocket"],
         reconnection: true,
-        reconnectionAttempts: 5,
+        reconnectionAttempts: 8,
         reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
+        reconnectionDelayMax: 30000,
         withCredentials: true,
       });
 

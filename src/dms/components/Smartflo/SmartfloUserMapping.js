@@ -37,6 +37,7 @@ const SmartfloUserMapping = () => {
     smartfloEnabled: false,
   });
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "info" });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -76,13 +77,21 @@ const SmartfloUserMapping = () => {
   };
 
   const handleSave = async () => {
+    if (!editDialog.user?._id || saving) return;
+
+    const agentNumber = formData.smartfloAgentNumber.trim();
+    if (formData.smartfloEnabled && !agentNumber) {
+      showSnackbar("Agent phone number is required when Smartflo is enabled", "error");
+      return;
+    }
+
+    setSaving(true);
     try {
       const payload = {
-        smartfloAgentNumber: formData.smartfloAgentNumber.trim(),
+        smartfloAgentNumber: agentNumber,
         smartfloEnabled: formData.smartfloEnabled,
       };
 
-      // Using api instance for automatic token handling and refresh
       const response = await api.put(
         `/admin/smartflo/users/${editDialog.user._id}/map`,
         payload
@@ -90,12 +99,18 @@ const SmartfloUserMapping = () => {
 
       if (response.data.success) {
         showSnackbar("User mapping updated successfully", "success");
-        fetchUsers();
+        await fetchUsers();
         handleCloseDialog();
       }
     } catch (error) {
       console.error("Update mapping error:", error);
-      showSnackbar(error.response?.data?.message || "Failed to update mapping", "error");
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Failed to update mapping";
+      showSnackbar(msg, "error");
+    } finally {
+      setSaving(false);
     }
   };
   const showSnackbar = (message, severity) => {
@@ -342,7 +357,7 @@ const SmartfloUserMapping = () => {
           <Button
             onClick={handleSave}
             variant="contained"
-            disabled={!formData.smartfloAgentNumber}
+            disabled={saving || (!formData.smartfloAgentNumber && formData.smartfloEnabled)}
             sx={{
               textTransform: "none",
               fontWeight: 600,
@@ -353,7 +368,7 @@ const SmartfloUserMapping = () => {
               },
             }}
           >
-            Save Mapping
+            {saving ? <CircularProgress size={22} color="inherit" /> : "Save Mapping"}
           </Button>
         </DialogActions>
       </Dialog>

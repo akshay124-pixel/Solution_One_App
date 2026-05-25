@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { usePortalAuth } from "./PortalAuthContext";
 
 import ServiceDashboard from "../service/components/ServiceDashboard";
+import PartReplacementDashboard from "../service/components/PartReplacementDashboard";
 import ServiceNavbar from "../service/components/Navbar";
 
 const ServiceApp = () => {
@@ -64,7 +65,17 @@ const ServiceApp = () => {
         onApprovalAction={handleApprovalAction}
       />
       <Routes>
-        <Route path="/" element={<ServiceDashboard refreshTrigger={refreshTrigger} onApprovalAction={handleApprovalAction} />} />
+        <Route 
+          path="/" 
+          element={
+            user?.role === "part_replacement" ? (
+              <Navigate to="/service/part-replacement" replace />
+            ) : (
+              <ServiceDashboard refreshTrigger={refreshTrigger} onApprovalAction={handleApprovalAction} />
+            )
+          } 
+        />
+        <Route path="/part-replacement" element={<PartReplacementDashboard />} />
         <Route path="*" element={<Navigate to="/service" replace />} />
       </Routes>
     </>

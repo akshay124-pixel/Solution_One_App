@@ -41,6 +41,10 @@ const FURNI_ONLY_ROLES = [
   { value: "Bill",               label: "Bill" },
 ];
 
+const SERVICE_ROLES = [
+  { value: "part_replacement",  label: "Part Replacement" },
+];
+
 const soRoleRoute = (role) => {
   if (role === "Production")         return "/so/production";
   if (role === "Finish")             return "/so/finish";
@@ -93,9 +97,10 @@ const Signup = () => {
   const handleSectionChange = (section) => {
     setActiveSection(section);
     const defaults = {
-      crm:   { role: "salesperson", furniOnly: false },
-      so:    { role: "Watch",       furniOnly: false },
-      furni: { role: "Production",   furniOnly: true  },
+      crm:     { role: "salesperson",    furniOnly: false },
+      so:      { role: "Watch",          furniOnly: false },
+      furni:   { role: "Production",     furniOnly: true  },
+      service: { role: "part_replacement", furniOnly: false },
     };
     setFormData((prev) => ({ ...prev, ...defaults[section], dms: false }));
   };
@@ -137,12 +142,15 @@ const Signup = () => {
 
         const hint     = res.data.redirectHint;
         const userRole = res.data.user?.role;
-        if (hint === "select-module")          navigate("/select-module", { replace: true });
-        else if (hint === "service-dashboard") navigate("/service", { replace: true });
-        else if (hint === "dms-dashboard")     navigate("/dms/dashboard", { replace: true });
+        if (hint === "select-module")     navigate("/select-module", { replace: true });
+        else if (hint === "dms-dashboard") navigate("/dms/dashboard", { replace: true });
         else if (hint === "furni-dashboard")   navigate(furniRoleRoute(userRole), { replace: true });
         else if (hint === "so-dashboard")      navigate(soRoleRoute(userRole), { replace: true });
-        else                                   navigate("/crm/dashboard", { replace: true });
+        else if (hint === "service-dashboard") {
+          if (userRole === "part_replacement") navigate("/service/part-replacement", { replace: true });
+          else navigate("/service", { replace: true });
+        }
+        else navigate("/crm/dashboard", { replace: true });
       } else {
         toast.error(res.data.message || "Signup failed.", { theme: "colored", autoClose: 3000 });
       }
@@ -155,10 +163,11 @@ const Signup = () => {
 
   // Which roles to show in the dropdown
   const visibleRoles = activeSection === "crm" ? CRM_ROLES
-    : activeSection === "so"    ? SO_ROLES
-    : FURNI_ONLY_ROLES;
+    : activeSection === "so" ? SO_ROLES
+    : activeSection === "furni" ? FURNI_ONLY_ROLES
+    : SERVICE_ROLES;
 
-  const sectionLabel = { crm: "CRM / DMS", so: "Sales Order", furni: "Furni" };
+  const sectionLabel = { crm: "CRM / DMS", so: "Sales Order", furni: "Furni", service: "Service" };
 
   return (
     <div className="container" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>

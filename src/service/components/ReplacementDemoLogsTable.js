@@ -161,6 +161,7 @@ const ReplacementDemoLogsTable = ({ logs, onView, onEdit, onApprove, onReject, o
           <thead
             className="gradient-table-header"
             style={{
+              background: "linear-gradient(135deg, #2575fc, #6a11cb)",
               color: "white",
               boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
               position: "sticky",

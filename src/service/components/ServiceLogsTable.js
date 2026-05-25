@@ -1,7 +1,9 @@
-import React from "react";
 import { Table, Button, Badge } from "react-bootstrap";
-import { FaEye } from "react-icons/fa";
+import { FaEye, FaDownload } from "react-icons/fa";
 import { Settings } from "lucide-react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import React, { useRef } from "react";
 
 const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPage, totalPages, totalRecords }) => {
   // Get user role from localStorage - only globaladmin can delete
@@ -50,10 +52,61 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
       Open: "danger",
       "In Progress": "warning",
       Resolved: "info",
-      Closed: "success",
-      Completed: "success",
+      Closed: "secondary",
+      Completed: "secondary",
     };
     return statusMap[status] || "secondary";
+  };
+
+  const getPartStatusBadge = (status) => {
+    const statusMap = {
+      "Pending": "warning",
+      "In Stock": "success",
+      "Out of Stock": "danger",
+      "Not Required": "secondary",
+    };
+    return statusMap[status] || "secondary";
+  };
+
+  const getRowStyle = (log) => {
+    const status = log.serviceStatus;
+    const partStatus = log.partStatus;
+
+    // Use exact matches but be defensive
+    const isClosed = status === "Closed" || status === "Completed";
+    
+    if (isClosed) {
+      return { 
+        backgroundColor: "#dcfce7", // Soft Green
+        "--row-text-color": "#166534" 
+      };
+    }
+    
+    if (partStatus === "In Stock") {
+      return { 
+        backgroundColor: "#eff6ff",
+        "--row-text-color": "#1e40af"
+      };
+    }
+
+    if (partStatus === "Out of Stock") {
+      return { 
+        backgroundColor: "#fef2f2",
+        "--row-text-color": "#991b1b"
+      };
+    }
+
+    if (partStatus === "Pending") {
+      return { 
+        backgroundColor: "#fff7ed",
+        "--row-text-color": "#9a3412"
+      };
+    }
+
+    return { 
+      backgroundColor: "transparent",
+      "--row-text-color": "inherit"
+    };
   };
 
   const getCallStatusBadge = (callStatus) => {
@@ -108,13 +161,38 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
 
   const renderEmptyState = () => (
     <tr>
-      <td colSpan="11" style={{ height: "400px", textAlign: "center", verticalAlign: "middle" }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-          <Settings size={48} style={{ color: "#9ca3af", marginBottom: "16px" }} />
-          <p style={{ color: "#6b7280", fontSize: "1rem", fontWeight: "500", margin: 0 }}>
-            No service logs found
+      <td 
+        colSpan="15" 
+        style={{ 
+          height: "550px", 
+          textAlign: "center", 
+          verticalAlign: "middle",
+          background: "white",
+          border: "none"
+        }}
+      >
+        <div style={{ 
+          display: "flex", 
+          flexDirection: "column", 
+          alignItems: "center", 
+          justifyContent: "center",
+          height: "100%",
+          width: "100%"
+        }}>
+          <div style={{
+            background: "#f8fafc",
+            padding: "40px",
+            borderRadius: "50%",
+            marginBottom: "20px",
+            boxShadow: "inset 0 2px 4px rgba(0,0,0,0.05)"
+          }}>
+            <Settings size={64} style={{ color: "#9ca3af" }} />
+          </div>
+          <h4 style={{ color: "#1e293b", fontWeight: "700", marginBottom: "8px" }}>No Data Available</h4>
+          <p style={{ color: "#64748b", fontSize: "1rem", fontWeight: "500", margin: 0 }}>
+            No service logs found in the system
           </p>
-          <p style={{ color: "#9ca3af", fontSize: "0.875rem", margin: "8px 0 0 0" }}>
+          <p style={{ color: "#9ca3af", fontSize: "0.875rem", margin: "12px 0 0 0" }}>
             Create a call log to get started with service tracking
           </p>
         </div>
@@ -152,6 +230,7 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
           <thead
             className="gradient-table-header"
             style={{
+              background: "linear-gradient(135deg, #2575fc, #6a11cb)",
               color: "white",
               boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
               position: "sticky",
@@ -313,6 +392,20 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
                 textAlign: "center",
                 border: "none",
                 color: "white"
+              }}>Part Status</th>
+              <th style={{ 
+                padding: "10px 15px", 
+                height: "50px",
+                lineHeight: "30px",
+                fontSize: "0.95rem",
+                fontWeight: "600",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                borderBottom: "2px solid rgba(255, 255, 255, 0.2)",
+                whiteSpace: "nowrap",
+                textAlign: "center",
+                border: "none",
+                color: "white"
               }}>Follow-up Date</th>
               <th style={{ 
                 padding: "10px 15px", 
@@ -368,12 +461,14 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
                 style={{
                   borderBottom: "1px solid #e6f0fa",
                   transition: "all 0.3s ease",
+                  ...getRowStyle(log)
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#f0f7ff";
+                  e.currentTarget.style.backgroundColor = log.serviceStatus === "Closed" || log.serviceStatus === "Completed" ? "#e2e8f0" : "#f0f7ff";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "transparent";
+                  const style = getRowStyle(log);
+                  e.currentTarget.style.backgroundColor = style.backgroundColor;
                 }}
               >
                 <td style={{ 
@@ -385,7 +480,7 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
                   whiteSpace: "nowrap",
                   textAlign: "center",
                   fontWeight: "500",
-                  color: "#6b7280",
+                  color: "var(--row-text-color, #6b7280)",
                   fontSize: "0.875rem"
                 }}>{index + 1}</td>
                 <td style={{ 
@@ -434,7 +529,7 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
                   whiteSpace: "nowrap",
                   textAlign: "center",
                   fontWeight: "600",
-                  color: "#1f2937"
+                  color: "var(--row-text-color, #1f2937)"
                 }}>
                   {log.orderId}
                 </td>
@@ -447,7 +542,7 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
                   whiteSpace: "nowrap",
                   textAlign: "center",
                   fontWeight: "500",
-                  color: "#1f2937"
+                  color: "var(--row-text-color, #1f2937)"
                 }}>
                   {log.orderId?.startsWith('PMTM') 
                     ? (log.serviceRequestName || "-")
@@ -463,7 +558,7 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
                   whiteSpace: "nowrap",
                   textAlign: "center",
                   fontWeight: "500",
-                  color: "#1f2937"
+                  color: "var(--row-text-color, #1f2937)"
                 }}>
                   {log.orderId?.startsWith('PMTM') 
                     ? (log.serviceRequestMobile || "-")
@@ -479,7 +574,7 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
                   whiteSpace: "nowrap",
                   textAlign: "center",
                   fontWeight: "500",
-                  color: "#1f2937"
+                  color: "var(--row-text-color, #1f2937)"
                 }}>
                   {log.state || "-"}
                 </td>
@@ -519,7 +614,7 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     textAlign: "center",
-                    color: "#6b7280"
+                    color: "var(--row-text-color, #6b7280)"
                   }}
                   title={log.issue}
                 >
@@ -551,11 +646,33 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
                   padding: "10px 15px", 
                   height: "50px",
                   lineHeight: "30px",
+                  textAlign: "center"
+                }}>
+                  <Badge 
+                    bg={getPartStatusBadge(log.partStatus || "Not Required")}
+                    style={{
+                      padding: "6px 12px",
+                      fontSize: "0.85rem",
+                      display: "inline-block",
+                      width: "100%",
+                      textAlign: "center",
+                      borderRadius: "6px",
+                      fontWeight: "600",
+                      minWidth: "100px"
+                    }}
+                  >
+                    {log.partStatus || "Not Required"}
+                  </Badge>
+                </td>
+                <td style={{ 
+                  padding: "10px 15px", 
+                  height: "50px",
+                  lineHeight: "30px",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
                   textAlign: "center",
-                  color: "#6b7280"
+                  color: "var(--row-text-color, #6b7280)"
                 }}>
                   {formatDate(log.followUpDate)}
                 </td>
@@ -567,7 +684,7 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
                   textAlign: "center",
-                  color: "#6b7280"
+                  color: "var(--row-text-color, #6b7280)"
                 }}>
                   {formatDateTime(log.createdAt)}
                 </td>
@@ -710,7 +827,7 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     textAlign: "center",
-                    color: "#6b7280",
+                    color: "var(--row-text-color, #6b7280)",
                     fontSize: "0.875rem"
                   }}
                   title={log.remarks || "No remarks"}

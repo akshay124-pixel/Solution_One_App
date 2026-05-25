@@ -1,14 +1,74 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { Modal, Badge, Alert, Accordion, Button } from "react-bootstrap";
-import { User, Calendar, Clock, History, X, Eye, FileText } from "lucide-react";
+import { User, Calendar, Clock, History, X, Eye, FileText, Download, Package } from "lucide-react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import { toast } from "react-toastify";
 import serviceApi from "../axiosSetup";
 import engineersList from "../utils/engineersList";
+import { getCallTypeDisplay } from "../utils/callTypes";
 
 const ViewServiceLog = ({ isOpen, onClose, log }) => {
+  const modalBodyRef = React.useRef(null);
+
   useEffect(() => {
     // Component is now read-only, no state management needed
   }, [log]);
+
+  const handleDownloadPDF = async () => {
+    if (!modalBodyRef.current) return;
+    
+    try {
+      toast.info("Generating PDF...");
+      const element = modalBodyRef.current;
+      
+      // Temporarily remove scroll and height restrictions for capture
+      const originalStyle = element.style.cssText;
+      element.style.maxHeight = "none";
+      element.style.overflow = "visible";
+      element.style.height = "auto";
+      element.style.background = "white";
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight
+      });
+      
+      // Restore original styles
+      element.style.cssText = originalStyle;
+      
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      // Handle multi-page PDF if content is too long
+      let heightLeft = pdfHeight;
+      let position = 0;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`service-log-${log.complaintNumber}.pdf`);
+      toast.success("PDF downloaded successfully!");
+    } catch (error) {
+      console.error("PDF Error:", error);
+      toast.error("Failed to generate PDF");
+    }
+  };
 
   const handleDownloadAttachment = async (filename) => {
     if (!filename) {
@@ -98,29 +158,36 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
       size="lg" 
       centered
       backdrop="static"
+      contentClassName="border-0 bg-transparent"
     >
       <div
+        ref={modalBodyRef}
         style={{
-          borderRadius: "1px",
+          borderRadius: "16px",
           overflow: "hidden",
           border: "none",
-          boxShadow: "0 20px 60px rgba(37, 117, 252, 0.3)",
+          boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+          background: "white"
         }}
       >
         <Modal.Header
-          style={{
-            background: "linear-gradient(135deg, #2575fc, #6a11cb)",
+          style={{ 
+            background: "linear-gradient(135deg, #2575fc, #6a11cb)", 
             color: "white",
-            borderBottom: "none",
-            padding: "24px 28px",
-            boxShadow: "0 4px 15px rgba(0, 0, 0, 0.2)",
+            border: "none",
+            padding: "24px 30px",
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderRadius: "16px 16px 0 0"
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "14px", width: "100%" }}>
             <div style={{
               width: "48px",
               height: "48px",
-              borderRadius: "12px",
+              borderRadius: "2px",
               background: "rgba(255, 255, 255, 0.2)",
               display: "flex",
               alignItems: "center",
@@ -137,31 +204,62 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                 View service status and history
               </p>
             </div>
-            <button
-              onClick={handleClose}
-              style={{
-                background: "rgba(255, 255, 255, 0.2)",
-                border: "none",
-                borderRadius: "8px",
-                width: "36px",
-                height: "36px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                color: "white",
-                backdropFilter: "blur(10px)",
-                transition: "background 0.2s ease"
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.background = "rgba(255, 255, 255, 0.3)";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = "rgba(255, 255, 255, 0.2)";
-              }}
-            >
-              <X size={20} />
-            </button>
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              <button
+                onClick={handleDownloadPDF}
+                style={{
+                  background: "rgba(255, 255, 255, 0.2)",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "8px 12px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "white",
+                  backdropFilter: "blur(10px)",
+                  transition: "all 0.2s ease",
+                  gap: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: "600"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
+                }}
+                title="Download as PDF"
+              >
+                <Download size={18} />
+                <span>PDF Export</span>
+              </button>
+              <button
+                onClick={handleClose}
+                style={{
+                  background: "rgba(255, 255, 255, 0.2)",
+                  border: "none",
+                  borderRadius: "8px",
+                  width: "36px",
+                  height: "36px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "white",
+                  backdropFilter: "blur(10px)",
+                  transition: "background 0.2s ease"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
           </div>
         </Modal.Header>
         
@@ -359,6 +457,238 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                 </div>
               </div>
 
+              {/* Service Call Attachments Section */}
+              <div style={{ marginBottom: "24px", padding: "20px", background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+                <h6 style={{ 
+                  fontWeight: "800", 
+                  color: "#1e293b", 
+                  fontSize: "0.85rem", 
+                  marginBottom: "15px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px"
+                }}>
+                  <FileText size={18} color="#2575fc" />
+                  Service Call Attachments ({ 
+                    (log.serviceAttachments?.length || 0) + 
+                    (log.serviceAttachment && !log.serviceAttachments?.some(a => a.fileName === log.serviceAttachment) ? 1 : 0) 
+                  })
+                </h6>
+                <div style={{ display: "grid", gap: "10px" }}>
+                  {/* Legacy Service Attachment */}
+                  {log.serviceAttachment && !log.serviceAttachments?.some(a => a.fileName === log.serviceAttachment) && (
+                    <div
+                      style={{
+                        background: "white",
+                        padding: "12px 16px",
+                        borderRadius: "10px",
+                        border: "1px solid #e2e8f0",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "12px",
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.02)"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", overflow: "hidden", flex: 1 }}>
+                        <div style={{ padding: "8px", borderRadius: "8px", background: "#f1f5f9", color: "#2575fc", flexShrink: 0 }}>
+                          <FileText size={16} />
+                        </div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ 
+                            fontSize: "0.85rem", 
+                            fontWeight: "600", 
+                            color: "#1e293b", 
+                            whiteSpace: "nowrap", 
+                            overflow: "hidden", 
+                            textOverflow: "ellipsis",
+                            width: "100%"
+                          }} title={log.serviceAttachment}>
+                            {log.serviceAttachment}
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Legacy Service Document</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDownloadAttachment(log.serviceAttachment)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#2575fc",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          fontSize: "0.8rem",
+                          fontWeight: "700",
+                          cursor: "pointer",
+                          padding: "6px 12px",
+                          borderRadius: "6px",
+                          transition: "all 0.2s",
+                          flexShrink: 0
+                        }}
+                      >
+                        <Download size={16} />
+                        Download
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Modern Service Attachments */}
+                  {log.serviceAttachments && log.serviceAttachments.length > 0 ? log.serviceAttachments.map((file, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        background: "white",
+                        padding: "12px 16px",
+                        borderRadius: "10px",
+                        border: "1px solid #e2e8f0",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "12px",
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+                        width: "100%",
+                        overflow: "hidden"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", overflow: "hidden", flex: 1 }}>
+                        <div style={{ padding: "8px", borderRadius: "8px", background: "#f1f5f9", color: "#2575fc", flexShrink: 0 }}>
+                          <FileText size={16} />
+                        </div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ 
+                            fontSize: "0.85rem", 
+                            fontWeight: "600", 
+                            color: "#1e293b", 
+                            whiteSpace: "nowrap", 
+                            overflow: "hidden", 
+                            textOverflow: "ellipsis",
+                            width: "100%"
+                          }} title={file.originalName || file.fileName}>
+                            {file.originalName || file.fileName}
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                            {(file.size / 1024).toFixed(1)} KB • {formatDate(file.uploadedAt)}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDownloadAttachment(file.fileName)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#2575fc",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          fontSize: "0.8rem",
+                          fontWeight: "700",
+                          cursor: "pointer",
+                          padding: "6px 12px",
+                          borderRadius: "6px",
+                          transition: "all 0.2s",
+                          flexShrink: 0
+                        }}
+                      >
+                        <Download size={16} />
+                        Download
+                      </button>
+                    </div>
+                  )) : !log.serviceAttachment && (
+                    <div style={{ padding: "20px", textAlign: "center", border: "1px dashed #cbd5e1", borderRadius: "10px" }}>
+                      <span style={{ fontSize: "0.85rem", color: "#64748b", fontStyle: "italic" }}>No service call attachments</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Part Related Attachments Section */}
+              <div style={{ padding: "20px", background: "#f0fdf4", borderRadius: "12px", border: "1px solid #bbf7d0", marginBottom: "20px" }}>
+                <h6 style={{ 
+                  fontWeight: "800", 
+                  color: "#166534", 
+                  fontSize: "0.85rem", 
+                  marginBottom: "15px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px"
+                }}>
+                  <Package size={18} color="#166534" />
+                  Part Related Attachments ({log.attachments?.length || 0})
+                </h6>
+                <div style={{ display: "grid", gap: "10px" }}>
+                  {log.attachments && log.attachments.length > 0 ? log.attachments.map((file, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        background: "white",
+                        padding: "12px 16px",
+                        borderRadius: "10px",
+                        border: "1px solid #bbf7d0",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "12px",
+                        boxShadow: "0 2px 4px rgba(22, 101, 52, 0.05)",
+                        width: "100%",
+                        overflow: "hidden"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", overflow: "hidden", flex: 1 }}>
+                        <div style={{ padding: "8px", borderRadius: "8px", background: "#f0fdf4", color: "#166534", flexShrink: 0 }}>
+                          <Package size={16} />
+                        </div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ 
+                            fontSize: "0.85rem", 
+                            fontWeight: "600", 
+                            color: "#1e293b", 
+                            whiteSpace: "nowrap", 
+                            overflow: "hidden", 
+                            textOverflow: "ellipsis",
+                            width: "100%"
+                          }} title={file.originalName || file.fileName}>
+                            {file.originalName || file.fileName}
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: "#166534", opacity: 0.8 }}>
+                            {(file.size / 1024).toFixed(1)} KB • {formatDate(file.uploadedAt)}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDownloadAttachment(file.fileName)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#166534",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          fontSize: "0.8rem",
+                          fontWeight: "700",
+                          cursor: "pointer",
+                          padding: "6px 12px",
+                          borderRadius: "6px",
+                          transition: "all 0.2s",
+                          flexShrink: 0
+                        }}
+                      >
+                        <Download size={16} />
+                        Download
+                      </button>
+                    </div>
+                  )) : (
+                    <div style={{ padding: "20px", textAlign: "center", border: "1px dashed #bbf7d0", borderRadius: "10px" }}>
+                      <span style={{ fontSize: "0.85rem", color: "#166534", opacity: 0.7, fontStyle: "italic" }}>No part related attachments</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div style={{ 
                 display: "grid", 
                 gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
@@ -419,7 +749,10 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                   </div>
                 )}
                 
-                {log.callType && (
+                {(() => {
+                  const callTypeDisplay = getCallTypeDisplay(log.callType);
+                  if (!callTypeDisplay) return null;
+                  return (
                   <div style={{ 
                     padding: "16px",
                     background: "#f8fafc",
@@ -430,7 +763,7 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                       <strong style={{ color: "#374151", fontSize: "0.875rem" }}>Call Type:</strong>
                     </div>
                     <Badge 
-                      bg={log.callType === "Software" ? "info" : "warning"}
+                      bg={callTypeDisplay.badge}
                       style={{
                         padding: "4px 8px",
                         borderRadius: "4px",
@@ -438,10 +771,11 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                         fontWeight: "500"
                       }}
                     >
-                      {log.callType === "Software" ? "💻 Software" : "🔧 Hardware"}
+                      {callTypeDisplay.text}
                     </Badge>
                   </div>
-                )}
+                  );
+                })()}
                 
                 <div style={{ 
                   padding: "16px",

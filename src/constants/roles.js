@@ -12,6 +12,7 @@ export const ROLES = {
   ADMIN:               "admin",
   SALESPERSON:         "salesperson",
   SERVICE:             "service",
+  PART_REPLACEMENT:    "part_replacement",
    
   PRODUCTION:          "Production",
   INSTALLATION:        "Installation",

@@ -73,11 +73,14 @@ const Login = () => {
       // hint === "crm-dashboard" → CRM-only fallback
       const hint = result.redirectHint;
       const role = result.user?.role;
-      if (hint === "select-module")        navigate("/select-module", { replace: true });
-      else if (hint === "service-dashboard") navigate("/service", { replace: true });
-      else if (hint === "dms-dashboard")    navigate("/dms/dashboard", { replace: true });
+      if (hint === "select-module")  navigate("/select-module", { replace: true });
+      else if (hint === "dms-dashboard") navigate("/dms/dashboard", { replace: true });
       else if (hint === "furni-dashboard")  navigate(furniRoleRoute(role), { replace: true });
       else if (hint === "so-dashboard")     navigate(soRoleRoute(role), { replace: true });
+      else if (hint === "service-dashboard") {
+        if (role === "part_replacement") navigate("/service/part-replacement", { replace: true });
+        else navigate("/service", { replace: true });
+      }
       else navigate("/crm/dashboard", { replace: true });
     } else {
       toast.error(result.message, {

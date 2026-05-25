@@ -24,6 +24,8 @@ const ROLE_OPTIONS = [
   { value:"superadmin",        label:"Superadmin",           group:"Global" },
   { value:"admin",             label:"Admin",                group:"Global" },
   { value:"salesperson",       label:"Salesperson",          group:"Global" },
+  { value:"service",           label:"Service Engineer",     group:"Global" },
+  { value:"part_replacement",  label:"Part Replacement",     group:"Global" },
   { value:"Production",        label:"Production",           group:"Operational" },
   { value:"ProductionApproval",label:"Production Approval",  group:"Operational" },
   { value:"Installation",      label:"Installation",         group:"Operational" },
@@ -601,8 +603,7 @@ const UsersTab = () => {
 const CreateUserTab = ({ onCreated }) => {
   const [form, setForm] = useState({
     username:"", email:"", password:"", role:"salesperson",
-    dms:false, furniOnly:false,
-    superadminModules:{ crm:true, so:true, dms:true, furni:true },
+    dms:false, furniOnly:false,              superadminModules:{ crm:true, so:true, dms:true, furni:true },
     activeSection:"crm",
   });
   const [busy, setBusy]   = useState(false);
@@ -631,8 +632,7 @@ const CreateUserTab = ({ onCreated }) => {
       await portalApi.post("/api/admin/users", payload);
       toast.success(`User ${form.email} created!`);
       setForm({ username:"", email:"", password:"", role:"salesperson",
-        dms:false, furniOnly:false,
-        superadminModules:{ crm:true, so:true, dms:true, furni:true },
+        dms:false, furniOnly:false,                superadminModules:{ crm:true, so:true, dms:true, furni:true },
         activeSection:"crm" });
       onCreated?.();
     } catch (err) {
@@ -642,9 +642,10 @@ const CreateUserTab = ({ onCreated }) => {
 
   // Section tabs (mirrors Signup.jsx)
   const sections = [
-    { key:"crm",   label:"CRM / Global",  roles:["globaladmin","superadmin","admin","salesperson"] },
-    { key:"so",    label:"Sales Order",   roles:["Watch","Production","ProductionApproval","Installation","Finish","Accounts","Verification","Bill"] },
-    { key:"furni", label:"Furni Only",    roles:["Production","ProductionApproval","Installation","Finish","Accounts","Verification","Bill"] },
+    { key:"crm",     label:"CRM / Global",  roles:["globaladmin","superadmin","admin","salesperson"] },
+    { key:"so",      label:"Sales Order",   roles:["Watch","Production","ProductionApproval","Installation","Finish","Accounts","Verification","Bill"] },
+    { key:"furni",   label:"Furni Only",    roles:["Production","ProductionApproval","Installation","Finish","Accounts","Verification","Bill"] },
+    { key:"service", label:"Service",       roles:["part_replacement"] },
   ];
 
   const activeRoles = sections.find(s => s.key === form.activeSection)?.roles || [];

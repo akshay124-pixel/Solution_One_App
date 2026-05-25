@@ -3,6 +3,7 @@ import { Modal, Form, Button, Alert } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { FileText, X, Save } from "lucide-react";
 import serviceApi from "../axiosSetup";
+import { CALL_TYPE_OPTIONS } from "../utils/callTypes";
 
 const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -15,10 +16,11 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
     issue: "",
     warrantyStatus: "",
     callType: "",
+    systemType: "av&edtech",
     followUpDate: "",
     salesPerson: "",
   });
-  const [serviceAttachment, setServiceAttachment] = useState(null);
+  const [attachments, setAttachments] = useState([]);
   const [fileError, setFileError] = useState("");
   const [loading, setLoading] = useState(false);
   const [salespersons, setSalespersons] = useState([]);
@@ -42,42 +44,45 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Validate file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        setFileError("File size must be less than 10MB");
-        setServiceAttachment(null);
-        e.target.value = "";
-        return;
-      }
+    const files = Array.from(e.target.files);
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+    ];
+    const allowedExtensions = ["jpg", "jpeg", "png", "pdf", "doc", "docx", "xlsx", "xls"];
 
-      // Validate file type
-      const allowedTypes = [
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
-        "application/vnd.ms-excel", // .xls
-      ];
-      
-      // Also check file extension as fallback
-      const allowedExtensions = ["jpg", "jpeg", "png", "pdf", "doc", "docx", "xlsx", "xls"];
-      const fileExtension = file.name.split('.').pop().toLowerCase();
-      
-      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
-        setFileError("Only JPG, PNG, PDF, DOC, DOCX, XLS, XLSX files are allowed");
-        setServiceAttachment(null);
-        e.target.value = "";
-        return;
-      }
+    const validFiles = [];
+    let error = "";
 
+    files.forEach((file) => {
+      const fileExt = file.name.split(".").pop().toLowerCase();
+      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
+        error = `Invalid file type: ${file.name}`;
+      } else if (file.size > 10 * 1024 * 1024) {
+        error = `File too large: ${file.name} (Max 10MB)`;
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (error) {
+      setFileError(error);
+      toast.error(error);
+    } else {
       setFileError("");
-      setServiceAttachment(file);
+      setAttachments((prev) => [...prev, ...validFiles].slice(0, 10));
     }
+    e.target.value = null;
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async () => {
@@ -105,12 +110,13 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
       formDataToSend.append("issue", formData.issue);
       formDataToSend.append("warrantyStatus", formData.warrantyStatus);
       formDataToSend.append("callType", formData.callType);
+      formDataToSend.append("systemType", formData.systemType);
       formDataToSend.append("followUpDate", formData.followUpDate);
       formDataToSend.append("salesPerson", formData.salesPerson);
       
-      if (serviceAttachment) {
-        formDataToSend.append("serviceAttachment", serviceAttachment);
-      }
+      attachments.forEach((file) => {
+        formDataToSend.append("serviceAttachments", file);
+      });
 
       const response = await serviceApi.post("/manual-service-request", formDataToSend, {
         headers: {
@@ -142,10 +148,11 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
       issue: "",
       warrantyStatus: "",
       callType: "",
+      systemType: "av&edtech",
       followUpDate: "",
       salesPerson: "",
     });
-    setServiceAttachment(null);
+    setAttachments([]);
     setFileError("");
     onClose();
   };
@@ -358,6 +365,20 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                 Service Details
               </h6>
 
+              <Form.Group className="mb-3">
+                <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                  System <span style={{ color: "#ef4444" }}>*</span>
+                </Form.Label>
+                <Form.Select
+                  value={formData.systemType}
+                  onChange={(e) => handleChange("systemType", e.target.value)}
+                  style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
+                >
+                  <option value="av&edtech">📺 AV & EdTech</option>
+                  <option value="furniture">🪑 Furniture</option>
+                </Form.Select>
+              </Form.Group>
+
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
                 <Form.Group>
                   <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
@@ -384,8 +405,9 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                     style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
                   >
                     <option value="">Select Type</option>
-                    <option value="Software">💻 Software</option>
-                    <option value="Hardware">🔧 Hardware</option>
+                    {CALL_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.icon} {opt.label}</option>
+                    ))}
                   </Form.Select>
                 </Form.Group>
               </div>
@@ -456,22 +478,57 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                 </Form.Label>
                 <Form.Control
                   type="file"
+                  multiple
                   onChange={handleFileChange}
                   accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
                   style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
                 />
                 <small style={{ color: "#6b7280", fontSize: "0.75rem", display: "block", marginTop: "6px" }}>
-                  Allowed: JPG, PNG, PDF, DOC, DOCX, XLS, XLSX (Max 10MB)
+                  Allowed: JPG, PNG, PDF, DOC, DOCX, XLS, XLSX (Max 10MB, Max 10 files)
                 </small>
                 {fileError && (
                   <Alert variant="danger" style={{ marginTop: "8px", padding: "8px 12px", fontSize: "0.75rem" }}>
                     {fileError}
                   </Alert>
                 )}
-                {serviceAttachment && !fileError && (
-                  <Alert variant="success" style={{ marginTop: "8px", padding: "8px 12px", fontSize: "0.75rem" }}>
-                    ✅ File selected: {serviceAttachment.name}
-                  </Alert>
+                {attachments.length > 0 && (
+                  <div style={{ marginTop: "12px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                    {attachments.map((file, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          background: "#ecfdf5",
+                          border: "1px solid #10b981",
+                          borderRadius: "6px",
+                          padding: "4px 8px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          fontSize: "0.75rem",
+                          color: "#065f46",
+                        }}
+                      >
+                        <span style={{ maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {file.name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(index)}
+                          style={{
+                            border: "none",
+                            background: "none",
+                            color: "#ef4444",
+                            cursor: "pointer",
+                            padding: "0",
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </Form.Group>
             </div>

@@ -12,7 +12,7 @@ import { getPortalAccessToken } from "../../portal/PortalAuthContext";
 const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
   const navigate = useNavigate();
   const [pendingApprovals, setPendingApprovals] = useState([]);
-  const [followUpNotifications, setFollowUpNotifications] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedLog, setSelectedLog] = useState(null);
@@ -42,8 +42,8 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
       console.log("[NotificationBell] GlobalAdmin - Fetching initial pending approvals...");
       fetchPendingApprovals(true);
     } else if (isSuperAdmin) {
-      console.log("[NotificationBell] SuperAdmin - Fetching initial follow-up notifications...");
-      fetchFollowUpNotifications(true);
+      console.log("[NotificationBell] SuperAdmin - Fetching notifications...");
+      fetchSuperAdminNotifications(true);
     }
 
     if (!isGlobalAdmin && !isSuperAdmin) return;
@@ -66,13 +66,35 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
     socket.on("followUpNotification", (notification) => {
       if (isSuperAdmin) {
         console.log("[ServiceSocket] New follow-up received:", notification);
-        setFollowUpNotifications((prev) => {
+        setNotifications((prev) => {
           if (prev.find((n) => n._id === notification._id)) return prev;
           toast.info(`🔔 New Follow-up: ${notification.complaintNumber}`, {
             position: "top-right",
             autoClose: 5000,
           });
           return [notification, ...prev];
+        });
+      }
+    });
+
+    socket.on("newPartReplacementRequest", (notification) => {
+      if (isSuperAdmin) {
+        console.log("[ServiceSocket] New part request received:", notification);
+        fetchSuperAdminNotifications(false);
+        toast.success(`🛠️ New Part Request: ${notification.complaintNumber}`, {
+          position: "top-right",
+          autoClose: 5000,
+        });
+      }
+    });
+
+    socket.on("partReplacementUpdate", (notification) => {
+      if (isSuperAdmin) {
+        console.log("[ServiceSocket] Part status update received:", notification);
+        fetchSuperAdminNotifications(false);
+        toast.info(`📦 Part Update: ${notification.complaintNumber} is now ${notification.status}`, {
+          position: "top-right",
+          autoClose: 5000,
         });
       }
     });
@@ -121,19 +143,17 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
     }
   };
 
-  const fetchFollowUpNotifications = async (showLoading = true) => {
+  const fetchSuperAdminNotifications = async (showLoading = true) => {
     if (!isSuperAdmin) return;
-    
+
     if (showLoading) setLoading(true);
     try {
-      console.log("[NotificationBell] Fetching follow-up notifications for today");
-      const response = await serviceApi.get("/notifications/follow-ups");
+      const response = await serviceApi.get("/notifications");
       if (response.data.success) {
-        setFollowUpNotifications(response.data.data || []);
-        setNotificationType('followup');
+        setNotifications(response.data.data || []);
       }
     } catch (error) {
-      console.error("[NotificationBell] Failed to fetch follow-up notifications:", error);
+      console.error("[NotificationBell] Failed to fetch super admin notifications:", error);
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -163,8 +183,7 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
       } finally {
         setOrderDetailsLoading(false);
       }
-    } else if (notificationType === 'followup') {
-      // For follow-up notifications, we have all the data we need
+    } else if (isSuperAdmin) {
       setFullOrderDetails({
         _id: log._id,
         complaintNumber: log.complaintNumber,
@@ -176,6 +195,11 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
         state: log.state,
         address: log.address,
         orderId: log.orderId,
+        message: log.message,
+        type: log.type,
+        status: log.status,
+        partName: log.partName,
+        remarks: log.remarks,
       });
       setOrderDetailsLoading(false);
     }
@@ -257,11 +281,10 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
     });
   };
 
-  const currentNotifications = isSuperAdmin ? followUpNotifications : pendingApprovals;
   const unreadCount = isSuperAdmin 
-    ? followUpNotifications.filter(n => !n.isRead).length 
+    ? notifications.filter(n => !n.isRead).length
     : pendingApprovals.length;
-  const headerTitle = isSuperAdmin ? "Today's Follow-ups" : "Ready For Approval";
+  const headerTitle = isSuperAdmin ? "Service Notifications" : "Ready For Approval";
   
   // Updated theme-consistent gradients (removing pink)
   const headerGradient = isSuperAdmin 
@@ -271,27 +294,27 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
   const primaryThemeColor = "#2575fc";
   const secondaryThemeColor = isSuperAdmin ? "#6a11cb" : "#764ba2";
 
+  const currentNotifications = isSuperAdmin 
+    ? notifications
+    : pendingApprovals;
+
   const handleMarkAsRead = async (notificationId) => {
     try {
       const response = await serviceApi.patch(`/notifications/${notificationId}/read`);
       if (response.data.success) {
-        toast.success("Marked as read");
-        fetchFollowUpNotifications();
+        fetchSuperAdminNotifications(false);
       }
     } catch (error) {
       console.error("Failed to mark as read:", error);
-      toast.error("Failed to mark as read");
     }
   };
 
   const handleClearAll = async () => {
-   
-    
     try {
       const response = await serviceApi.delete("/notifications/clear-all");
       if (response.data.success) {
         toast.success("All notifications cleared");
-        fetchFollowUpNotifications();
+        fetchSuperAdminNotifications(false);
       }
     } catch (error) {
       console.error("Failed to clear notifications:", error);
@@ -410,8 +433,7 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
                 </div>
               )}
             </div>
-            {isSuperAdmin ? (
-              currentNotifications.length > 0 && (
+              {isSuperAdmin && currentNotifications.length > 0 && (
                 <div style={{ display: "flex", gap: "8px" }}>
                   <Button
                     variant="link"
@@ -426,12 +448,12 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
                     Clear All
                   </Button>
                 </div>
-              )
-            ) : (
-              <Badge bg="light" text="dark" style={{ fontSize: "0.85rem", borderRadius: "4px", padding: "4px 8px" }}>
-                {unreadCount}
-              </Badge>
-            )}
+              )}
+              {isGlobalAdmin && (
+                <Badge bg="light" text="dark" style={{ fontSize: "0.85rem", borderRadius: "4px", padding: "4px 8px" }}>
+                  {unreadCount}
+                </Badge>
+              )}
           </div>
 
           {/* Scrollable Content */}
@@ -447,11 +469,11 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
               <div style={{ padding: "40px", textAlign: "center" }}>
                 <Check size={48} color="#10b981" style={{ marginBottom: "12px" }} />
                 <p style={{ color: "#6b7280", margin: 0, fontSize: "0.9rem" }}>
-                  {isSuperAdmin ? "No follow-ups for today" : "No orders ready for approval"}
+                  {isSuperAdmin ? "All caught up!" : "No orders ready for approval"}
                 </p>
                 <p style={{ color: "#9ca3af", margin: "4px 0 0 0", fontSize: "0.8rem" }}>
                   {isSuperAdmin 
-                    ? "All set! No service requests with follow-ups due today" 
+                    ? "No new service notifications or follow-ups" 
                     : "Orders with 'Proceed For Approval' status will appear here"}
                 </p>
               </div>
@@ -481,59 +503,78 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
                   onClick={() => handleViewDetails(log)}
                 >
                   {isSuperAdmin ? (
-                    // New UI for Super Admin (Follow-ups)
+                    // New UI for Super Admin (Unified Notifications)
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "8px" }}>
-                      <div style={{ flex: 1 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                           {!log.isRead && (
-                            <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: primaryThemeColor }}></div>
+                            <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: log.type === "followup" ? primaryThemeColor : "#10b981", flexShrink: 0 }}></div>
                           )}
-                          <div style={{ fontWeight: "700", color: "#1e293b", fontSize: "0.95rem" }}>
+                          <div style={{ fontWeight: "700", color: "#1e293b", fontSize: "0.95rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {log.complaintNumber}
                           </div>
                         </div>
-                        <div style={{ fontSize: "0.85rem", color: "#475569", marginBottom: "2px", fontWeight: "500" }}>
+                        
+                        <div style={{ fontSize: "0.85rem", color: log.type === "part_new" ? "#059669" : log.type === "part_update" ? "#2563eb" : "#475569", fontWeight: "600" }}>
+                          {log.message}
+                        </div>
+                        
+                        <div style={{ fontSize: "0.85rem", color: "#475569", marginBottom: "2px", fontWeight: "500", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                           Customer: {log.customerName || "Unknown"}
                         </div>
-                        <div style={{ fontSize: "0.82rem", color: "#64748b", marginBottom: "2px" }}>
-                          Issue: {log.issue || "N/A"}
-                        </div>
+                        
+                        {log.remarks && (
+                          <div style={{ fontSize: "0.8rem", color: "#64748b", fontStyle: "italic", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            "{log.remarks}"
+                          </div>
+                        )}
+
                         <div style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
                           <Clock size={12} />
-                          {formatDate(log.followUpDate || log.createdAt)}
+                          {formatDate(log.createdAt)}
+                          {log.updatedBy && <span>• By: {log.updatedBy}</span>}
+                          {log.createdBy && log.type === "part_new" && <span>• By: {log.createdBy}</span>}
                         </div>
                       </div>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px", flexShrink: 0, marginLeft: "12px" }}>
+                        {!log.isRead && (
+                          <Button
+                            variant="light"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMarkAsRead(log._id);
+                            }}
+                            style={{ 
+                              padding: "4px", 
+                              borderRadius: "50%", 
+                              width: "28px", 
+                              height: "28px", 
+                              display: "flex", 
+                              alignItems: "center", 
+                              justifyContent: "center",
+                              background: "#f0fdf4",
+                              color: "#166534",
+                              border: "1px solid #bbf7d0"
+                            }}
+                            title="Mark as read"
+                          >
+                            <Check size={14} strokeWidth={3} />
+                          </Button>
+                        )}
                         <div style={{ 
                           padding: "4px 10px", 
-                          background: "rgba(37, 117, 252, 0.15)",
-                          color: "#1e40af",
+                          background: log.type?.startsWith("part") ? "rgba(16, 185, 129, 0.15)" : "rgba(37, 117, 252, 0.15)",
+                          color: log.type?.startsWith("part") ? "#059669" : "#1e40af",
                           borderRadius: "6px", 
                           fontSize: "0.7rem", 
                           fontWeight: "700",
                           textTransform: "uppercase",
                           letterSpacing: "0.5px",
-                          border: "1px solid rgba(37, 117, 252, 0.2)"
+                          border: log.type?.startsWith("part") ? "1px solid rgba(16, 185, 129, 0.2)" : "1px solid rgba(37, 117, 252, 0.2)"
                         }}>
-                          {log.serviceStatus}
+                          {log.type === "part_new" ? "New Request" : log.type === "part_update" ? log.status : "Follow-up"}
                         </div>
-                        {!log.isRead && (
-                          <Button
-                          variant="link"
-                          size="sm"
-                          className="btn-hover-animation"
-                          style={{ padding: 0, color: "#94a3b8", transition: "color 0.2s" }}
-                            onMouseEnter={(e) => e.currentTarget.style.color = primaryThemeColor}
-                            onMouseLeave={(e) => e.currentTarget.style.color = "#94a3b8"}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMarkAsRead(log._id);
-                            }}
-                            title="Mark as read"
-                          >
-                            <Check size={18} />
-                          </Button>
-                        )}
                       </div>
                     </div>
                   ) : (
@@ -597,7 +638,7 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
               onClick={(e) => {
                 e.stopPropagation();
                 if (isGlobalAdmin) fetchPendingApprovals();
-                if (isSuperAdmin) fetchFollowUpNotifications();
+                if (isSuperAdmin) fetchSuperAdminNotifications();
               }}
             >
               <RotateCw size={16} className={loading ? "spin-animation" : ""} />

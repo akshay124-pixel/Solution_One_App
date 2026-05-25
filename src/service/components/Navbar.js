@@ -1,7 +1,7 @@
 import React from "react";
 import { Navbar, Nav, Container, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { LogOut, Package } from "lucide-react";
 import ApprovalNotificationBell from "./ApprovalNotificationBell";
 
 const ServiceNavbar = ({ isAuthenticated, onLogout, userRole, onApprovalAction }) => {

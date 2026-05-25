@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { X, ChevronDown } from "lucide-react";
+import { CALL_TYPE_OPTIONS, getCallTypeDisplay } from "../utils/callTypes";
 
 const ServiceLogsFilters = ({
   serviceLogsSearch,
@@ -8,6 +9,8 @@ const ServiceLogsFilters = ({
   setStatusFilter,
   callTypeFilter,
   setCallTypeFilter,
+  systemTypeFilter,
+  setSystemTypeFilter,
   stateFilter,
   setStateFilter,
   availableStates,
@@ -22,12 +25,13 @@ const ServiceLogsFilters = ({
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
-  const hasActiveFilters = serviceLogsSearch || statusFilter || callTypeFilter || stateFilter || salesPersonFilter || startDate || endDate;
+  const hasActiveFilters = serviceLogsSearch || statusFilter || callTypeFilter || systemTypeFilter || stateFilter || salesPersonFilter || startDate || endDate;
 
   const clearAllFilters = () => {
     setServiceLogsSearch("");
     setStatusFilter("");
     setCallTypeFilter("");
+    setSystemTypeFilter("");
     setStateFilter("");
     setStartDate("");
     setEndDate("");
@@ -122,8 +126,30 @@ const ServiceLogsFilters = ({
             }}
           >
             <option value="">All Types</option>
-            <option value="Software">💻 Software</option>
-            <option value="Hardware">🔧 Hardware</option>
+            {CALL_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.icon} {opt.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* System Filter */}
+        <div style={{ flex: "0 0 auto" }}>
+          <select
+            value={systemTypeFilter}
+            onChange={(e) => setSystemTypeFilter(e.target.value)}
+            style={{
+              padding: "10px 12px",
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+              fontSize: "0.875rem",
+              background: "white",
+              minWidth: "140px",
+              cursor: "pointer"
+            }}
+          >
+            <option value="">All Systems</option>
+            <option value="av&edtech">📺 AV & EdTech</option>
+            <option value="furniture">🪑 Furniture</option>
           </select>
         </div>
 
@@ -379,7 +405,7 @@ const ServiceLogsFilters = ({
                 fontSize: "0.75rem",
                 fontWeight: "500"
               }}>
-                Type: {callTypeFilter}
+                Type: {getCallTypeDisplay(callTypeFilter)?.text || callTypeFilter}
               </span>
             )}
             {stateFilter && (

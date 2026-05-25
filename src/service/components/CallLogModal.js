@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Form, Button, Alert } from "react-bootstrap";
 import { toast } from "react-toastify";
-import { Phone, User, MessageSquare, Calendar, Send, X } from "lucide-react";
+import { Phone, User, MessageSquare, Calendar, Send, X, Paperclip } from "lucide-react";
 import serviceApi from "../axiosSetup";
 
 const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
@@ -15,7 +15,7 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
   const [issue, setIssue] = useState("");
   const [remarks, setRemarks] = useState("");
   const [followUpDate, setFollowUpDate] = useState("");
-  const [serviceAttachment, setServiceAttachment] = useState(null);
+  const [attachments, setAttachments] = useState([]);
   const [fileError, setFileError] = useState("");
   const [loading, setLoading] = useState(false);
   const [salespersons, setSalespersons] = useState([]);
@@ -45,44 +45,44 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
   }, [order]);
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const allowedTypes = [
-        "application/pdf",
-        "image/png",
-        "image/jpg", 
-        "image/jpeg",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
-        "application/vnd.ms-excel" // .xls
-      ];
-      const allowedExtensions = ["pdf", "png", "jpg", "jpeg", "docx", "xlsx", "xls"];
-      const fileExt = file.name.split(".").pop().toLowerCase();
+    const files = Array.from(e.target.files);
+    const allowedTypes = [
+      "application/pdf",
+      "image/png",
+      "image/jpg", 
+      "image/jpeg",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+      "application/vnd.ms-excel" // .xls
+    ];
+    const allowedExtensions = ["pdf", "png", "jpg", "jpeg", "docx", "xlsx", "xls"];
 
+    const validFiles = [];
+    let error = "";
+
+    files.forEach((file) => {
+      const fileExt = file.name.split(".").pop().toLowerCase();
       if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
-        setFileError(
-          "Invalid file type. Only PDF, PNG, JPG, DOCX, XLS, XLSX are allowed."
-        );
-        toast.error(
-          "Invalid file type. Only PDF, PNG, JPG, DOCX, XLS, XLSX are allowed."
-        );
-        e.target.value = null;
-        setServiceAttachment(null);
-        return;
+        error = `Invalid file type: ${file.name}`;
+      } else if (file.size > 10 * 1024 * 1024) {
+        error = `File too large: ${file.name} (Max 10MB)`;
+      } else {
+        validFiles.push(file);
       }
-      if (file.size > 10 * 1024 * 1024) {
-        setFileError("File size must be less than 10MB");
-        toast.error("File size must be less than 10MB");
-        e.target.value = null;
-        setServiceAttachment(null);
-        return;
-      }
-      setServiceAttachment(file);
-      setFileError("");
+    });
+
+    if (error) {
+      setFileError(error);
+      toast.error(error);
     } else {
-      setServiceAttachment(null);
       setFileError("");
+      setAttachments((prev) => [...prev, ...validFiles].slice(0, 10)); // Limit to 10
     }
+    e.target.value = null; // Clear input
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
@@ -119,9 +119,10 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
       formData.append("followUpDate", followUpDate);
       formData.append("salesPerson", selectedSalesperson);
       
-      if (serviceAttachment) {
-        formData.append("serviceAttachment", serviceAttachment);
-      }
+      // Append all files
+      attachments.forEach((file) => {
+        formData.append("serviceAttachments", file);
+      });
 
       const response = await serviceApi.post("/call-logs", formData, {
         headers: {
@@ -132,19 +133,8 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
       if (response.data.success) {
         toast.success(response.data.message);
         // Reset form
-        setCallStatus("");
-        setServiceRequestName("");
-        setServiceRequestMobile("");
-        setServiceRequestEmail("");
-        setWarrantyStatus("");
-        setIssue("");
-        setRemarks("");
-        setFollowUpDate("");
-        setSelectedSalesperson(order?.salesPerson || "");
-        setServiceAttachment(null);
-        setFileError("");
+        handleClose();
         onSuccess();
-        onClose();
       }
     } catch (error) {
       toast.error(
@@ -166,7 +156,7 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
     setRemarks("");
     setFollowUpDate("");
     setSelectedSalesperson(order?.salesPerson || "");
-    setServiceAttachment(null);
+    setAttachments([]);
     setFileError("");
     onClose();
   };
@@ -741,7 +731,7 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  border: `1px solid ${serviceAttachment ? "#22c55e" : "#d1d5db"}`,
+                  border: `1px solid ${attachments.length > 0 ? "#22c55e" : "#d1d5db"}`,
                   borderRadius: "8px",
                   backgroundColor: "#f8fafc",
                   padding: "8px",
@@ -752,6 +742,14 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
                   overflow: "hidden",
                 }}
               >
+                <Form.Control
+                  type="file"
+                  id="serviceAttachment"
+                  multiple
+                  onChange={handleFileChange}
+                  accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.xls"
+                  style={{ display: "none" }}
+                />
                 <label
                   htmlFor="serviceAttachment"
                   style={{
@@ -780,82 +778,13 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
                       "linear-gradient(135deg, #e2e8f0, #f8fafc)")
                   }
                 >
-                  <svg
-                    style={{
-                      width: "18px",
-                      height: "18px",
-                      color: "#6366f1",
-                      flexShrink: 0,
-                    }}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                    />
-                  </svg>
-                  <span
-                    style={{
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                      flex: 1,
-                    }}
-                  >
-                    {serviceAttachment
-                      ? serviceAttachment.name
-                      : "Upload Document (PDF, PNG, JPG, DOCX, XLS, XLSX)"}
+                  <Paperclip size={18} style={{ color: "#6366f1", flexShrink: 0 }} />
+                  <span>
+                    {attachments.length > 0 
+                      ? `${attachments.length} files selected` 
+                      : "Choose files..."}
                   </span>
                 </label>
-                <input
-                  id="serviceAttachment"
-                  type="file"
-                  name="serviceAttachment"
-                  accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.xls"
-                  onChange={handleFileChange}
-                  style={{
-                    display: "none",
-                  }}
-                />
-                {serviceAttachment && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setServiceAttachment(null);
-                      setFileError("");
-                      document.getElementById("serviceAttachment").value = null;
-                    }}
-                    style={{
-                      padding: "8px",
-                      background: "none",
-                      border: "none",
-                      color: "#ef4444",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      flexShrink: 0,
-                    }}
-                    title="Remove File"
-                  >
-                    <svg
-                      style={{ width: "18px", height: "18px" }}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                )}
               </div>
               {fileError && (
                 <small
@@ -869,16 +798,49 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
                   {fileError}
                 </small>
               )}
-              <small
-                style={{
-                  color: "#6b7280",
-                  fontSize: "0.75rem",
-                  marginTop: "4px",
-                  display: "block",
-                }}
-              >
-                Optional: Upload supporting documents, images, or reports (Max 10MB)
+              <small style={{ color: "#64748b", fontSize: "0.75rem", marginTop: "4px", display: "block" }}>
+                Allowed: PDF, PNG, JPG, DOCX, XLS, XLSX (Max 10MB, Max 10 files)
               </small>
+
+              {attachments.length > 0 && (
+                <div style={{ marginTop: "12px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {attachments.map((file, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        background: "#f0fdf4",
+                        border: "1px solid #bbf7d0",
+                        borderRadius: "6px",
+                        padding: "4px 10px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        fontSize: "0.75rem",
+                        color: "#166534",
+                      }}
+                    >
+                      <span style={{ maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {file.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(index)}
+                        style={{
+                          border: "none",
+                          background: "none",
+                          color: "#ef4444",
+                          cursor: "pointer",
+                          padding: "0",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Form.Group>
 
             <div

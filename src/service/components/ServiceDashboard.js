@@ -1,6 +1,7 @@
 import React, { useState, useEffect, Suspense } from "react";
+import { useNavigate } from "react-router-dom";
 import { Container, Row, Col, Card, Button, Modal, Form, Spinner } from "react-bootstrap";
-import { Download, RefreshCw, TrendingUp, Clock, CheckCircle, AlertCircle, Repeat, X, Check } from "lucide-react";
+import { Download, RefreshCw, TrendingUp, Clock, CheckCircle, AlertCircle, Repeat, X, Check, Package } from "lucide-react";
 import SearchSection from "./SearchSection";
 import SearchResultsTable from "./SearchResultsTable";
 import ServiceLogsTable from "./ServiceLogsTable";
@@ -22,6 +23,7 @@ import { toast } from "react-toastify";
 const ViewEntry = React.lazy(() => import("../../so/components/ViewEntry"));
 
 const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
+  const navigate = useNavigate();
   const [searchResults, setSearchResults] = useState([]);
   const [serviceLogs, setServiceLogs] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -44,6 +46,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   const [serviceLogsSearch, setServiceLogsSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [callTypeFilter, setCallTypeFilter] = useState("");
+  const [systemTypeFilter, setSystemTypeFilter] = useState("");
   const [stateFilter, setStateFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -107,7 +110,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   // Reset pagination when filters change
   useEffect(() => {
     setServicePage(1);
-  }, [debouncedServiceLogsSearch, statusFilter, callTypeFilter, stateFilter, salesPersonFilter, startDate, endDate]);
+  }, [debouncedServiceLogsSearch, statusFilter, callTypeFilter, systemTypeFilter, stateFilter, salesPersonFilter, startDate, endDate]);
 
   useEffect(() => {
     setReplacementPage(1);
@@ -131,7 +134,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   // Fetch service logs on mount and when filters/pagination change
   useEffect(() => {
     fetchServiceLogs();
-  }, [servicePage, serviceLimit, debouncedServiceLogsSearch, statusFilter, callTypeFilter, stateFilter, salesPersonFilter, startDate, endDate]);
+  }, [servicePage, serviceLimit, debouncedServiceLogsSearch, statusFilter, callTypeFilter, systemTypeFilter, stateFilter, salesPersonFilter, startDate, endDate]);
 
   useEffect(() => {
     fetchReplacementDemoLogs();
@@ -158,6 +161,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
           search: debouncedServiceLogsSearch,
           status: statusFilter,
           callType: callTypeFilter,
+          systemType: systemTypeFilter,
           state: stateFilter,
           salesPerson: salesPersonFilter,
           startDate: startDate,
@@ -396,6 +400,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
           search: debouncedServiceLogsSearch,
           status: statusFilter,
           callType: callTypeFilter,
+          systemType: systemTypeFilter,
           state: stateFilter,
           startDate: startDate,
           endDate: endDate
@@ -656,6 +661,48 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
       </style>
       <div className="service-dashboard">
         <Container fluid style={{ padding: "30px" }}>
+          
+          {/* Global Admin Quick Access */}
+          {userRole?.toLowerCase() === "globaladmin" && (
+            <div 
+              style={{ 
+                background: "linear-gradient(135deg, #2575fc, #6a11cb)", 
+                padding: "20px 32px", 
+                borderRadius: "16px", 
+                marginBottom: "30px",
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center",
+                boxShadow: "0 10px 25px rgba(37, 117, 252, 0.25)",
+                color: "white"
+              }}
+            >
+              <div>
+                <h4 style={{ margin: 0, fontWeight: "800", letterSpacing: "-0.5px" }}>Welcome, Global Admin</h4>
+                <p style={{ margin: "4px 0 0 0", opacity: 0.9, fontSize: "0.95rem", fontWeight: "500" }}>You have full access to all service and part replacement workflows.</p>
+              </div>
+              <Button 
+                onClick={() => navigate("/service/part-replacement")}
+                style={{ 
+                  background: "white", 
+                  color: "#2575fc", 
+                  border: "none", 
+                  padding: "12px 24px", 
+                  borderRadius: "12px", 
+                  fontWeight: "700",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  transition: "all 0.2s ease",
+                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)"
+                }}
+                className="hover-scale"
+              >
+                <Package size={20} />
+                Go to Part Replacement Dashboard
+              </Button>
+            </div>
+          )}
 
           {/* Dashboard Stats */}
           <Row className="mb-5" style={{ gap: "0", margin: "0 -10px" }}>
@@ -735,8 +782,10 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
               statusFilter={statusFilter}
               setStatusFilter={setStatusFilter}
               callTypeFilter={callTypeFilter}
-              setCallTypeFilter={setCallTypeFilter}
-              stateFilter={stateFilter}
+            setCallTypeFilter={setCallTypeFilter}
+            systemTypeFilter={systemTypeFilter}
+            setSystemTypeFilter={setSystemTypeFilter}
+            stateFilter={stateFilter}
               setStateFilter={setStateFilter}
               availableStates={[...new Set(serviceLogs.map(log => log.state).filter(Boolean))]}
               startDate={startDate}

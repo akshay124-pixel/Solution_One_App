@@ -86,6 +86,7 @@ const SearchResultsTable = ({ orders, onView, onCallLog }) => {
           <thead 
             className="gradient-table-header"
             style={{ 
+              background: "linear-gradient(135deg, #2575fc, #6a11cb)",
               color: "white",
               boxShadow: "none",
             }}

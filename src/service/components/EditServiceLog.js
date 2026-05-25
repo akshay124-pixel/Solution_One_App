@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Form, Button, Alert, Badge } from "react-bootstrap";
 import { toast } from "react-toastify";
-import { Settings, X, Save } from "lucide-react";
+import { Settings, X, Save, FileText } from "lucide-react";
 import serviceApi from "../axiosSetup";
 import engineersList from "../utils/engineersList";
+import { CALL_TYPE_OPTIONS } from "../utils/callTypes";
 
 const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
   const [serviceStatus, setServiceStatus] = useState("");
@@ -25,6 +26,12 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
   const [salespersons, setSalespersons] = useState([]);
   const [salesPerson, setSalesPerson] = useState("");
   const [address, setAddress] = useState("");
+  const [replacementPartReceived, setReplacementPartReceived] = useState("No");
+  const [serviceAttachments, setServiceAttachments] = useState([]); // New service files
+  const [partAttachments, setPartAttachments] = useState([]); // New part files
+  const [existingPartAttachments, setExistingPartAttachments] = useState([]); // Old part files from DB
+  const [existingServiceAttachments, setExistingServiceAttachments] = useState([]); // Old service files from DB
+  const [deletedAttachments, setDeletedAttachments] = useState([]); // FileNames to remove in backend
 
   const handleDownloadAttachment = async (filename) => {
     if (!filename) {
@@ -97,9 +104,9 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
   };
 
   // File upload handler
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
+  const handleFileChange = (e, type = 'part') => {
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
       const allowedTypes = [
         "application/pdf",
         "image/png",
@@ -110,31 +117,66 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
         "application/vnd.ms-excel" // .xls
       ];
       const allowedExtensions = ["pdf", "png", "jpg", "jpeg", "docx", "xlsx", "xls"];
-      const fileExt = file.name.split(".").pop().toLowerCase();
+      
+      const validFiles = [];
+      let errorMessage = "";
 
-      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
-        setFileError(
-          "Invalid file type. Only PDF, PNG, JPG, DOCX, XLS, XLSX are allowed."
-        );
-        toast.error(
-          "Invalid file type. Only PDF, PNG, JPG, DOCX, XLS, XLSX are allowed."
-        );
-        e.target.value = null;
-        setServiceAttachment(null);
-        return;
+      files.forEach(file => {
+        const fileExt = file.name.split(".").pop().toLowerCase();
+        
+        if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
+          errorMessage = `Invalid file type for ${file.name}. Only PDF, PNG, JPG, DOCX, XLS, XLSX are allowed.`;
+          return;
+        }
+        
+        if (file.size > 10 * 1024 * 1024) {
+          errorMessage = `File ${file.name} is too large. Max size is 10MB.`;
+          return;
+        }
+
+        // Prevent duplicate local uploads
+        const currentAttachments = type === 'service' ? serviceAttachments : partAttachments;
+        if (currentAttachments.some(a => a.name === file.name && a.size === file.size)) {
+          return;
+        }
+
+        validFiles.push(file);
+      });
+
+      if (errorMessage) {
+        setFileError(errorMessage);
+        toast.error(errorMessage);
+      } else {
+        setFileError("");
       }
-      if (file.size > 10 * 1024 * 1024) {
-        setFileError("File size must be less than 10MB");
-        toast.error("File size must be less than 10MB");
-        e.target.value = null;
-        setServiceAttachment(null);
-        return;
+
+      if (validFiles.length > 0) {
+        if (type === 'service') {
+          setServiceAttachments(prev => [...prev, ...validFiles]);
+        } else {
+          setPartAttachments(prev => [...prev, ...validFiles]);
+        }
       }
-      setServiceAttachment(file);
-      setFileError("");
+      
+      // Reset input value to allow re-uploading same file if deleted
+      e.target.value = null;
+    }
+  };
+
+  const removeNewAttachment = (index, type = 'part') => {
+    if (type === 'service') {
+      setServiceAttachments(prev => prev.filter((_, i) => i !== index));
     } else {
-      setServiceAttachment(null);
-      setFileError("");
+      setPartAttachments(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const removeExistingAttachment = (fileName, type = 'part') => {
+    setDeletedAttachments(prev => [...prev, fileName]);
+    if (type === 'service') {
+      setExistingServiceAttachments(prev => prev.filter(a => a.fileName !== fileName));
+    } else {
+      setExistingPartAttachments(prev => prev.filter(a => a.fileName !== fileName));
     }
   };
 
@@ -169,6 +211,12 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
       setAssignedEngineers(log.assignedEngineers || []);
       setHardwareItems(log.hardwareItems || [{ description: "", quantity: "", price: "" }]);
       setSalesPerson(log.orderDetails?.salesPerson || log.salesPerson || "");
+      setReplacementPartReceived(log.replacementPartReceived || "No");
+      setExistingPartAttachments(log.attachments || []);
+      setExistingServiceAttachments(log.serviceAttachments || []);
+      setPartAttachments([]);
+      setServiceAttachments([]);
+      setDeletedAttachments([]);
       setServiceAttachment(null); // Reset file input for new uploads
       setFileError("");
     }
@@ -178,6 +226,14 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
     if (!serviceStatus) {
       toast.warning("Please select a service status");
       return;
+    }
+
+    // Workflow validation: Part Replacement Closing Rule
+    if (serviceStatus === "Closed" && log?.partStatus === "In Stock") {
+      if (replacementPartReceived !== "Yes") {
+        toast.error("Replacement part must be received before closing this ticket.");
+        return;
+      }
     }
 
     // Validate mobile number if provided
@@ -198,16 +254,24 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
       formData.append("state", state);
       formData.append("address", address);
       formData.append("warrantyStatus", warrantyStatus);
+      formData.append("replacementPartReceived", replacementPartReceived);
       formData.append("callType", callType);
       formData.append("issue", issue);
       formData.append("followUpDate", followUpDate ? new Date(followUpDate).toISOString() : "");
       formData.append("assignedEngineers", JSON.stringify(assignedEngineers));
       formData.append("hardwareItems", JSON.stringify(callType === "Hardware" ? hardwareItems.filter(item => item.description && item.description.trim()) : []));
       formData.append("salesPerson", salesPerson);
+      formData.append("deletedAttachments", JSON.stringify(deletedAttachments));
       
-      if (serviceAttachment) {
-        formData.append("serviceAttachment", serviceAttachment);
-      }
+      // Append new service attachments
+      serviceAttachments.forEach(file => {
+        formData.append("serviceAttachments", file);
+      });
+
+      // Append new part attachments
+      partAttachments.forEach(file => {
+        formData.append("partAttachments", file);
+      });
 
       const response = await serviceApi.patch(`/service-logs/${log._id}`, formData, {
         headers: {
@@ -246,6 +310,11 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
     setAssignedEngineers(log?.assignedEngineers || []);
     setHardwareItems(log?.hardwareItems || [{ description: "", quantity: "", price: "" }]);
     setSalesPerson(log?.orderDetails?.salesPerson || log?.salesPerson || "");
+    setExistingPartAttachments(log?.attachments || []);
+    setExistingServiceAttachments(log?.serviceAttachments || []);
+    setPartAttachments([]);
+    setServiceAttachments([]);
+    setDeletedAttachments([]);
     setServiceAttachment(null);
     setFileError("");
     onClose();
@@ -732,8 +801,9 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
                     }}
                   >
                     <option value="">Select Type</option>
-                    <option value="Software">💻 Software</option>
-                    <option value="Hardware">🔧 Hardware</option>
+                    {CALL_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.icon} {opt.label}</option>
+                    ))}
                   </Form.Select>
                 </Form.Group>
               </div>
@@ -841,6 +911,41 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
                 <option value="Closed">Closed</option>
               </Form.Select>
             </Form.Group>
+
+            {/* Replacement Part Received Dropdown - Only show if partStatus is In Stock */}
+            {log?.partStatus === "In Stock" && (
+              <Form.Group className="mb-4">
+                <Form.Label style={{ fontWeight: "600", color: "#374151", marginBottom: "8px", display: "flex", alignItems: "center" }}>
+                  <span style={{ marginRight: "8px" }}>📦</span> Replacement Part Received?
+                </Form.Label>
+                <Form.Select
+                  value={replacementPartReceived}
+                  onChange={(e) => setReplacementPartReceived(e.target.value)}
+                  style={{
+                    borderRadius: "8px",
+                    border: "1px solid #d1d5db",
+                    padding: "10px 12px",
+                    fontSize: "0.875rem",
+                    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                    background: "white",
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = "#2563eb";
+                    e.target.style.boxShadow = "0 0 0 3px rgba(37, 99, 235, 0.1)";
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = "#d1d5db";
+                    e.target.style.boxShadow = "none";
+                  }}
+                >
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </Form.Select>
+                <Form.Text className="text-muted">
+                  Must be 'Yes' to close a ticket with In Stock replacement.
+                </Form.Text>
+              </Form.Group>
+            )}
 
             {/* Engineers and Call Type Section - Only show when Service Status is "In Progress" */}
             {serviceStatus === "In Progress" && (
@@ -954,144 +1059,333 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
                     }}
                   >
                     <option value="">Select Type</option>
-                    <option value="Software">💻 Software</option>
-                    <option value="Hardware">🔧 Hardware</option>
+                    {CALL_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.icon} {opt.label}</option>
+                    ))}
                   </Form.Select>
                 </Form.Group>
 
                 {/* Hardware Items - Only show when Call Type is "Hardware" */}
-                {callType === "Hardware" && (
+            {callType === "Hardware" && (
+              <>
+                <div style={{
+                  background: "#fef3c7",
+                  border: "1px solid #fbbf24",
+                  borderRadius: "8px",
+                  padding: "16px",
+                  marginTop: "16px",
+                  marginBottom: "24px"
+                }}>
                   <div style={{
-                    background: "#fef3c7",
-                    border: "1px solid #fbbf24",
-                    borderRadius: "8px",
-                    padding: "16px",
-                    marginTop: "16px"
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "12px"
                   }}>
-                    <div style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "12px"
+                    <h6 style={{ 
+                      fontWeight: "600", 
+                      color: "#92400e",
+                      fontSize: "0.875rem",
+                      margin: 0
                     }}>
-                      <h6 style={{ 
-                        fontWeight: "600", 
-                        color: "#92400e",
-                        fontSize: "0.875rem",
-                        margin: 0
-                      }}>
-                        Parts & Hardware Requirements
-                      </h6>
-                      <button
-                        type="button"
-                        onClick={addHardwareItem}
-                        style={{
-                          background: "#f59e0b",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "6px",
-                          padding: "6px 12px",
-                          fontSize: "0.75rem",
-                          fontWeight: "500",
-                          cursor: "pointer"
-                        }}
-                      >
-                        + Add Item
-                      </button>
-                    </div>
-                    
-                    {hardwareItems.map((item, index) => (
-                      <div key={index} style={{
-                        background: "white",
-                        border: "1px solid #e5e7eb",
+                      Parts & Hardware Requirements
+                    </h6>
+                    <button
+                      type="button"
+                      onClick={addHardwareItem}
+                      style={{
+                        background: "#f59e0b",
+                        color: "white",
+                        border: "none",
                         borderRadius: "6px",
-                        padding: "12px",
-                        marginBottom: "8px"
+                        padding: "6px 12px",
+                        fontSize: "0.75rem",
+                        fontWeight: "500",
+                        cursor: "pointer"
+                      }}
+                    >
+                      + Add Item
+                    </button>
+                  </div>
+                  
+                  {hardwareItems.map((item, index) => (
+                    <div key={index} style={{
+                      background: "white",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "6px",
+                      padding: "12px",
+                      marginBottom: "8px"
+                    }}>
+                      <div style={{ 
+                        display: "grid", 
+                        gridTemplateColumns: "2fr 1fr 1fr auto", 
+                        gap: "8px", 
+                        alignItems: "end" 
                       }}>
-                        <div style={{ 
-                          display: "grid", 
-                          gridTemplateColumns: "2fr 1fr 1fr auto", 
-                          gap: "8px", 
-                          alignItems: "end" 
-                        }}>
-                          <Form.Group>
-                            <Form.Label style={{ fontSize: "0.75rem", fontWeight: "500", color: "#374151" }}>
-                              Description
-                            </Form.Label>
-                            <Form.Control
-                              type="text"
-                              value={item.description}
-                              onChange={(e) => updateHardwareItem(index, "description", e.target.value)}
-                              placeholder="Item description..."
-                              style={{
-                                fontSize: "0.875rem",
-                                padding: "8px 10px",
-                                borderRadius: "4px"
-                              }}
-                            />
-                          </Form.Group>
-                          <Form.Group>
-                            <Form.Label style={{ fontSize: "0.75rem", fontWeight: "500", color: "#374151" }}>
-                              Quantity
-                            </Form.Label>
-                            <Form.Control
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => updateHardwareItem(index, "quantity", e.target.value)}
-                              placeholder="Qty"
-                              min="1"
-                              style={{
-                                fontSize: "0.875rem",
-                                padding: "8px 10px",
-                                borderRadius: "4px"
-                              }}
-                            />
-                          </Form.Group>
-                          <Form.Group>
-                            <Form.Label style={{ fontSize: "0.75rem", fontWeight: "500", color: "#374151" }}>
-                              Price (₹) {warrantyStatus === "In Warranty" && <span style={{ color: "#6b7280", fontSize: "0.7rem" }}>(Optional)</span>}
-                              {warrantyStatus === "Out of Warranty" && <span style={{ color: "#ef4444", fontSize: "0.7rem" }}>*</span>}
-                            </Form.Label>
-                            <Form.Control
-                              type="number"
-                              value={item.price}
-                              onChange={(e) => updateHardwareItem(index, "price", e.target.value)}
-                              placeholder="Enter price"
-                              min="0"
-                              step="0.01"
-                              required={warrantyStatus === "Out of Warranty"}
-                              style={{
-                                fontSize: "0.875rem",
-                                padding: "8px 10px",
-                                borderRadius: "4px",
-                                borderColor: warrantyStatus === "Out of Warranty" && !item.price ? "#fca5a5" : "#d1d5db"
-                              }}
-                            />
-                          
-                          </Form.Group>
-                          {hardwareItems.length > 1 && (
+                        <Form.Group>
+                          <Form.Label style={{ fontSize: "0.75rem", fontWeight: "500", color: "#374151" }}>
+                            Description
+                          </Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={item.description}
+                            onChange={(e) => updateHardwareItem(index, "description", e.target.value)}
+                            placeholder="Item description..."
+                            style={{
+                              fontSize: "0.875rem",
+                              padding: "8px 10px",
+                              borderRadius: "4px"
+                            }}
+                          />
+                        </Form.Group>
+                        <Form.Group>
+                          <Form.Label style={{ fontSize: "0.75rem", fontWeight: "500", color: "#374151" }}>
+                            Quantity
+                          </Form.Label>
+                          <Form.Control
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => updateHardwareItem(index, "quantity", e.target.value)}
+                            placeholder="Qty"
+                            min="1"
+                            style={{
+                              fontSize: "0.875rem",
+                              padding: "8px 10px",
+                              borderRadius: "4px"
+                            }}
+                          />
+                        </Form.Group>
+                        <Form.Group>
+                          <Form.Label style={{ fontSize: "0.75rem", fontWeight: "500", color: "#374151" }}>
+                            Price (₹) {warrantyStatus === "In Warranty" && <span style={{ color: "#6b7280", fontSize: "0.7rem" }}>(Optional)</span>}
+                            {warrantyStatus === "Out of Warranty" && <span style={{ color: "#ef4444", fontSize: "0.7rem" }}>*</span>}
+                          </Form.Label>
+                          <Form.Control
+                            type="number"
+                            value={item.price}
+                            onChange={(e) => updateHardwareItem(index, "price", e.target.value)}
+                            placeholder="Enter price"
+                            min="0"
+                            step="0.01"
+                            required={warrantyStatus === "Out of Warranty"}
+                            style={{
+                              fontSize: "0.875rem",
+                              padding: "8px 10px",
+                              borderRadius: "4px",
+                              borderColor: warrantyStatus === "Out of Warranty" && !item.price ? "#fca5a5" : "#d1d5db"
+                            }}
+                          />
+                        </Form.Group>
+                        {hardwareItems.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeHardwareItem(index)}
+                            style={{
+                              background: "#ef4444",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              padding: "8px",
+                              cursor: "pointer",
+                              fontSize: "0.75rem"
+                            }}
+                            title="Remove item"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Part Related Attachments Section */}
+                <div style={{
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  borderRadius: "8px",
+                  padding: "16px",
+                  marginBottom: "24px"
+                }}>
+                  <h6 style={{ 
+                    fontWeight: "600", 
+                    color: "#166534",
+                    fontSize: "0.875rem",
+                    marginBottom: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px"
+                  }}>
+                    <Settings size={18} />
+                    Part Related Attachments
+                  </h6>
+
+                  {/* Existing Attachments */}
+                  {existingPartAttachments.length > 0 && (
+                    <div style={{ marginBottom: "16px" }}>
+                      <p style={{ fontSize: "0.75rem", fontWeight: "600", color: "#166534", marginBottom: "8px" }}>
+                        Current Attachments:
+                      </p>
+                      <div style={{ display: "grid", gap: "8px" }}>
+                        {existingPartAttachments.map((file, idx) => (
+                          <div key={idx} style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            background: "white",
+                            padding: "8px 12px",
+                            borderRadius: "6px",
+                            border: "1px solid #bbf7d0"
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden" }}>
+                              <div style={{ color: "#166534", flexShrink: 0 }}>
+                                <Save size={16} />
+                              </div>
+                              <span style={{ 
+                                fontSize: "0.8125rem", 
+                                color: "#1f2937",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap"
+                              }}>
+                                {file.originalName || file.fileName}
+                              </span>
+                            </div>
+                            <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadAttachment(file.fileName)}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: "#166534",
+                                  padding: "4px",
+                                  cursor: "pointer"
+                                }}
+                                title="Download"
+                              >
+                                <Save size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeExistingAttachment(file.fileName, 'part')}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: "#ef4444",
+                                  padding: "4px",
+                                  cursor: "pointer"
+                                }}
+                                title="Remove"
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New Attachments Preview */}
+                  {partAttachments.length > 0 && (
+                    <div style={{ marginBottom: "16px" }}>
+                      <p style={{ fontSize: "0.75rem", fontWeight: "600", color: "#166534", marginBottom: "8px" }}>
+                        New Uploads:
+                      </p>
+                      <div style={{ display: "grid", gap: "8px" }}>
+                        {partAttachments.map((file, idx) => (
+                          <div key={idx} style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            background: "#dcfce7",
+                            padding: "8px 12px",
+                            borderRadius: "6px",
+                            border: "1px solid #86efac"
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden" }}>
+                              <div style={{ color: "#166534", flexShrink: 0 }}>
+                                <Save size={16} />
+                              </div>
+                              <div style={{ overflow: "hidden" }}>
+                                <div style={{ 
+                                  fontSize: "0.8125rem", 
+                                  color: "#1f2937",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap"
+                                }}>
+                                  {file.name}
+                                </div>
+                                <div style={{ fontSize: "0.7rem", color: "#166534" }}>
+                                  {(file.size / 1024).toFixed(1)} KB
+                                </div>
+                              </div>
+                            </div>
                             <button
                               type="button"
-                              onClick={() => removeHardwareItem(index)}
+                              onClick={() => removeNewAttachment(idx, 'part')}
                               style={{
-                                background: "#ef4444",
-                                color: "white",
+                                background: "none",
                                 border: "none",
-                                borderRadius: "4px",
-                                padding: "8px",
+                                color: "#ef4444",
+                                padding: "4px",
                                 cursor: "pointer",
-                                fontSize: "0.75rem"
+                                flexShrink: 0
                               }}
-                              title="Remove item"
+                              title="Remove"
                             >
-                              ✕
+                              <X size={16} />
                             </button>
-                          )}
-                        </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
+                  )}
+
+                  {/* Upload Dropzone Area */}
+                  <div
+                    style={{
+                      border: "2px dashed #86efac",
+                      borderRadius: "8px",
+                      padding: "20px",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      background: "rgba(255, 255, 255, 0.5)",
+                      transition: "all 0.2s ease"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.8)";
+                      e.currentTarget.style.borderColor = "#22c55e";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.5)";
+                      e.currentTarget.style.borderColor = "#86efac";
+                    }}
+                    onClick={() => document.getElementById('partAttachmentInput').click()}
+                  >
+                    <input
+                      id="partAttachmentInput"
+                      type="file"
+                      multiple
+                      accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.xls"
+                      onChange={(e) => handleFileChange(e, 'part')}
+                      style={{ display: "none" }}
+                    />
+                    <div style={{ color: "#166534", marginBottom: "8px" }}>
+                      <Save size={24} style={{ margin: "0 auto" }} />
+                    </div>
+                    <p style={{ margin: "0 0 4px 0", fontSize: "0.875rem", fontWeight: "600", color: "#166534" }}>
+                      Click to upload part related documents
+                    </p>
+                    <p style={{ margin: 0, fontSize: "0.75rem", color: "#166534", opacity: 0.8 }}>
+                      PDF, PNG, JPG, DOCX, XLSX (Max 10MB per file)
+                    </p>
                   </div>
-                )}
+                </div>
+              </>
+            )}
               </div>
             )}
 
@@ -1131,192 +1425,190 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
             </Form.Group>
 
             {/* Service Attachment Section */}
-            <Form.Group className="mb-4">
-              <Form.Label style={{ 
-                fontWeight: "500", 
-                color: "#374151",
+            <div style={{
+              background: "#f0f9ff",
+              border: "1px solid #bfdbfe",
+              borderRadius: "8px",
+              padding: "16px",
+              marginBottom: "24px"
+            }}>
+              <h6 style={{ 
+                fontWeight: "600", 
+                color: "#1e40af",
                 fontSize: "0.875rem",
-                marginBottom: "6px"
+                marginBottom: "16px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px"
               }}>
-                📎 Update Service Attachment (Optional)
-              </Form.Label>
-              {log?.serviceAttachment && (
-                <div style={{
-                  marginBottom: "12px",
-                  padding: "12px",
-                  background: "#f0f9ff",
-                  borderRadius: "6px",
-                  border: "1px solid #bfdbfe",
-                  fontSize: "0.875rem"
-                }}>
-                  <strong style={{ color: "#1e40af" }}>Current Attachment:</strong>
-                  <div style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ color: "#374151" }}>{log.serviceAttachment}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleDownloadAttachment(log.serviceAttachment)}
-                      style={{
-                        color: "#3b82f6",
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        textDecoration: "underline",
-                        fontSize: "0.75rem",
-                        fontWeight: "500",
-                        padding: 0
-                      }}
-                    >
-                      Download
-                    </button>
+                <FileText size={18} />
+                Service Call Attachments
+              </h6>
+
+              {/* Existing Service Attachments */}
+              {existingServiceAttachments.length > 0 && (
+                <div style={{ marginBottom: "16px" }}>
+                  <p style={{ fontSize: "0.75rem", fontWeight: "600", color: "#1e40af", marginBottom: "8px" }}>
+                    Current Attachments:
+                  </p>
+                  <div style={{ display: "grid", gap: "8px" }}>
+                    {existingServiceAttachments.map((file, idx) => (
+                      <div key={idx} style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        background: "white",
+                        padding: "8px 12px",
+                        borderRadius: "6px",
+                        border: "1px solid #bfdbfe"
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden" }}>
+                          <div style={{ color: "#1e40af", flexShrink: 0 }}>
+                            <Save size={16} />
+                          </div>
+                          <span style={{ 
+                            fontSize: "0.8125rem", 
+                            color: "#1f2937",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap"
+                          }}>
+                            {file.originalName || file.fileName}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadAttachment(file.fileName)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "#1e40af",
+                              padding: "4px",
+                              cursor: "pointer"
+                            }}
+                            title="Download"
+                          >
+                            <Save size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeExistingAttachment(file.fileName, 'service')}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "#ef4444",
+                              padding: "4px",
+                              cursor: "pointer"
+                            }}
+                            title="Remove"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
+
+              {/* New Service Attachments Preview */}
+              {serviceAttachments.length > 0 && (
+                <div style={{ marginBottom: "16px" }}>
+                  <p style={{ fontSize: "0.75rem", fontWeight: "600", color: "#1e40af", marginBottom: "8px" }}>
+                    New Uploads:
+                  </p>
+                  <div style={{ display: "grid", gap: "8px" }}>
+                    {serviceAttachments.map((file, idx) => (
+                      <div key={idx} style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        background: "#e0f2fe",
+                        padding: "8px 12px",
+                        borderRadius: "6px",
+                        border: "1px solid #bae6fd"
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden" }}>
+                          <div style={{ color: "#1e40af", flexShrink: 0 }}>
+                            <Save size={16} />
+                          </div>
+                          <div style={{ overflow: "hidden" }}>
+                            <div style={{ 
+                              fontSize: "0.8125rem", 
+                              color: "#1f2937",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap"
+                            }}>
+                              {file.name}
+                            </div>
+                            <div style={{ fontSize: "0.7rem", color: "#1e40af" }}>
+                              {(file.size / 1024).toFixed(1)} KB
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeNewAttachment(idx, 'service')}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#ef4444",
+                            padding: "4px",
+                            cursor: "pointer",
+                            flexShrink: 0
+                          }}
+                          title="Remove"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Upload Dropzone Area */}
               <div
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  border: `1px solid ${serviceAttachment ? "#22c55e" : "#d1d5db"}`,
+                  border: "2px dashed #bae6fd",
                   borderRadius: "8px",
-                  backgroundColor: "#f8fafc",
-                  padding: "8px",
-                  transition: "border-color 0.3s ease, box-shadow 0.3s ease",
-                  width: "100%",
-                  height: "48px",
-                  boxSizing: "border-box",
-                  overflow: "hidden",
+                  padding: "20px",
+                  textAlign: "center",
+                  cursor: "pointer",
+                  background: "rgba(255, 255, 255, 0.5)",
+                  transition: "all 0.2s ease"
                 }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.8)";
+                  e.currentTarget.style.borderColor = "#3b82f6";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.5)";
+                  e.currentTarget.style.borderColor = "#bae6fd";
+                }}
+                onClick={() => document.getElementById('serviceAttachmentInput').click()}
               >
-                <label
-                  htmlFor="editServiceAttachment"
-                  style={{
-                    flex: 1,
-                    padding: "8px 12px",
-                    background: "linear-gradient(135deg, #e2e8f0, #f8fafc)",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    fontSize: "0.875rem",
-                    color: "#475569",
-                    transition: "background 0.3s ease",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    height: "100%",
-                  }}
-                  onMouseOver={(e) =>
-                    (e.currentTarget.style.background =
-                      "linear-gradient(135deg, #d1d5db, #e5e7eb)")
-                  }
-                  onMouseOut={(e) =>
-                    (e.currentTarget.style.background =
-                      "linear-gradient(135deg, #e2e8f0, #f8fafc)")
-                  }
-                >
-                  <svg
-                    style={{
-                      width: "18px",
-                      height: "18px",
-                      color: "#f59e0b",
-                      flexShrink: 0,
-                    }}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                    />
-                  </svg>
-                  <span
-                    style={{
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                      flex: 1,
-                    }}
-                  >
-                    {serviceAttachment
-                      ? serviceAttachment.name
-                      : "Upload New Document (PDF, PNG, JPG, DOCX, XLS, XLSX)"}
-                  </span>
-                </label>
                 <input
-                  id="editServiceAttachment"
+                  id="serviceAttachmentInput"
                   type="file"
-                  name="serviceAttachment"
+                  multiple
                   accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.xls"
-                  onChange={handleFileChange}
-                  style={{
-                    display: "none",
-                  }}
+                  onChange={(e) => handleFileChange(e, 'service')}
+                  style={{ display: "none" }}
                 />
-                {serviceAttachment && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setServiceAttachment(null);
-                      setFileError("");
-                      document.getElementById("editServiceAttachment").value = null;
-                    }}
-                    style={{
-                      padding: "8px",
-                      background: "none",
-                      border: "none",
-                      color: "#ef4444",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      flexShrink: 0,
-                    }}
-                    title="Remove File"
-                  >
-                    <svg
-                      style={{ width: "18px", height: "18px" }}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                )}
+                <div style={{ color: "#1e40af", marginBottom: "8px" }}>
+                  <FileText size={24} style={{ margin: "0 auto" }} />
+                </div>
+                <p style={{ margin: "0 0 4px 0", fontSize: "0.875rem", fontWeight: "600", color: "#1e40af" }}>
+                  Click to upload service call documents
+                </p>
+                <p style={{ margin: 0, fontSize: "0.75rem", color: "#1e40af", opacity: 0.8 }}>
+                  PDF, PNG, JPG, DOCX, XLSX (Max 10MB per file)
+                </p>
               </div>
-              {fileError && (
-                <small
-                  style={{
-                    color: "#ef4444",
-                    fontSize: "0.75rem",
-                    marginTop: "4px",
-                    display: "block",
-                  }}
-                >
-                  {fileError}
-                </small>
-              )}
-              <small
-                style={{
-                  color: "#6b7280",
-                  fontSize: "0.75rem",
-                  marginTop: "4px",
-                  display: "block",
-                }}
-              >
-                {log?.serviceAttachment 
-                  ? "Upload a new file to replace the current attachment (Max 10MB)"
-                  : "Optional: Upload supporting documents, images, or reports (Max 10MB)"
-                }
-              </small>
-            </Form.Group>
+            </div>
 
             <div
               style={{

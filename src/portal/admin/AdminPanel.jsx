@@ -37,9 +37,23 @@ const ROLE_OPTIONS = [
 ];
 
 const MODULE_COMBOS = [
-  "crm","so","dms","furni",
-  "crm+so","crm+dms","so+dms","crm+furni","so+furni","dms+furni",
-  "crm+so+dms","crm+so+furni","so+dms+furni","crm+dms+furni","crm+so+dms+furni",
+  // Single modules
+  "crm","dms","furni","service","so",
+  // Two modules (alphabetically sorted)
+  "crm+dms","crm+furni","crm+service","crm+so",
+  "dms+furni","dms+service","dms+so",
+  "furni+service","furni+so","service+so",
+  // Three modules (alphabetically sorted)
+  "crm+dms+furni","crm+dms+service","crm+dms+so",
+  "crm+furni+service","crm+furni+so","crm+service+so",
+  "dms+furni+service","dms+furni+so","dms+service+so",
+  "furni+service+so",
+  // Four modules (alphabetically sorted)
+  "crm+dms+furni+service","crm+dms+furni+so",
+  "crm+dms+service+so","crm+furni+service+so",
+  "dms+furni+service+so",
+  // Five modules (all - alphabetically sorted)
+  "crm+dms+furni+service+so"
 ];
 
 // ── Global CSS ────────────────────────────────────────────────────────────────

@@ -384,14 +384,19 @@ const ResetPasswordModal = ({ user, onClose }) => {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (pw.length < 6) { toast.warning("Min 6 characters."); return; }
+    const trimmedPassword = pw.trim();
+    if (trimmedPassword.length < 6) { toast.warning("Min 6 characters."); return; }
     setBusy(true);
     try {
-      await portalApi.post(`/api/admin/users/${user._id}/reset-password`, { newPassword: pw });
+      await portalApi.post(`/api/admin/users/${user._id}/reset-password`, { newPassword: trimmedPassword });
       toast.success(`Password reset for ${user.email}`);
       onClose();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Reset failed.");
+      if (!err.response) {
+        toast.error("Network error. Check connection and CORS settings.");
+      } else {
+        toast.error(err.response?.data?.message || "Reset failed.");
+      }
     } finally { setBusy(false); }
   };
 

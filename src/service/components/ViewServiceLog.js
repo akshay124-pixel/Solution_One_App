@@ -919,6 +919,24 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                       Total: ₹{log.hardwareItems.reduce((total, item) => total + (parseFloat(item.price || 0) * parseInt(item.quantity || 0)), 0).toFixed(2)}
                     </div>
                   </div>
+
+                  {/* Shipping Address - shown only when it exists */}
+                  {log.shippingAddress && (
+                    <div style={{
+                      marginTop: "12px",
+                      padding: "12px",
+                      background: "white",
+                      border: "1px solid #fbbf24",
+                      borderRadius: "6px"
+                    }}>
+                      <div style={{ fontSize: "0.75rem", color: "#92400e", fontWeight: "600", marginBottom: "4px" }}>
+                        📦 Shipping Address
+                      </div>
+                      <div style={{ fontSize: "0.875rem", color: "#1f2937", lineHeight: "1.5" }}>
+                        {log.shippingAddress}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

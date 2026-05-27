@@ -239,7 +239,6 @@ const ViewPartReplacementLog = ({ show, onHide, log }) => {
         <div className="row">
           <InfoRow icon={Clipboard} label="Complaint Number" value={log.complaintNumber} />
           <InfoRow icon={User} label="Customer Name" value={log.customerName} />
-          <InfoRow icon={Package} label="Product" value={log.product} />
           <InfoRow icon={Info} label="Part Required" value={log.partName} />
           <InfoRow icon={Info} label="Hardware Status" value={log.hardwareStatus} badge badgeColor={log.hardwareStatus === "In Warranty" ? "success" : "danger"} />
           <InfoRow icon={Info} label="Procurement Status" value={log.partStatus} badge badgeColor={getStatusBadge(log.partStatus)} />
@@ -256,6 +255,33 @@ const ViewPartReplacementLog = ({ show, onHide, log }) => {
           </p>
 
           <hr style={{ opacity: 0.1, margin: "20px 0" }} />
+
+          {/* Shipping Address - only shown when present */}
+          {log.serviceLogId?.shippingAddress && (
+            <>
+              <div className="d-flex align-items-center gap-2 mb-3" style={{ color: "#92400e" }}>
+                <Package size={18} />
+                <h6 className="mb-0 fw-800 text-uppercase" style={{ fontSize: "0.85rem", letterSpacing: "1px" }}>
+                  📦 Shipping Address
+                </h6>
+              </div>
+              <div
+                style={{
+                  background: "#fef3c7",
+                  border: "1px solid #fbbf24",
+                  borderRadius: "8px",
+                  padding: "12px 16px",
+                  fontSize: "0.95rem",
+                  lineHeight: "1.6",
+                  color: "#1f2937",
+                  marginBottom: "4px"
+                }}
+              >
+                {log.serviceLogId.shippingAddress}
+              </div>
+              <hr style={{ opacity: 0.1, margin: "20px 0" }} />
+            </>
+          )}
 
           <div className="d-flex align-items-center gap-2 mb-3 text-primary">
             <MessageSquare size={18} />

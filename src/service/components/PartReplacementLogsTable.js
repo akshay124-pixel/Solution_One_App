@@ -65,7 +65,7 @@ const PartReplacementLogsTable = ({ logs, onView, onEdit, onDelete, loading }) =
   const renderEmptyState = () => (
     <tr>
       <td 
-        colSpan="11" 
+        colSpan="10" 
         style={{ 
           height: "550px", // Increase height to fill the scrollable container (600px - header)
           textAlign: "center", 
@@ -162,7 +162,7 @@ const PartReplacementLogsTable = ({ logs, onView, onEdit, onDelete, loading }) =
           background: "white"
         }}
       >
-        <Table hover style={{ margin: 0, width: "100%", minWidth: "1810px", tableLayout: "fixed", borderCollapse: "separate", borderSpacing: 0 }}>
+        <Table hover style={{ margin: 0, width: "100%", minWidth: "1630px", tableLayout: "fixed", borderCollapse: "separate", borderSpacing: 0 }}>
           <thead
             className="gradient-table-header"
             style={{
@@ -178,7 +178,6 @@ const PartReplacementLogsTable = ({ logs, onView, onEdit, onDelete, loading }) =
               <th style={{ ...headerStyle, width: "50px" }}>#</th>
               <th style={{ ...headerStyle, width: "150px" }}>Ticket ID</th>
               <th style={{ ...headerStyle, width: "200px" }}>Customer Name</th>
-              <th style={{ ...headerStyle, width: "180px" }}>Product</th>
               <th style={{ ...headerStyle, width: "180px" }}>Part Name</th>
               <th style={{ ...headerStyle, width: "150px" }}>Hardware Status</th>
               <th style={{ ...headerStyle, width: "150px" }}>Part Status</th>
@@ -208,7 +207,6 @@ const PartReplacementLogsTable = ({ logs, onView, onEdit, onDelete, loading }) =
                 <td style={{ textAlign: "center", verticalAlign: "middle", height: "50px", lineHeight: "30px", fontWeight: "500", color: "#6b7280", fontSize: "0.875rem" }}>{index + 1}</td>
                 <td style={{ textAlign: "center", verticalAlign: "middle", height: "50px", lineHeight: "30px", fontWeight: "700", color: "#dc2626", fontSize: "0.9rem" }}>{log.complaintNumber}</td>
                 <td style={{ textAlign: "center", verticalAlign: "middle", height: "50px", lineHeight: "30px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: "500", color: "#1f2937" }} title={log.customerName}>{log.customerName}</td>
-                <td style={{ textAlign: "center", verticalAlign: "middle", height: "50px", lineHeight: "30px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: "600", color: "#1f2937" }} title={log.product}>{log.product}</td>
                 <td style={{ textAlign: "center", verticalAlign: "middle", height: "50px", lineHeight: "30px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: "500", color: "#1f2937" }} title={log.partName}>{log.partName}</td>
                 <td style={{ textAlign: "center", verticalAlign: "middle", height: "50px", lineHeight: "30px" }}>
                   <Badge 

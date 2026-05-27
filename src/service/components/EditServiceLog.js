@@ -26,6 +26,7 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
   const [salespersons, setSalespersons] = useState([]);
   const [salesPerson, setSalesPerson] = useState("");
   const [address, setAddress] = useState("");
+  const [shippingAddress, setShippingAddress] = useState(""); // New shipping address state
   const [replacementPartReceived, setReplacementPartReceived] = useState("No");
   const [serviceAttachments, setServiceAttachments] = useState([]); // New service files
   const [partAttachments, setPartAttachments] = useState([]); // New part files
@@ -204,6 +205,7 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
       setCity(log.city || "");
       setState(log.state || "");
       setAddress(log.address || "");
+      setShippingAddress(log.shippingAddress || ""); // Initialize shipping address
       setWarrantyStatus(log.warrantyStatus || "");
       setCallType(log.callType || "");
       setIssue(log.issue || "");
@@ -253,6 +255,7 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
       formData.append("city", city);
       formData.append("state", state);
       formData.append("address", address);
+      formData.append("shippingAddress", shippingAddress); // Add shipping address to FormData
       formData.append("warrantyStatus", warrantyStatus);
       formData.append("replacementPartReceived", replacementPartReceived);
       formData.append("callType", callType);
@@ -303,6 +306,7 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
     setCity(log?.city || "");
     setState(log?.state || "");
     setAddress(log?.address || "");
+    setShippingAddress(log?.shippingAddress || ""); // Reset shipping address
     setWarrantyStatus(log?.warrantyStatus || "");
     setCallType(log?.callType || "");
     setIssue(log?.issue || "");
@@ -1197,6 +1201,48 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
                       </div>
                     </div>
                   ))}
+
+                  {/* Shipping Address - shown only when at least one item is added */}
+                  {hardwareItems.some(item => item.description && item.description.trim()) && (
+                    <Form.Group style={{ marginTop: "12px" }}>
+                      <Form.Label style={{
+                        fontSize: "0.8rem",
+                        fontWeight: "600",
+                        color: "#92400e",
+                        marginBottom: "6px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px"
+                      }}>
+                        📦 Shipping Address
+                        <span style={{ fontSize: "0.7rem", color: "#b45309", fontWeight: "400" }}>(Where to ship the parts)</span>
+                      </Form.Label>
+                      <Form.Control
+                        as="textarea"
+                        rows={2}
+                        value={shippingAddress}
+                        onChange={(e) => setShippingAddress(e.target.value)}
+                        placeholder="Enter shipping address for hardware parts..."
+                        style={{
+                          fontSize: "0.875rem",
+                          padding: "8px 10px",
+                          borderRadius: "6px",
+                          border: "1px solid #fbbf24",
+                          background: "white",
+                          resize: "vertical",
+                          transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = "#f59e0b";
+                          e.target.style.boxShadow = "0 0 0 3px rgba(245, 158, 11, 0.15)";
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = "#fbbf24";
+                          e.target.style.boxShadow = "none";
+                        }}
+                      />
+                    </Form.Group>
+                  )}
                 </div>
 
                 {/* Part Related Attachments Section */}

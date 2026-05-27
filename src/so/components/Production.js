@@ -2185,6 +2185,10 @@ const Production = () => {
                         <strong>Shipping Address:</strong>{" "}
                         {viewOrder.shippingAddress || "N/A"}
                       </div>
+                       <div className="pdf-item" style={{ gridColumn: "span 2" }}>
+                        <strong>Pincode:</strong>{" "}
+                        {viewOrder.pinCode || "N/A"}
+                      </div>
                       <div className="pdf-item">
                         <strong>Status:</strong>{" "}
                         {viewOrder.fulfillingStatus || "Pending"}
@@ -2470,6 +2474,7 @@ const Production = () => {
                       <InfoItem label="Customer Name" value={viewOrder.customername || "N/A"} />
                       <InfoItem label="Contact No" value={viewOrder.contactNo || "N/A"} />
                       <InfoItem label="Shipping Address" value={viewOrder.shippingAddress || "N/A"} />
+                      <InfoItem label="Pincode" value={viewOrder.pinCode || "N/A"} />
                       {viewOrder.customerEmail && <InfoItem label="Email" value={viewOrder.customerEmail} />}
                     </div>
                   </div>

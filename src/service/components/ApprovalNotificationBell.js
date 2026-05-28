@@ -170,8 +170,8 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
     setShowDetailModal(true);
     setFullOrderDetails(null);
     
-    if (notificationType === 'approval') {
-      // Fetch full order details for approval notifications
+    if (isGlobalAdmin) {
+      // Fetch full order details for approval notifications (GlobalAdmin only)
       setOrderDetailsLoading(true);
       try {
         console.log("[NotificationBell] Fetching full order details for log:", log._id);
@@ -189,10 +189,11 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
       } finally {
         setOrderDetailsLoading(false);
       }
-    } else if (isSuperAdmin && log.type === "followup") {
+    } else if (isSuperAdmin && (log.type === "followup" || (!log.type?.startsWith("part") && log.serviceLogId))) {
       // Fetch full service log details for follow-up notifications
       setOrderDetailsLoading(true);
       try {
+        // Use serviceLogId (from DB) or fall back to _id (from socket payload before fix)
         const serviceLogId = log.serviceLogId || log._id;
         const response = await serviceApi.get(`/service-logs/${serviceLogId}`);
         if (response.data.success) {

@@ -940,6 +940,85 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                 </div>
               )}
 
+              {/* Part Replacement Tracking (procurement + inventory stage) */}
+              {Array.isArray(log.partReplacements) && log.partReplacements.length > 0 && (
+                <div style={{
+                  marginBottom: "20px",
+                  padding: "16px",
+                  background: "#eef2ff",
+                  borderRadius: "8px",
+                  border: "1px solid #c7d2fe"
+                }}>
+                  <h6 style={{
+                    fontWeight: "600",
+                    color: "#3730a3",
+                    fontSize: "0.875rem",
+                    marginBottom: "12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px"
+                  }}>
+                    📦 Part Replacement Tracking
+                  </h6>
+                  <div style={{ display: "grid", gap: "8px" }}>
+                    {log.partReplacements.map((pr, index) => {
+                      const parts = Array.isArray(pr.parts) && pr.parts.length > 0
+                        ? pr.parts
+                        : [{
+                            _id: `legacy-${index}`,
+                            partName: pr.partName,
+                            status: pr.partStatus,
+                            procurementRemarks: pr.remarks,
+                            updatedAt: pr.updatedAt,
+                            quantity: pr.quantity,
+                          }];
+                      return parts.map((part, pidx) => (
+                        <div key={`${index}-${part._id || pidx}`} style={{
+                          background: "white",
+                          border: "1px solid #c7d2fe",
+                          borderRadius: "6px",
+                          padding: "10px 12px",
+                          display: "grid",
+                          gridTemplateColumns: "2fr 1fr 1.4fr",
+                          gap: "10px",
+                          alignItems: "center",
+                        }}>
+                          <div style={{ overflow: "hidden" }}>
+                            <div style={{ fontWeight: "600", color: "#1f2937", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={part.partName}>
+                              {part.partName || "-"}
+                            </div>
+                            {part.procurementRemarks && (
+                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={part.procurementRemarks}>
+                                {part.procurementRemarks}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ textAlign: "center", fontSize: "0.8rem", color: "#374151", fontWeight: "600" }}>
+                            Qty: {part.quantity || 1}
+                          </div>
+                          <div style={{ textAlign: "right", fontSize: "0.8rem" }}>
+                            <Badge
+                              bg={
+                                (part.status || "").toLowerCase() === "in stock" ? "success"
+                                : (part.status || "").toLowerCase() === "out of stock" ? "danger"
+                                : (part.status || "").toLowerCase() === "dispatched" ? "primary"
+                                : "warning"
+                              }
+                              style={{ fontSize: "0.72rem", marginBottom: "2px" }}
+                            >
+                              {part.status || "Pending"}
+                            </Badge>
+                            <div style={{ color: "#6b7280", fontSize: "0.72rem" }}>
+                              {formatDateTime(part.updatedAt || pr.updatedAt)}
+                            </div>
+                          </div>
+                        </div>
+                      ));
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* No Charges Tag - Show when: Software call OR Hardware with no parts OR In Warranty with no parts */}
               {(log.callType === "Software" || 
                 (log.callType === "Hardware" && (!log.hardwareItems || log.hardwareItems.length === 0)) ||

@@ -63,6 +63,8 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
       "Pending": "warning",
       "In Stock": "success",
       "Out of Stock": "danger",
+      "Partial Stock": "info",
+      "Dispatched": "primary",
       "Not Required": "secondary",
     };
     return statusMap[status] || "secondary";

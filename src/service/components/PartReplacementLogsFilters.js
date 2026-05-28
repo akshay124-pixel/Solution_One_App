@@ -47,9 +47,12 @@ const PartReplacementLogsFilters = ({
               onChange={(e) => setStatusFilter(e.target.value)}
               style={{ borderRadius: "8px", border: "1.5px solid #e2e8f0", fontSize: "0.9rem", padding: "10px 15px" }}
             >
-              <option value="">Active Logs</option>
+              <option value="">All Logs</option>
               <option value="Pending">Pending</option>
               <option value="Out of Stock">Out of Stock</option>
+              <option value="In Stock">In Stock</option>
+              <option value="Partial Stock">Partial Stock</option>
+              <option value="Dispatched">Dispatched</option>
             </Form.Select>
           </Form.Group>
         </Col>

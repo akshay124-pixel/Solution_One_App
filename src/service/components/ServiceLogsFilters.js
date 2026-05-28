@@ -13,6 +13,8 @@ const ServiceLogsFilters = ({
   setSystemTypeFilter,
   stateFilter,
   setStateFilter,
+  partReplacementStatusFilter,
+  setPartReplacementStatusFilter,
   availableStates,
   startDate,
   setStartDate,
@@ -25,7 +27,7 @@ const ServiceLogsFilters = ({
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
-  const hasActiveFilters = serviceLogsSearch || statusFilter || callTypeFilter || systemTypeFilter || stateFilter || salesPersonFilter || startDate || endDate;
+  const hasActiveFilters = serviceLogsSearch || statusFilter || callTypeFilter || systemTypeFilter || stateFilter || partReplacementStatusFilter || salesPersonFilter || startDate || endDate;
 
   const clearAllFilters = () => {
     setServiceLogsSearch("");
@@ -33,6 +35,7 @@ const ServiceLogsFilters = ({
     setCallTypeFilter("");
     setSystemTypeFilter("");
     setStateFilter("");
+    setPartReplacementStatusFilter("");
     setStartDate("");
     setEndDate("");
     setSalesPersonFilter("");
@@ -174,6 +177,30 @@ const ServiceLogsFilters = ({
                 {state}
               </option>
             ))}
+          </select>
+        </div>
+
+        {/* Part Replacement Status Filter */}
+        <div style={{ flex: "0 0 auto" }}>
+          <select
+            value={partReplacementStatusFilter}
+            onChange={(e) => setPartReplacementStatusFilter(e.target.value)}
+            style={{
+              padding: "10px 12px",
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+              fontSize: "0.875rem",
+              background: "white",
+              minWidth: "170px",
+              cursor: "pointer"
+            }}
+          >
+            <option value="">All Part Status</option>
+            <option value="Pending">Pending</option>
+            <option value="Out of Stock">Out of Stock</option>
+            <option value="In Stock">In Stock</option>
+            <option value="Partial Stock">Partial Stock</option>
+            <option value="Dispatched">Dispatched</option>
           </select>
         </div>
 
@@ -418,6 +445,18 @@ const ServiceLogsFilters = ({
                 fontWeight: "500"
               }}>
                 State: {stateFilter}
+              </span>
+            )}
+            {partReplacementStatusFilter && (
+              <span style={{
+                padding: "4px 10px",
+                background: "#0ea5e9",
+                color: "white",
+                borderRadius: "6px",
+                fontSize: "0.75rem",
+                fontWeight: "500"
+              }}>
+                Part Status: {partReplacementStatusFilter}
               </span>
             )}
             {salesPersonFilter && (

@@ -48,6 +48,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   const [callTypeFilter, setCallTypeFilter] = useState("");
   const [systemTypeFilter, setSystemTypeFilter] = useState("");
   const [stateFilter, setStateFilter] = useState("");
+  const [partReplacementStatusFilter, setPartReplacementStatusFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [stats, setStats] = useState({
@@ -110,7 +111,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   // Reset pagination when filters change
   useEffect(() => {
     setServicePage(1);
-  }, [debouncedServiceLogsSearch, statusFilter, callTypeFilter, systemTypeFilter, stateFilter, salesPersonFilter, startDate, endDate]);
+  }, [debouncedServiceLogsSearch, statusFilter, callTypeFilter, systemTypeFilter, stateFilter, partReplacementStatusFilter, salesPersonFilter, startDate, endDate]);
 
   useEffect(() => {
     setReplacementPage(1);
@@ -134,7 +135,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   // Fetch service logs on mount and when filters/pagination change
   useEffect(() => {
     fetchServiceLogs();
-  }, [servicePage, serviceLimit, debouncedServiceLogsSearch, statusFilter, callTypeFilter, systemTypeFilter, stateFilter, salesPersonFilter, startDate, endDate]);
+  }, [servicePage, serviceLimit, debouncedServiceLogsSearch, statusFilter, callTypeFilter, systemTypeFilter, stateFilter, partReplacementStatusFilter, salesPersonFilter, startDate, endDate]);
 
   useEffect(() => {
     fetchReplacementDemoLogs();
@@ -163,6 +164,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
           callType: callTypeFilter,
           systemType: systemTypeFilter,
           state: stateFilter,
+          partReplacementStatus: partReplacementStatusFilter,
           salesPerson: salesPersonFilter,
           startDate: startDate,
           endDate: endDate
@@ -402,6 +404,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
           callType: callTypeFilter,
           systemType: systemTypeFilter,
           state: stateFilter,
+          partReplacementStatus: partReplacementStatusFilter,
           startDate: startDate,
           endDate: endDate
         },
@@ -787,6 +790,8 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
             setSystemTypeFilter={setSystemTypeFilter}
             stateFilter={stateFilter}
               setStateFilter={setStateFilter}
+              partReplacementStatusFilter={partReplacementStatusFilter}
+              setPartReplacementStatusFilter={setPartReplacementStatusFilter}
               availableStates={[...new Set(serviceLogs.map(log => log.state).filter(Boolean))]}
               startDate={startDate}
               setStartDate={setStartDate}

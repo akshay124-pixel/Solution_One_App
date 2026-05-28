@@ -18,8 +18,39 @@ const PartReplacementLogsTable = ({ logs, onView, onEdit, onDelete, loading }) =
       "Pending": "warning",
       "In Stock": "success",
       "Out of Stock": "danger",
+      "Dispatched": "primary",
+      "Partial Stock": "info",
     };
     return statusMap[status] || "secondary";
+  };
+
+  const getPartsSummary = (log) => {
+    const parts = Array.isArray(log.parts) && log.parts.length > 0
+      ? log.parts
+      : [{
+          partName: log.partName,
+          quantity: log.quantity,
+          status: log.partStatus,
+        }];
+
+    const counts = parts.reduce((acc, p) => {
+      const s = p.status || "Pending";
+      acc[s] = (acc[s] || 0) + 1;
+      return acc;
+    }, {});
+
+    const total = parts.length;
+    const hasInStockLike = Boolean(counts["In Stock"] || counts["Dispatched"]);
+    const hasPendingOrOut = Boolean(counts["Pending"] || counts["Out of Stock"]);
+    const primaryStatus =
+      (hasInStockLike && hasPendingOrOut) ? "Partial Stock"
+      : counts["Out of Stock"] ? "Out of Stock"
+      : counts["Pending"] ? "Pending"
+      : counts["Dispatched"] ? "Dispatched"
+      : counts["In Stock"] ? "In Stock"
+      : (log.partStatus || "Pending");
+
+    return { total, primaryStatus, counts };
   };
 
   const renderLoadingOverlay = () => (
@@ -103,7 +134,7 @@ const PartReplacementLogsTable = ({ logs, onView, onEdit, onDelete, loading }) =
   );
 
   const getRowStyle = (log) => {
-    const partStatus = log.partStatus;
+    const partStatus = getPartsSummary(log).primaryStatus;
 
     if (partStatus === "In Stock") {
       return { backgroundColor: "#eff6ff" }; // Soft Blue
@@ -115,6 +146,9 @@ const PartReplacementLogsTable = ({ logs, onView, onEdit, onDelete, loading }) =
 
     if (partStatus === "Pending") {
       return { backgroundColor: "#fff7ed" }; // Soft Orange
+    }
+    if (partStatus === "Partial Stock") {
+      return { backgroundColor: "#ecfeff" }; // Soft Cyan
     }
 
     return { backgroundColor: "transparent" };
@@ -178,7 +212,7 @@ const PartReplacementLogsTable = ({ logs, onView, onEdit, onDelete, loading }) =
               <th style={{ ...headerStyle, width: "50px" }}>#</th>
               <th style={{ ...headerStyle, width: "150px" }}>Ticket ID</th>
               <th style={{ ...headerStyle, width: "200px" }}>Customer Name</th>
-              <th style={{ ...headerStyle, width: "180px" }}>Part Name</th>
+              <th style={{ ...headerStyle, width: "220px" }}>Parts</th>
               <th style={{ ...headerStyle, width: "150px" }}>Hardware Status</th>
               <th style={{ ...headerStyle, width: "150px" }}>Part Status</th>
               <th style={{ ...headerStyle, width: "200px" }}>Issue/Reason</th>
@@ -207,7 +241,22 @@ const PartReplacementLogsTable = ({ logs, onView, onEdit, onDelete, loading }) =
                 <td style={{ textAlign: "center", verticalAlign: "middle", height: "50px", lineHeight: "30px", fontWeight: "500", color: "#6b7280", fontSize: "0.875rem" }}>{index + 1}</td>
                 <td style={{ textAlign: "center", verticalAlign: "middle", height: "50px", lineHeight: "30px", fontWeight: "700", color: "#dc2626", fontSize: "0.9rem" }}>{log.complaintNumber}</td>
                 <td style={{ textAlign: "center", verticalAlign: "middle", height: "50px", lineHeight: "30px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: "500", color: "#1f2937" }} title={log.customerName}>{log.customerName}</td>
-                <td style={{ textAlign: "center", verticalAlign: "middle", height: "50px", lineHeight: "30px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: "500", color: "#1f2937" }} title={log.partName}>{log.partName}</td>
+                {(() => {
+                  const summary = getPartsSummary(log);
+                  const parts = Array.isArray(log.parts) && log.parts.length > 0
+                    ? log.parts
+                    : [{ partName: log.partName, quantity: log.quantity, status: log.partStatus }];
+                  const preview = parts.slice(0, 2).map(p => p.partName).filter(Boolean).join(", ");
+                  const more = summary.total > 2 ? ` +${summary.total - 2} more` : "";
+                  return (
+                    <td
+                      style={{ textAlign: "center", verticalAlign: "middle", height: "50px", lineHeight: "30px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: "500", color: "#1f2937" }}
+                      title={parts.map(p => `${p.partName} (${p.quantity || 1})`).join(" | ")}
+                    >
+                      {preview || "-"}{more}
+                    </td>
+                  );
+                })()}
                 <td style={{ textAlign: "center", verticalAlign: "middle", height: "50px", lineHeight: "30px" }}>
                   <Badge 
                     bg={log.hardwareStatus === "In Warranty" ? "success" : "danger"}
@@ -217,12 +266,17 @@ const PartReplacementLogsTable = ({ logs, onView, onEdit, onDelete, loading }) =
                   </Badge>
                 </td>
                 <td style={{ textAlign: "center", verticalAlign: "middle", height: "50px", lineHeight: "30px" }}>
+                  {(() => {
+                    const summary = getPartsSummary(log);
+                    return (
                   <Badge 
-                    bg={getStatusBadge(log.partStatus)}
+                    bg={getStatusBadge(summary.primaryStatus)}
                     style={{ padding: "6px 12px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "600", minWidth: "100px" }}
                   >
-                    {log.partStatus}
+                    {summary.primaryStatus}
                   </Badge>
+                    );
+                  })()}
                 </td>
                 <td 
                   style={{ textAlign: "center", verticalAlign: "middle", height: "50px", lineHeight: "30px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#6b7280", fontSize: "0.875rem" }} 
@@ -232,9 +286,15 @@ const PartReplacementLogsTable = ({ logs, onView, onEdit, onDelete, loading }) =
                 </td>
                 <td 
                   style={{ textAlign: "center", verticalAlign: "middle", height: "50px", lineHeight: "30px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#6b7280", fontSize: "0.875rem" }} 
-                  title={log.remarks || "No procurement remarks"}
+                  title={
+                    (Array.isArray(log.parts) && log.parts.length > 0
+                      ? log.parts.map((p) => `${p.partName}: ${p.procurementRemarks || "-"}`).join(" | ")
+                      : (log.remarks || "No procurement remarks"))
+                  }
                 >
-                  {log.remarks || "-"}
+                  {Array.isArray(log.parts) && log.parts.length > 0
+                    ? (log.parts.find((p) => p.procurementRemarks)?.procurementRemarks || "-")
+                    : (log.remarks || "-")}
                 </td>
                 <td style={{ textAlign: "center", verticalAlign: "middle", height: "50px", lineHeight: "30px", color: "#6b7280", fontSize: "0.875rem" }}>{formatDate(log.createdAt)}</td>
                 <td style={{ textAlign: "center", verticalAlign: "middle", height: "50px" }}>
@@ -363,7 +423,7 @@ const PartReplacementLogsTable = ({ logs, onView, onEdit, onDelete, loading }) =
         }}
       >
         <div>
-          Showing <strong>{logs.length}</strong> active hardware replacement requests
+          Showing <strong>{logs.length}</strong> hardware replacement logs
         </div>
         <div className="d-flex align-items-center gap-4">
           <div className="d-flex align-items-center gap-2">
@@ -373,6 +433,10 @@ const PartReplacementLogsTable = ({ logs, onView, onEdit, onDelete, loading }) =
           <div className="d-flex align-items-center gap-2">
             <div style={{ width: "12px", height: "12px", borderRadius: "3px", background: "#fef2f2", border: "1px solid #fee2e2" }}></div>
             <span>Out of Stock</span>
+          </div>
+          <div className="d-flex align-items-center gap-2">
+            <div style={{ width: "12px", height: "12px", borderRadius: "3px", background: "#ecfeff", border: "1px solid #a5f3fc" }}></div>
+            <span>Partial Stock</span>
           </div>
         </div>
       </div>

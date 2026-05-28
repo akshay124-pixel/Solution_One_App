@@ -110,6 +110,7 @@ const ViewPartReplacementLog = ({ show, onHide, log }) => {
       "Pending": "warning",
       "In Stock": "success",
       "Out of Stock": "danger",
+      "Dispatched": "primary",
     };
     return statusMap[status] || "secondary";
   };
@@ -239,10 +240,59 @@ const ViewPartReplacementLog = ({ show, onHide, log }) => {
         <div className="row">
           <InfoRow icon={Clipboard} label="Complaint Number" value={log.complaintNumber} />
           <InfoRow icon={User} label="Customer Name" value={log.customerName} />
-          <InfoRow icon={Info} label="Part Required" value={log.partName} />
           <InfoRow icon={Info} label="Hardware Status" value={log.hardwareStatus} badge badgeColor={log.hardwareStatus === "In Warranty" ? "success" : "danger"} />
-          <InfoRow icon={Info} label="Procurement Status" value={log.partStatus} badge badgeColor={getStatusBadge(log.partStatus)} />
           <InfoRow icon={Calendar} label="Request Date" value={formatDate(log.createdAt)} />
+        </div>
+
+        {/* Parts list (aggregated + legacy) */}
+        <div className="mt-2 p-4 rounded-4 bg-white border shadow-sm">
+          <div className="d-flex align-items-center gap-2 mb-3" style={{ color: "#1e40af" }}>
+            <Package size={18} />
+            <h6 className="mb-0 fw-800 text-uppercase" style={{ fontSize: "0.85rem", letterSpacing: "1px" }}>
+              Parts ({Array.isArray(log.parts) && log.parts.length > 0 ? log.parts.length : 1})
+            </h6>
+          </div>
+
+          <div style={{ display: "grid", gap: "10px" }}>
+            {(Array.isArray(log.parts) && log.parts.length > 0
+              ? log.parts
+              : [{ _id: "legacy", partName: log.partName, quantity: log.quantity, status: log.partStatus, procurementRemarks: log.remarks }]
+            ).map((p) => (
+              <div
+                key={p._id}
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  padding: "12px 14px",
+                  display: "grid",
+                  gridTemplateColumns: "2fr 0.6fr 0.8fr",
+                  gap: "12px",
+                  alignItems: "center",
+                }}
+              >
+                <div style={{ overflow: "hidden" }}>
+                  <div style={{ fontWeight: 700, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={p.partName}>
+                    {p.partName || "-"}
+                  </div>
+                  {p.procurementRemarks && (
+                    <div style={{ fontSize: "0.82rem", color: "#475569", marginTop: "4px", fontStyle: "italic", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={p.procurementRemarks}>
+                      {p.procurementRemarks}
+                    </div>
+                  )}
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Qty</div>
+                  <div style={{ fontWeight: 700, color: "#0f172a" }}>{p.quantity || 1}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <Badge bg={getStatusBadge(p.status || log.partStatus)} style={{ padding: "6px 12px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "700" }}>
+                    {p.status || log.partStatus || "Pending"}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="mt-2 p-4 rounded-4 bg-white border shadow-sm">

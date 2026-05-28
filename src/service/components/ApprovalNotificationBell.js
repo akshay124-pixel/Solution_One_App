@@ -158,6 +158,14 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
   };
 
   const handleViewDetails = async (log) => {
+    // Part replacement notifications — just mark as read, no modal
+    if (isSuperAdmin && (log.type === "part_new" || log.type === "part_update")) {
+      if (!log.isRead) {
+        handleMarkAsRead(log._id);
+      }
+      return;
+    }
+
     setSelectedLog(log);
     setShowDetailModal(true);
     setFullOrderDetails(null);
@@ -181,25 +189,71 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
       } finally {
         setOrderDetailsLoading(false);
       }
-    } else if (isSuperAdmin) {
-      setFullOrderDetails({
-        _id: log._id,
-        complaintNumber: log.complaintNumber,
-        customerName: log.customerName,
-        followUpDate: log.followUpDate,
-        serviceStatus: log.serviceStatus,
-        issue: log.issue,
-        city: log.city,
-        state: log.state,
-        address: log.address,
-        orderId: log.orderId,
-        message: log.message,
-        type: log.type,
-        status: log.status,
-        partName: log.partName,
-        remarks: log.remarks,
-      });
-      setOrderDetailsLoading(false);
+    } else if (isSuperAdmin && log.type === "followup") {
+      // Fetch full service log details for follow-up notifications
+      setOrderDetailsLoading(true);
+      try {
+        const serviceLogId = log.serviceLogId || log._id;
+        const response = await serviceApi.get(`/service-logs/${serviceLogId}`);
+        if (response.data.success) {
+          const sl = response.data.log;
+          setFullOrderDetails({
+            _id: log._id,
+            complaintNumber: sl.complaintNumber || log.complaintNumber,
+            customerName: sl.serviceRequestName || sl.customerName || log.customerName,
+            followUpDate: sl.followUpDate || log.followUpDate,
+            serviceStatus: sl.serviceStatus || log.serviceStatus,
+            issue: sl.issue || log.issue,
+            city: sl.city || log.city,
+            state: sl.state || log.state,
+            address: sl.address || log.address,
+            orderId: sl.orderId || log.orderId,
+            message: log.message,
+            type: log.type,
+            status: sl.status || log.status,
+            remarks: sl.remarks || log.remarks,
+          });
+        } else {
+          // Fallback to notification data if API fails
+          setFullOrderDetails({
+            _id: log._id,
+            complaintNumber: log.complaintNumber,
+            customerName: log.customerName,
+            followUpDate: log.followUpDate,
+            serviceStatus: log.serviceStatus,
+            issue: log.issue,
+            city: log.city,
+            state: log.state,
+            address: log.address,
+            orderId: log.orderId,
+            message: log.message,
+            type: log.type,
+            status: log.status,
+            remarks: log.remarks,
+          });
+        }
+      } catch (error) {
+        console.error("[NotificationBell] Failed to fetch service log details:", error);
+        // Fallback to notification data
+        setFullOrderDetails({
+          _id: log._id,
+          complaintNumber: log.complaintNumber,
+          customerName: log.customerName,
+          followUpDate: log.followUpDate,
+          serviceStatus: log.serviceStatus,
+          issue: log.issue,
+          city: log.city,
+          state: log.state,
+          address: log.address,
+          orderId: log.orderId,
+          message: log.message,
+          type: log.type,
+          status: log.status,
+          remarks: log.remarks,
+        });
+      } finally {
+        setOrderDetailsLoading(false);
+      }
     }
   };
 

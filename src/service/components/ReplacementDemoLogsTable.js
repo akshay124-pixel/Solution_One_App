@@ -116,15 +116,62 @@ const ReplacementDemoLogsTable = ({ logs, onView, onEdit, onApprove, onReject, o
 
   const renderEmptyState = () => (
     <tr>
-      <td colSpan="9" style={{ height: "400px", textAlign: "center", verticalAlign: "middle" }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ fontSize: "3rem", marginBottom: "16px" }}>📋</div>
-          <p style={{ color: "#6b7280", fontSize: "1rem", fontWeight: "500", margin: 0 }}>
+      <td colSpan="9" style={{ padding: 0 }}>
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "550px",
+          padding: "40px 20px",
+          background: "linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)"
+        }}>
+          <div style={{
+            width: "100px",
+            height: "100px",
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: "24px",
+            boxShadow: "0 10px 30px rgba(102, 126, 234, 0.2)"
+          }}>
+            <span style={{ fontSize: "3.5rem" }}>📋</span>
+          </div>
+          <p style={{
+            color: "#1f2937",
+            fontSize: "1.5rem",
+            fontWeight: "700",
+            margin: "0 0 8px 0",
+            letterSpacing: "-0.5px"
+          }}>
             No Replacement Logs Found
           </p>
-          <p style={{ color: "#9ca3af", fontSize: "0.875rem", margin: "8px 0 0 0" }}>
-            Logs will appear here when Replacement orders are created.
+          <p style={{
+            color: "#9ca3af",
+            fontSize: "0.95rem",
+            margin: 0,
+            maxWidth: "400px",
+            textAlign: "center",
+            lineHeight: "1.6"
+          }}>
+            Logs will automatically appear here when new Replacement orders are created and submitted for approval.
           </p>
+          <div style={{
+            marginTop: "32px",
+            padding: "12px 24px",
+            borderRadius: "8px",
+            background: "#e0f2fe",
+            border: "1px solid #bae6fd",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            color: "#0c4a6e"
+          }}>
+            <span style={{ fontSize: "1.1rem" }}>💡</span>
+            <span style={{ fontWeight: "500" }}>Pro Tip: Make sure your orders are marked as "Replacement" type</span>
+          </div>
         </div>
       </td>
     </tr>

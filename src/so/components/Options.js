@@ -1340,6 +1340,7 @@ export const Reportinglist = [
   { label: "Abhayjit Sekhon", value: "Abhayjit Sekhon" },
   { label: "Amarjeet Singh", value: "Amarjeet Singh" },
   { label: "Arwinder Singh", value: "Arwinder Singh" },
+  { label: "Arif Khan", value: "Arif Khan" },
   { label: "Ashwani Kumar", value: "Ashwani Kumar" },
   { label: "Bachan Pal", value: "Bachan Pal" },
   { label: "Gem Team", value: "Gem Team" },

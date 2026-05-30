@@ -992,7 +992,7 @@ export const salesPersonlist = [
   "Vageesh Bhardwaj",
   "Varun Budhiraja",
   "Vaseem Khan",
-  "Vishal Angra"
+  "Vishal Angra",
 ];
 
 export const Reportinglist = [
@@ -1000,8 +1000,10 @@ export const Reportinglist = [
   "Abhayjit Sekhon",
   "Amarjeet Singh",
   "Arwinder Singh",
+
   "Abhishek Sharma",
   "Ashwani Kumar",
+  "Arif Khan",
   "Bachan Pal",
   "Gem Team",
   "Harpeet Singh",
@@ -1039,5 +1041,3 @@ export const dispatchFromOptions = [
   "Jaipur",
   "Rajasthan",
 ];
-
-

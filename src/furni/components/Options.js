@@ -912,6 +912,7 @@ export const paymentTermsOptions = [
 export const salesPersonlist = [
   "Abhay Pratap Singh",
   "Abhay Bhardwaj",
+  "Abhishek Kumar Jha",
   "Abhayjit Sekhon",
   "Ajay Kumar",
   "Akshay",

@@ -81,12 +81,14 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   const [showDeleteReplacementDemoLog, setShowDeleteReplacementDemoLog] = useState(false);
   const [replacementDemoLoading, setReplacementDemoLoading] = useState(false);
   const [userRole, setUserRole] = useState("");
+  const [replacementSalespersons, setReplacementSalespersons] = useState([]);
   
   // Replacement/Demo Logs Filters
   const [replacementSearchTerm, setReplacementSearchTerm] = useState("");
   const [replacementApprovalStatusFilter, setReplacementApprovalStatusFilter] = useState("");
   const [replacementStartDate, setReplacementStartDate] = useState("");
   const [replacementEndDate, setReplacementEndDate] = useState("");
+  const [replacementSalesPersonFilter, setReplacementSalesPersonFilter] = useState("");
 
   // Pagination State for Replacement Logs
   const [replacementPage, setReplacementPage] = useState(1);
@@ -115,7 +117,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
 
   useEffect(() => {
     setReplacementPage(1);
-  }, [debouncedReplacementSearch, replacementApprovalStatusFilter, replacementStartDate, replacementEndDate]);
+  }, [debouncedReplacementSearch, replacementApprovalStatusFilter, replacementStartDate, replacementEndDate, replacementSalesPersonFilter]);
 
   // Fetch active salespersons list on mount
   useEffect(() => {
@@ -132,6 +134,21 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
     fetchSalespersons();
   }, []);
 
+  // Fetch replacement salespersons list on mount
+  useEffect(() => {
+    const fetchReplacementSalespersons = async () => {
+      try {
+        const response = await serviceApi.get("/replacement-demo-logs/salespersons");
+        if (response.data.success) {
+          setReplacementSalespersons(response.data.salespersons || []);
+        }
+      } catch (err) {
+        console.error("Failed to load replacement salespersons:", err);
+      }
+    };
+    fetchReplacementSalespersons();
+  }, []);
+
   // Fetch service logs on mount and when filters/pagination change
   useEffect(() => {
     fetchServiceLogs();
@@ -139,7 +156,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
 
   useEffect(() => {
     fetchReplacementDemoLogs();
-  }, [replacementPage, replacementLimit, debouncedReplacementSearch, replacementApprovalStatusFilter, replacementStartDate, replacementEndDate]);
+  }, [replacementPage, replacementLimit, debouncedReplacementSearch, replacementApprovalStatusFilter, replacementStartDate, replacementEndDate, replacementSalesPersonFilter]);
 
   useEffect(() => {
     fetchUserRole();
@@ -196,6 +213,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
           limit: replacementLimit,
           search: debouncedReplacementSearch,
           approvalStatus: replacementApprovalStatusFilter,
+          salesPerson: replacementSalesPersonFilter,
           startDate: replacementStartDate,
           endDate: replacementEndDate
         }
@@ -434,6 +452,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
         params: {
           search: debouncedReplacementSearch,
           approvalStatus: replacementApprovalStatusFilter,
+          salesPerson: replacementSalesPersonFilter,
           startDate: replacementStartDate,
           endDate: replacementEndDate
         },
@@ -854,6 +873,9 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
               endDate={replacementEndDate}
               setEndDate={setReplacementEndDate}
               filteredCount={replacementStats.total}
+              salespersons={replacementSalespersons}
+              salesPersonFilter={replacementSalesPersonFilter}
+              setSalesPersonFilter={setReplacementSalesPersonFilter}
             />
             
             <ReplacementDemoLogsTable

@@ -920,7 +920,6 @@ export const salesPersonlist = [
   "Amarjeet Singh",
   "Anirban Syam",
   "Arif Khan",
-  "Alok Roy",
   "Arwinder Singh",
   "Ashwani Kumar",
   "Bachan Pal",

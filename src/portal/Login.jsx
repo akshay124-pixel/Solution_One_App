@@ -66,6 +66,12 @@ const Login = () => {
         position: "top-right", autoClose: 3000, theme: "colored",
       });
 
+      // Check if password is expired or requires force change
+      if (result.passwordStatus?.isExpired || result.passwordStatus?.passwordForceChangeRequired) {
+        navigate("/password-expired", { replace: true });
+        return;
+      }
+
       // Role-based redirect using hint from server
       // hint === "select-module" → anyone with app_access.length === 2
       // hint === "service-dashboard" → service role

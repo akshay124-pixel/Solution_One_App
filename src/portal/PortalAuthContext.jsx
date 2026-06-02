@@ -130,7 +130,12 @@ export const refreshPortalToken = async () => {
         if (res.data.user) {
           syncLocalStorage(res.data.accessToken, res.data.user);
         }
-        return { success: true, accessToken: res.data.accessToken, user: res.data.user };
+        return { 
+          success: true, 
+          accessToken: res.data.accessToken, 
+          user: res.data.user,
+          passwordStatus: res.data.passwordStatus,
+        };
       }
       throw new Error("Refresh failed");
     })
@@ -163,6 +168,7 @@ portalApi.interceptors.response.use(
 export const PortalAuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [passwordStatus, setPasswordStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const initialized = useRef(false);
 
@@ -180,6 +186,7 @@ export const PortalAuthProvider = ({ children }) => {
             app_access: result.user.app_access || [],
           };
           setUser(userData);
+          setPasswordStatus(result.passwordStatus || null);
           setIsAuthenticated(true);
         }
       } catch (_) {
@@ -195,6 +202,7 @@ export const PortalAuthProvider = ({ children }) => {
       setPortalAccessToken(null);
       setIsAuthenticated(false);
       setUser(null);
+      setPasswordStatus(null);
     };
     window.addEventListener("portal:logout", handleLogout);
     return () => window.removeEventListener("portal:logout", handleLogout);
@@ -211,10 +219,16 @@ export const PortalAuthProvider = ({ children }) => {
           app_access: res.data.user.app_access || [],
         };
         setUser(userData);
+        setPasswordStatus(res.data.passwordStatus || null);
         setIsAuthenticated(true);
         setLoading(false);
         syncLocalStorage(res.data.accessToken, userData);
-        return { success: true, redirectHint: res.data.redirectHint, user: userData };
+        return { 
+          success: true, 
+          redirectHint: res.data.redirectHint, 
+          user: userData, 
+          passwordStatus: res.data.passwordStatus 
+        };
       }
       return { success: false, message: "Login failed." };
     } catch (err) {
@@ -240,12 +254,26 @@ export const PortalAuthProvider = ({ children }) => {
     syncLocalStorage(accessToken, userWithAccess);
   }, []);
 
+  // Fetch password status
+  const fetchPasswordStatus = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await portalApi.get("/api/auth/password-status");
+      if (res.data.success) {
+        setPasswordStatus(res.data.passwordStatus);
+      }
+    } catch (err) {
+      console.error("Failed to fetch password status:", err);
+    }
+  }, [isAuthenticated]);
+
   const logout = useCallback(async () => {
     try {
       await portalApi.post("/api/auth/logout");
     } catch (_) {}
     setPortalAccessToken(null);
     setUser(null);
+    setPasswordStatus(null);
     setIsAuthenticated(false);
     localStorage.removeItem("token");
     localStorage.removeItem("userId");
@@ -258,8 +286,17 @@ export const PortalAuthProvider = ({ children }) => {
   }, []);
 
   const value = useMemo(
-    () => ({ isAuthenticated, loading, user, login, logout, setAuthFromToken }),
-    [isAuthenticated, loading, user, login, logout, setAuthFromToken]
+    () => ({ 
+      isAuthenticated, 
+      loading, 
+      user, 
+      passwordStatus,
+      login, 
+      logout, 
+      setAuthFromToken,
+      fetchPasswordStatus,
+    }),
+    [isAuthenticated, loading, user, passwordStatus, login, logout, setAuthFromToken, fetchPasswordStatus]
   );
 
   return (

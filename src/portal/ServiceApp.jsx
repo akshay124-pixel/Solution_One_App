@@ -1,15 +1,21 @@
 import React, { useState } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { usePortalAuth } from "./PortalAuthContext";
 
 import ServiceDashboard from "../service/components/ServiceDashboard";
 import PartReplacementDashboard from "../service/components/PartReplacementDashboard";
 import ServiceNavbar from "../service/components/Navbar";
+import ServiceChangePassword from "../service/Auth/ChangePassword";
+import { PasswordExpiryBanner } from "./PasswordExpiryBanner";
+import { PasswordReminderModal } from "./PasswordReminderModal";
 
 const ServiceApp = () => {
   const { user, logout } = usePortalAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  const isChangePassword = pathname.endsWith("/change-password");
 
   const handleLogout = async () => {
     await logout();
@@ -26,8 +32,9 @@ const ServiceApp = () => {
 
   return (
     <>
+      <PasswordReminderModal />
       {/* Switch Module bar — shown for any user with access to multiple modules */}
-      {hasMultiple && (
+      {hasMultiple && !isChangePassword && (
         <div
           style={{
             background: "linear-gradient(135deg, #11998e, #1fa57d)",
@@ -58,24 +65,26 @@ const ServiceApp = () => {
           </button>
         </div>
       )}
-      <ServiceNavbar 
+      {!isChangePassword && <PasswordExpiryBanner />}
+      {!isChangePassword && <ServiceNavbar 
         isAuthenticated={true} 
         onLogout={handleLogout}
         userRole={user?.role}
         onApprovalAction={handleApprovalAction}
-      />
+      />}
       <Routes>
-        <Route 
-          path="/" 
+        <Route
+          path="/"
           element={
             user?.role === "part_replacement" ? (
               <Navigate to="/service/part-replacement" replace />
             ) : (
               <ServiceDashboard refreshTrigger={refreshTrigger} onApprovalAction={handleApprovalAction} />
             )
-          } 
+          }
         />
         <Route path="/part-replacement" element={<PartReplacementDashboard />} />
+        <Route path="/change-password" element={<ServiceChangePassword />} />
         <Route path="*" element={<Navigate to="/service" replace />} />
       </Routes>
     </>

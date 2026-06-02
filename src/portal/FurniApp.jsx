@@ -18,6 +18,8 @@ import FurniVerification  from "../furni/components/Verification";
 import FurniBill          from "../furni/components/BillGeneration";
 import FurniProductionApproval from "../furni/components/ProductionApproval";
 import FurniChangePassword from "../furni/Auth/ChangePassword";
+import { PasswordExpiryBanner } from "./PasswordExpiryBanner";
+import { PasswordReminderModal } from "./PasswordReminderModal";
 
 // Role → default Furni route
 const roleRedirect = (role) => {
@@ -58,6 +60,7 @@ const FurniApp = () => {
 
   return (
     <>
+      <PasswordReminderModal />
       {/* Switch Module bar */}
       {hasMultiple && !isChangePassword && (
         <div style={{
@@ -70,9 +73,14 @@ const FurniApp = () => {
           <button
             onClick={() => navigate("/select-module")}
             style={{
-              marginLeft: "auto", background: "rgba(255,255,255,0.18)",
-              border: "1px solid rgba(255,255,255,0.4)", borderRadius: "5px",
-              color: "#fff", padding: "2px 12px", cursor: "pointer", fontSize: "12px",
+              marginLeft: "auto",
+              background: "rgba(255,255,255,0.18)",
+              border: "1px solid rgba(255,255,255,0.4)",
+              borderRadius: "5px",
+              color: "#fff",
+              padding: "2px 12px",
+              cursor: "pointer",
+              fontSize: "12px",
             }}
             aria-label="Switch module"
           >
@@ -80,6 +88,7 @@ const FurniApp = () => {
           </button>
         </div>
       )}
+      {!isChangePassword && <PasswordExpiryBanner />}
       {!isChangePassword && (
         <FurniNavbar
           isAuthenticated={true}

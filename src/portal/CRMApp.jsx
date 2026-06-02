@@ -6,6 +6,8 @@ import CRMNavbar from "../crm/components/Navbar";
 import CRMDashBoard from "../crm/components/DashBoard";
 import CRMChangePassword from "../crm/Auth/ChangePassword";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { PasswordExpiryBanner } from "./PasswordExpiryBanner";
+import { PasswordReminderModal } from "./PasswordReminderModal";
 
 // Thin bar shown only when user has access to both modules
 const SwitchModuleBar = () => {
@@ -42,7 +44,9 @@ const CRMAppInner = () => {
 
   return (
     <>
+      <PasswordReminderModal />
       {!isChangePassword && <SwitchModuleBar />}
+      {!isChangePassword && <PasswordExpiryBanner />}
       {!isChangePassword && <CRMNavbar />}
       <Routes>
         <Route path="dashboard" element={<CRMDashBoard />} />

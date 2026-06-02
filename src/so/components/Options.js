@@ -1261,7 +1261,6 @@ export const salesPersonlist = [
   { label: "Ajay Kumar", value: "Ajay Kumar" },
   { label: "Akshay", value: "Akshay" },
   { label: "Aman Sisoudiya", value: "Aman Sisoudiya" },
-  { label: "Alok Roy", value: "Alok Roy" },
   { label: "Amarjeet Singh", value: "Amarjeet Singh" },
   { label: "Anirban Syam", value: "Anirban Syam" },
   { label: "Arif Khan", value: "Arif Khan" },

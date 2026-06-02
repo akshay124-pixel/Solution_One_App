@@ -1,5 +1,6 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { usePortalAuth } from "./PortalAuthContext";
 
 import Login from "./Login";
 import Signup from "./Signup";
@@ -12,6 +13,7 @@ import FurniApp from "./FurniApp";
 import ServiceApp from "./ServiceApp";
 import IdentityManager from "./admin/IdentityManager";
 import AdminPanel from "./admin/AdminPanel";
+import PasswordExpiredScreen from "./PasswordExpiredScreen";
 
 const Unauthorized = () => (
   <div style={{
@@ -24,6 +26,22 @@ const Unauthorized = () => (
   </div>
 );
 
+const PasswordCheckWrapper = ({ children }) => {
+  const { passwordStatus, user } = usePortalAuth();
+
+  // Exempt globaladmin and superadmin from password lifecycle requirements
+  if (user?.role === 'globaladmin' || user?.role === 'superadmin') {
+    return children;
+  }
+
+  // If password is expired, redirect to password expired screen
+  if (passwordStatus?.isExpired || passwordStatus?.passwordForceChangeRequired) {
+    return <Navigate to="/password-expired" replace />;
+  }
+
+  return children;
+};
+
 const AppRouter = () => (
   <Routes>
     {/* Public */}
@@ -31,6 +49,7 @@ const AppRouter = () => (
     <Route path="/login" element={<Login />} />
     <Route path="/signup" element={<Signup />} />
     <Route path="/unauthorized" element={<Unauthorized />} />
+    <Route path="/password-expired" element={<PasswordExpiredScreen />} />
 
     {/*
       Module Selector — shown to anyone with app_access.length >= 2
@@ -39,7 +58,9 @@ const AppRouter = () => (
       path="/select-module"
       element={
         <ProtectedRoute requireMultiAccess>
-          <ModuleSelector />
+          <PasswordCheckWrapper>
+            <ModuleSelector />
+          </PasswordCheckWrapper>
         </ProtectedRoute>
       }
     />
@@ -49,7 +70,9 @@ const AppRouter = () => (
       path="/crm/*"
       element={
         <ProtectedRoute appAccess="crm">
-          <CRMApp />
+          <PasswordCheckWrapper>
+            <CRMApp />
+          </PasswordCheckWrapper>
         </ProtectedRoute>
       }
     />
@@ -59,7 +82,9 @@ const AppRouter = () => (
       path="/so/*"
       element={
         <ProtectedRoute appAccess="so">
-          <SOApp />
+          <PasswordCheckWrapper>
+            <SOApp />
+          </PasswordCheckWrapper>
         </ProtectedRoute>
       }
     />
@@ -69,7 +94,9 @@ const AppRouter = () => (
       path="/dms/*"
       element={
         <ProtectedRoute appAccess="dms">
-          <DMSApp />
+          <PasswordCheckWrapper>
+            <DMSApp />
+          </PasswordCheckWrapper>
         </ProtectedRoute>
       }
     />
@@ -79,7 +106,9 @@ const AppRouter = () => (
       path="/furni/*"
       element={
         <ProtectedRoute appAccess="furni">
-          <FurniApp />
+          <PasswordCheckWrapper>
+            <FurniApp />
+          </PasswordCheckWrapper>
         </ProtectedRoute>
       }
     />
@@ -89,7 +118,9 @@ const AppRouter = () => (
       path="/service/*"
       element={
         <ProtectedRoute appAccess="service">
-          <ServiceApp />
+          <PasswordCheckWrapper>
+            <ServiceApp />
+          </PasswordCheckWrapper>
         </ProtectedRoute>
       }
     />
@@ -99,7 +130,9 @@ const AppRouter = () => (
       path="/admin/identity"
       element={
         <ProtectedRoute roles={["globaladmin"]}>
-          <IdentityManager />
+          <PasswordCheckWrapper>
+            <IdentityManager />
+          </PasswordCheckWrapper>
         </ProtectedRoute>
       }
     />
@@ -109,7 +142,9 @@ const AppRouter = () => (
       path="/admin/*"
       element={
         <ProtectedRoute roles={["globaladmin"]}>
-          <AdminPanel />
+          <PasswordCheckWrapper>
+            <AdminPanel />
+          </PasswordCheckWrapper>
         </ProtectedRoute>
       }
     />

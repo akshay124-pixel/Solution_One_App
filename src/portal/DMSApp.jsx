@@ -9,6 +9,8 @@ import CallAnalyticsDashboard from "../dms/components/Analytics/CallAnalyticsDas
 import SmartfloUserMapping from "../dms/components/Smartflo/SmartfloUserMapping";
 import ScheduledCallsManager from "../dms/components/Dialer/ScheduledCallsManager";
 import CallHistoryPage from "../dms/components/CallHistory/CallHistoryPage";
+import { PasswordExpiryBanner } from "./PasswordExpiryBanner";
+import { PasswordReminderModal } from "./PasswordReminderModal";
 
 const DMSApp = () => {
   const { user, logout } = usePortalAuth();
@@ -26,6 +28,7 @@ const DMSApp = () => {
 
   return (
     <>
+      <PasswordReminderModal />
       {hasMultiple && !isChangePassword && (
         <div style={{
           background: "linear-gradient(90deg,#0ea5e9,#6366f1)",
@@ -47,6 +50,7 @@ const DMSApp = () => {
           </button>
         </div>
       )}
+      {!isChangePassword && <PasswordExpiryBanner />}
       {!isChangePassword && <DMSNavbar />}
       <Routes>
         <Route path="dashboard" element={<DMSDashBoard />} />

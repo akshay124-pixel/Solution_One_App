@@ -12,6 +12,8 @@ import SOVerification from "../so/components/Verification";
 import SOBill from "../so/components/BillGeneration";
 import SOProductionApproval from "../so/components/ProductionApproval";
 import SOChangePassword from "../so/Auth/ChangePassword";
+import { PasswordExpiryBanner } from "./PasswordExpiryBanner";
+import { PasswordReminderModal } from "./PasswordReminderModal";
 
 // Role → default SO route
 const roleRedirect = (role) => {
@@ -50,6 +52,7 @@ const SOApp = () => {
 
   return (
     <>
+      <PasswordReminderModal />
       {/* Switch Module bar — shown for any user with access to multiple modules */}
       {hasMultiple && !isChangePassword && (
         <div style={{
@@ -72,6 +75,7 @@ const SOApp = () => {
           </button>
         </div>
       )}
+      {!isChangePassword && <PasswordExpiryBanner />}
       {!isChangePassword && (
         <SONavbar
           isAuthenticated={true}

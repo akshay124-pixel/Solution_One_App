@@ -29,8 +29,11 @@ const Unauthorized = () => (
 const PasswordCheckWrapper = ({ children }) => {
   const { passwordStatus, user } = usePortalAuth();
 
+  // Normalize role to lowercase for consistent check
+  const normalizedRole = user?.role?.toLowerCase?.() || user?.role;
+  
   // Exempt globaladmin and superadmin from password lifecycle requirements
-  if (user?.role === 'globaladmin' || user?.role === 'superadmin') {
+  if (normalizedRole === 'globaladmin' || normalizedRole === 'superadmin') {
     return children;
   }
 

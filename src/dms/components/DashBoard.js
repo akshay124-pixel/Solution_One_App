@@ -1095,63 +1095,31 @@ function DashBoard() {
           return;
         }
 
-        // Use 500 batch size as per spec
-        const chunkSize = 500;
-        const chunks = [];
-        for (let i = 0; i < newEntries.length; i += chunkSize) {
-          chunks.push(newEntries.slice(i, i + chunkSize));
-        }
+        // Send all entries to backend (backend handles batching)
+        const response = await api.post("/api/entries", newEntries, {
+          timeout: 300000, // 5 minutes timeout
+        });
 
-        let uploadedCount = 0;
-        const errors = [];
-
-        for (let i = 0; i < chunks.length; i++) {
-          const chunk = chunks[i];
-          try {
-            const response = await api.post("/api/entries", chunk, {
-              timeout: 120000, // 2 minutes timeout per batch
-            });
-
-            if (response.status === 201 || response.status === 200) {
-              uploadedCount += response.data.insertedCount || chunk.length;
-              toast.success(
-                `Batch ${i + 1}/${chunks.length}: Uploaded ${response.data.insertedCount || chunk.length} entries`
-              );
-            } else if (response.status === 207) {
-              const chunkUploaded = response.data.insertedCount || 0;
-              uploadedCount += chunkUploaded;
-              errors.push(...(response.data.errors || []));
-              toast.warn(
-                `Batch ${i + 1}/${chunks.length}: Partially uploaded (${chunkUploaded} entries)`
-              );
-            }
-          } catch (error) {
-            const errorMessage =
-              error.response?.data?.message ||
-              `Batch ${i + 1}: Failed to upload chunk`;
-            errors.push(errorMessage);
-            toast.error(errorMessage);
-          }
-        }
+        const { totalRecords, added, duplicatesSkipped, failed } = response.data;
 
         // Refresh data after upload
-        if (uploadedCount > 0) {
+        if (added > 0) {
           fetchEntries();
-          // REAL-TIME UPDATE: Refresh tracker counts immediately after bulk upload
           fetchEntryCounts();
           if (process.env.NODE_ENV === 'development') {
             console.log("🔄 REAL-TIME: Refreshed tracker counts after bulk upload");
           }
         }
 
-        if (uploadedCount === newEntries.length && errors.length === 0) {
-          toast.success(`Upload complete! ${uploadedCount} entries added.`);
-        } else if (uploadedCount > 0) {
-          toast.warn(
-            `Uploaded ${uploadedCount} of ${newEntries.length} entries. ${errors.length} errors.`
-          );
+        // Show summary
+        const summaryMessage = `Upload Complete\nTotal Records: ${totalRecords}\nAdded: ${added}\nDuplicates Skipped: ${duplicatesSkipped}\nFailed: ${failed}`;
+        
+        if (added > 0 && duplicatesSkipped === 0 && failed === 0) {
+          toast.success(summaryMessage);
+        } else if (added > 0) {
+          toast.warn(summaryMessage);
         } else {
-          toast.error(`Failed to upload entries. ${errors.join("; ")}`);
+          toast.error(summaryMessage);
         }
       } catch (error) {
         console.error("Error processing Excel file:", error.message);

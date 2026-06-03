@@ -429,8 +429,10 @@ const Row = React.memo(({ index, style, data }) => {
 
     if (isOrderComplete(order)) return "#ffffff";
 
+    const hasAttachments = order.poFilePath || (order.attachments && order.attachments.length > 0);
+    
     if (order.sostatus === "Approved") {
-      if (order.poFilePath) {
+      if (hasAttachments) {
         return "#d4f4e6";
       }
       return "#e6ffed";
@@ -440,7 +442,7 @@ const Row = React.memo(({ index, style, data }) => {
 
     // Pending for Approval
     if (order.sostatus === "Pending for Approval") {
-      if (order.poFilePath) {
+      if (hasAttachments) {
         return "#e4d1ff"; // darker purple when PO attached
       }
       return "#f3e8ff"; // normal pending

@@ -148,7 +148,7 @@ function ViewEntry({ isOpen, onClose, entry }) {
       filePath !== "/"
     );
   };
-  const handleDownload = async (filePath, label = "AV_EdTech") => {
+  const handleDownload = async (filePath) => {
     const targetPath = filePath || entry?.poFilePath;
 
     if (!isValidPoFilePath(targetPath)) {
@@ -169,8 +169,9 @@ function ViewEntry({ isOpen, onClose, entry }) {
 
       const blob = response.data;
       const ext = fileName.includes(".") ? "." + fileName.split(".").pop() : "";
+      const baseName = fileName.includes(".") ? fileName.slice(0, -ext.length) : fileName;
       const orderSlug = entry?.orderId ? `Order_${entry.orderId}` : "SO";
-      const downloadFileName = `${orderSlug}_SO_${label}${ext}`;
+      const downloadFileName = `${orderSlug}_${baseName}${ext}`;
 
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
@@ -643,57 +644,7 @@ function ViewEntry({ isOpen, onClose, entry }) {
       label: "Products Edit Timestamp",
       formatter: formatTimestamp,
     },
-    {
-      key: "poFilePath",
-      label: "Attachments",
-      renderer: () =>
-        isValidPoFilePath(entry.poFilePath) ? (
-          <Button
-            variant="outline-primary"
-            size="sm"
-            onClick={() => handleDownload(entry.poFilePath, "AV_EdTech")}
-            style={{
-              background: "linear-gradient(135deg, #2575fc, #6a11cb)",
-              padding: "6px 12px",
-              borderRadius: "20px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              fontSize: "0.85rem",
-              fontWeight: "600",
-              color: "#ffffff",
-              border: "1px solid #ffffff22",
-              boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
-              transition:
-                "transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease",
-              cursor: "pointer",
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.transform = "scale(1.05)";
-              e.target.style.boxShadow = "0 4px 12px rgba(106, 17, 203, 0.4)";
-              e.target.style.background =
-                "linear-gradient(135deg, #3b82f6, #7e22ce)";
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = "scale(1)";
-              e.target.style.boxShadow = "0 2px 6px rgba(0, 0, 0, 0.15)";
-              e.target.style.background =
-                "linear-gradient(135deg, #2575fc, #6a11cb)";
-            }}
-            onMouseDown={(e) => {
-              e.target.style.transform = "scale(0.95)";
-            }}
-            onMouseUp={(e) => {
-              e.target.style.transform = "scale(1.05)";
-            }}
-          >
-            <Download size={14} />
-            Download
-          </Button>
-        ) : (
-          <span>No file attached</span>
-        ),
-    },
+
   ];
   const customerInfoFields = [
     { key: "customername", label: "Customer Name" },
@@ -761,7 +712,7 @@ function ViewEntry({ isOpen, onClose, entry }) {
           <Button
             variant="outline-primary"
             size="sm"
-            onClick={() => handleDownload(entry.pwcFile, "PWC_Document")}
+            onClick={() => handleDownload(entry.pwcFile)}
             style={{
               background: "linear-gradient(135deg, #2575fc, #6a11cb)",
               padding: "6px 14px",
@@ -824,7 +775,7 @@ function ViewEntry({ isOpen, onClose, entry }) {
           <Button
             variant="outline-primary"
             size="sm"
-            onClick={() => handleDownload(entry.stampReport, "StampSignedReport")}
+            onClick={() => handleDownload(entry.stampReport)}
             style={{
               background: "linear-gradient(135deg, #2575fc, #6a11cb)",
               padding: "6px 14px",
@@ -864,7 +815,7 @@ function ViewEntry({ isOpen, onClose, entry }) {
           <Button
             variant="outline-primary"
             size="sm"
-            onClick={() => handleDownload(entry.installationFile, "SalesOrder_InstallationReport")}
+            onClick={() => handleDownload(entry.installationFile)}
             style={{
               background: "linear-gradient(135deg, #2575fc, #6a11cb)",
               padding: "6px 14px",
@@ -1716,6 +1667,185 @@ function ViewEntry({ isOpen, onClose, entry }) {
             ))}
           </Accordion>
         )}
+
+        {/* File Attachments */}
+        {(() => {
+          // Collect all attachments (new attachments array or legacy poFilePath)
+          let attachments = [];
+          if (entry.attachments && entry.attachments.length > 0) {
+            attachments = entry.attachments;
+          } else if (entry.poFilePath && isValidPoFilePath(entry.poFilePath)) {
+            attachments = [entry.poFilePath];
+          }
+
+          if (attachments.length === 0) return null;
+
+          return (
+            <div style={{ marginTop: "1.5rem", padding: "1rem 1.5rem", background: "#fff", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.08)" }}>
+              <div style={{ 
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "space-between",
+                marginBottom: "1rem" 
+              }}>
+                <span style={{ 
+                  fontSize: "0.875rem", 
+                  fontWeight: 600, 
+                  color: "#374151" 
+                }}>
+                  📎 Attachments ({attachments.length})
+                </span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                {attachments.map((filePath, index) => {
+                          const fileName = filePath.split("/").pop();
+                          const fileExt = fileName.includes(".") ? fileName.split(".").pop().toLowerCase() : "";
+                          
+                          // Get document type label based on extension
+                          const getDocumentTypeLabel = () => {
+                            if (["pdf"].includes(fileExt)) return "PDF Document";
+                            if (["doc", "docx"].includes(fileExt)) return "Word Document";
+                            if (["xls", "xlsx"].includes(fileExt)) return "Excel Document";
+                            if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt)) return "Image Document";
+                            return "Attachment File";
+                          };
+                          
+                          // Get file icon based on extension
+                          const getFileIcon = () => {
+                            if (["pdf"].includes(fileExt)) {
+                              return (
+                                <svg style={{ width: "32px", height: "32px", color: "#ef4444" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                              );
+                            } else if (["doc", "docx"].includes(fileExt)) {
+                              return (
+                                <svg style={{ width: "32px", height: "32px", color: "#3b82f6" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                              );
+                            } else if (["xls", "xlsx"].includes(fileExt)) {
+                              return (
+                                <svg style={{ width: "32px", height: "32px", color: "#22c55e" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                              );
+                            } else if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt)) {
+                              return (
+                                <svg style={{ width: "32px", height: "32px", color: "#f59e0b" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                              );
+                            } else {
+                              return (
+                                <svg style={{ width: "32px", height: "32px", color: "#6366f1" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                              );
+                            }
+                          };
+
+                          const getFileExtBadgeColor = () => {
+                            if (["pdf"].includes(fileExt)) return { bg: "#fef2f2", color: "#dc2626" };
+                            if (["doc", "docx"].includes(fileExt)) return { bg: "#eff6ff", color: "#2563eb" };
+                            if (["xls", "xlsx"].includes(fileExt)) return { bg: "#f0fdf4", color: "#16a34a" };
+                            if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt)) return { bg: "#fffbeb", color: "#d97706" };
+                            return { bg: "#f5f3ff", color: "#7c3aed" };
+                          };
+
+                          const badgeStyle = getFileExtBadgeColor();
+                          const documentLabel = getDocumentTypeLabel();
+
+                  return (
+                    <div
+                      key={index}
+                      style={{
+                        display: "flex",
+                        flexDirection: ["column", "row"],
+                        alignItems: ["flex-start", "center"],
+                        gap: ["0.75rem", "1rem"],
+                        padding: "0.875rem 1.125rem",
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        border: "1px solid #e5e7eb",
+                        boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+                        transition: "all 0.2s ease",
+                        cursor: "pointer",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)";
+                        e.currentTarget.style.borderColor = "#d1d5db";
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = "0 1px 2px 0 rgba(0, 0, 0, 0.05)";
+                        e.currentTarget.style.borderColor = "#e5e7eb";
+                        e.currentTarget.style.transform = "translateY(0)";
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.875rem", flex: 1, minWidth: 0 }}>
+                        {getFileIcon()}
+                        <div style={{ minWidth: 0 }}>
+                          <span
+                            title={documentLabel}
+                            style={{
+                              fontSize: "0.9375rem",
+                              fontWeight: 500,
+                              color: "#111827",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              display: "block",
+                            }}
+                          >
+                            {documentLabel}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => handleDownload(filePath)}
+                        style={{
+                          background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                          padding: "0.625rem 1.25rem",
+                          borderRadius: "10px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          fontSize: "0.875rem",
+                          fontWeight: 600,
+                          color: "#ffffff",
+                          border: "none",
+                          boxShadow: "0 4px 6px -1px rgba(99, 102, 241, 0.3), 0 2px 4px -1px rgba(99, 102, 241, 0.2)",
+                          transition: "all 0.2s ease",
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = "scale(1.05)";
+                          e.currentTarget.style.boxShadow = "0 10px 15px -3px rgba(99, 102, 241, 0.4), 0 4px 6px -2px rgba(99, 102, 241, 0.3)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = "scale(1)";
+                          e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(99, 102, 241, 0.3), 0 2px 4px -1px rgba(99, 102, 241, 0.2)";
+                        }}
+                        onMouseDown={(e) => {
+                          e.currentTarget.style.transform = "scale(0.98)";
+                        }}
+                      >
+                        <svg style={{ width: "18px", height: "18px" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         <Button
           onClick={handleCopy}

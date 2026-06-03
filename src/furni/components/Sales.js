@@ -115,14 +115,15 @@ const Row = React.memo(({ index, style, data }) => {
     if (order.sostatus === "Order Cancelled") return "#ffe5e5";
     if (order.orderType === "Replacement" && order.sostatus === "Pending for Approval") return "#fff3e0"; // Light orange for Pending Replacement
     if (isOrderComplete(order)) return "#ffffff";
+    const hasAttachments = order.poFilePath || (order.attachments && order.attachments.length > 0);
     if (order.sostatus === "Approved") {
-      if (order.poFilePath) return "#d4f4e6"; // Darker green when PO attached
+      if (hasAttachments) return "#d4f4e6"; // Darker green when PO attached
       return "#e6ffed";
     }
     if (order.sostatus === "Accounts Approved") return "#e6f0ff";
     // Pending for Approval - highlight with darker purple when PO attached
     if (order.sostatus === "Pending for Approval") {
-      if (order.poFilePath) return "#e4d1ff"; // Darker purple when PO attached
+      if (hasAttachments) return "#e4d1ff"; // Darker purple when PO attached
       return "#f3e8ff"; // Normal light purple
     }
     return "#f3e8ff";
@@ -131,14 +132,15 @@ const Row = React.memo(({ index, style, data }) => {
     if (order.sostatus === "Order Cancelled") return "#ffcccc";
     if (order.orderType === "Replacement" && order.sostatus === "Pending for Approval") return "#ffe0b2"; // Slightly darker orange hover for Pending Replacement
     if (isOrderComplete(order)) return "#f0f7ff";
+    const hasAttachments = order.poFilePath || (order.attachments && order.attachments.length > 0);
     if (order.sostatus === "Approved") {
-      if (order.poFilePath) return "#c8ede0"; // Darker green hover
+      if (hasAttachments) return "#c8ede0"; // Darker green hover
       return "#d1f7dc";
     }
     if (order.sostatus === "Accounts Approved") return "#d1e4ff";
     // Pending for Approval hover
     if (order.sostatus === "Pending for Approval") {
-      if (order.poFilePath) return "#d4b8ff"; // Darker purple hover when PO attached
+      if (hasAttachments) return "#d4b8ff"; // Darker purple hover when PO attached
       return "#ede4ff"; // Normal hover
     }
     return "#ede4ff";

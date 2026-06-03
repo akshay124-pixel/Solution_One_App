@@ -47,7 +47,7 @@ const InstallationEditModal = ({ show, onHide, order, onUpdate }) => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleDownload = async (filePath, label = "SalesOrder_InstallationReport") => {
+    const handleDownload = async (filePath) => {
         if (!filePath || typeof filePath !== "string") {
             toast.error("Invalid file path!");
             return;
@@ -66,8 +66,9 @@ const InstallationEditModal = ({ show, onHide, order, onUpdate }) => {
 
             const blob = response.data;
             const ext = fileName.includes(".") ? "." + fileName.split(".").pop() : "";
+            const baseName = fileName.includes(".") ? fileName.slice(0, -ext.length) : fileName;
             const orderSlug = order?.orderId ? `Order_${order.orderId}` : "SO";
-            const downloadFileName = `${orderSlug}_SO_${label}${ext}`;
+            const downloadFileName = `${orderSlug}_${baseName}${ext}`;
 
             const link = document.createElement("a");
             link.href = window.URL.createObjectURL(blob);

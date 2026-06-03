@@ -423,8 +423,9 @@ function Installation() {
 
       const blob = response.data;
       const ext = fileName.includes(".") ? "." + fileName.split(".").pop() : "";
+      const baseName = fileName.includes(".") ? fileName.slice(0, -ext.length) : fileName;
       const orderSlug = viewOrder?.orderId ? `Order_${viewOrder.orderId}` : "SO";
-      const downloadFileName = `${orderSlug}_SO_SalesOrder_InstallationReport${ext}`;
+      const downloadFileName = `${orderSlug}_${baseName}${ext}`;
 
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import furniApi from "../axiosSetup";
 import { Button, Modal, Badge, Form, Spinner } from "react-bootstrap";
 import { Accordion, Card } from "react-bootstrap";import { FaEye, FaTimes, FaEnvelope, FaDownload } from "react-icons/fa";
@@ -51,20 +51,21 @@ function Installation() {
     hasPrevPage: false,
   });
 
-  const handleDownload = async (filePath, label = "InstallationReport") => {
+  const handleDownload = async (filePath) => {
     if (!filePath || typeof filePath !== "string") { toast.error("Invalid file path!"); return; }
     try {
-      const filename = filePath.split("/").pop();
-      if (!filename) { toast.error("Invalid file path!"); return; }
+      const fileName = filePath.split("/").pop();
+      if (!fileName) { toast.error("Invalid file path!"); return; }
 
-      const response = await furniApi.get(`/api/download/${encodeURIComponent(filename)}`, { responseType: "blob" });
+      const response = await furniApi.get(`/api/download/${encodeURIComponent(fileName)}`, { responseType: "blob" });
       const blob = response.data;
-      const ext = filename.includes(".") ? "." + filename.split(".").pop() : "";
+      const ext = fileName.includes(".") ? "." + fileName.split(".").pop() : "";
+      const baseName = fileName.includes(".") ? fileName.slice(0, -ext.length) : fileName;
       const orderSlug = viewOrder?.orderId ? `Order_${viewOrder.orderId}` : "Furni";
-      const downloadFilename = `${orderSlug}_Furni${label ? "_" + label : ""}${ext}`;
+      const downloadFileName = `${orderSlug}_${baseName}${ext}`;
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
-      link.download = downloadFilename;
+      link.download = downloadFileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

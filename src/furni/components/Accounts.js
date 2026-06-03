@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, memo } from "react";
 import furniApi from "../axiosSetup";
 import { Button, Modal, Badge, Form, Spinner } from "react-bootstrap";
 import { FaEye, FaTimes } from "react-icons/fa";
@@ -6,6 +6,187 @@ import { toast } from "react-toastify";
 import { exportToExcel } from "../../utils/excelHelper";
 import ViewEntry from "./ViewEntry";
 import Pagination from "../../components/Pagination";
+import { getDirtyValues } from "../utils/formUtils";
+
+const MODAL_HEADER_STYLE = {
+  background: "linear-gradient(135deg, #2575fc, #6a11cb)",
+  color: "#fff",
+  borderBottom: "none",
+  padding: "20px",
+};
+
+const MODAL_TITLE_STYLE = {
+  fontWeight: "700",
+  fontSize: "1.5rem",
+  textTransform: "uppercase",
+  letterSpacing: "1px",
+};
+
+const MODAL_BODY_STYLE = {
+  padding: "30px",
+  background: "#fff",
+  borderRadius: "0 0 15px 15px",
+  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
+};
+
+const LABEL_STYLE = { fontWeight: "600", color: "#333" };
+const ERROR_STYLE = { color: "red", fontSize: "0.875rem" };
+const GROUP_STYLE = { marginBottom: "20px" };
+
+const BASE_INPUT_STYLE = {
+  borderRadius: "10px",
+  padding: "12px",
+  fontSize: "1rem",
+  transition: "all 0.3s ease",
+};
+
+const BUTTON_CANCEL_STYLE = {
+  background: "linear-gradient(135deg, #6c757d, #5a6268)",
+  border: "none",
+  padding: "10px 20px",
+  borderRadius: "20px",
+  color: "#fff",
+  fontWeight: "600",
+  transition: "all 0.3s ease",
+};
+
+const BUTTON_SAVE_STYLE = {
+  background: "linear-gradient(135deg, #2575fc, #6a11cb)",
+  border: "none",
+  padding: "10px 20px",
+  borderRadius: "20px",
+  color: "#fff",
+  fontWeight: "600",
+  transition: "all 0.3s ease",
+};
+
+const handleFocus = (e) => {
+  e.target.style.boxShadow = "0 0 10px rgba(37, 117, 252, 0.5)";
+};
+
+const handleBlur = (e) => {
+  e.target.style.boxShadow = "none";
+};
+
+const MemoizedInput = memo(({
+  label,
+  name,
+  value,
+  onChange,
+  placeholder,
+  error,
+  type = "text",
+  disabled = false,
+  step,
+  required = false
+}) => {
+  const inputStyle = {
+    ...BASE_INPUT_STYLE,
+    border: error ? "1px solid red" : "1px solid #ced4da",
+  };
+
+  return (
+    <Form.Group style={GROUP_STYLE}>
+      <Form.Label style={LABEL_STYLE}>
+        {label} {required && <span style={{ color: "red" }}>*</span>}
+      </Form.Label>
+      <Form.Control
+        type={type}
+        step={step}
+        name={name}
+        value={value}
+        onChange={(e) => onChange(name, e.target.value)}
+        placeholder={placeholder}
+        style={inputStyle}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        disabled={disabled}
+        required={required}
+      />
+      {error && <Form.Text style={ERROR_STYLE}>{error}</Form.Text>}
+    </Form.Group>
+  );
+});
+
+const MemoizedSelect = memo(({
+  label,
+  name,
+  value,
+  onChange,
+  options,
+  error,
+  disabled = false,
+  required = false
+}) => {
+  const inputStyle = {
+    ...BASE_INPUT_STYLE,
+    border: error ? "1px solid red" : "1px solid #ced4da",
+  };
+
+  return (
+    <Form.Group style={GROUP_STYLE}>
+      <Form.Label style={LABEL_STYLE}>
+        {label} {required && <span style={{ color: "red" }}>*</span>}
+      </Form.Label>
+      <Form.Select
+        name={name}
+        value={value}
+        onChange={(e) => onChange(name, e.target.value)}
+        style={inputStyle}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        disabled={disabled}
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </Form.Select>
+      {error && <Form.Text style={ERROR_STYLE}>{error}</Form.Text>}
+    </Form.Group>
+  );
+});
+
+const MemoizedTextarea = memo(({
+  label,
+  name,
+  value,
+  onChange,
+  placeholder,
+  error,
+  rows = 3,
+  required = false
+}) => {
+  const inputStyle = {
+    ...BASE_INPUT_STYLE,
+    border: error ? "1px solid red" : "1px solid #ced4da",
+  };
+
+  return (
+    <Form.Group style={GROUP_STYLE}>
+      <Form.Label style={LABEL_STYLE}>
+        {label} {required && <span style={{ color: "red" }}>*</span>}
+      </Form.Label>
+      <Form.Control
+        as="textarea"
+        rows={rows}
+        name={name}
+        value={value}
+        onChange={(e) => onChange(name, e.target.value)}
+        placeholder={placeholder}
+        style={inputStyle}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        required={required}
+      />
+      {error && <Form.Text style={ERROR_STYLE}>{error}</Form.Text>}
+    </Form.Group>
+  );
+});
+
+const handleBtnEnter = (e) => (e.target.style.transform = "translateY(-2px)");
+const handleBtnLeave = (e) => (e.target.style.transform = "translateY(0)");
 
 function Accounts() {
   const [orders, setOrders] = useState([]);
@@ -27,6 +208,7 @@ function Accounts() {
     neftTransactionId: "",
     chequeId: "",
   });
+  const [originalFormData, setOriginalFormData] = useState({});
   const [errors, setErrors] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -92,15 +274,18 @@ function Accounts() {
     }
   }, [currentPage, pageLimit, searchQuery, statusFilter]);
 
-  useEffect(() => {
-    if (formData.paymentReceived === "Received") {
-      setFormData((prev) => ({
-        ...prev,
-        paymentDue: "0",
-        paymentCollected: Number(prev.total || 0).toFixed(2),
-      }));
-    }
-  }, [formData.paymentReceived]);
+  const handleChange = useCallback((name, value) => {
+    setFormData((prev) => {
+      const temp = { ...prev, [name]: value };
+      if (name === "paymentReceived" && value === "Received") {
+        temp.paymentDue = "0";
+        temp.paymentCollected = Number(temp.total || 0).toFixed(2);
+      }
+      return temp;
+    });
+
+    setErrors((prev) => (prev[name] ? { ...prev, [name]: null } : prev));
+  }, []);
 
   useEffect(() => {
     fetchAccountsOrders(currentPage, pageLimit);
@@ -124,7 +309,7 @@ function Accounts() {
 
   const handleEdit = (order) => {
     setEditOrder(order);
-    setFormData({
+    const initialData = {
       total: order.total || "",
       paymentReceived: order.paymentReceived || "Not Received",
       remarksByAccounts: order.remarksByAccounts || "",
@@ -137,7 +322,9 @@ function Accounts() {
       paymentDue: order.paymentReceived === "Received" ? "0" : order.paymentDue || "",
       neftTransactionId: order.neftTransactionId || "",
       chequeId: order.chequeId || "",
-    });
+    };
+    setFormData(initialData);
+    setOriginalFormData(initialData);
     setErrors({});
     setShowEditModal(true);
   };
@@ -180,7 +367,21 @@ function Accounts() {
         installationStatus: formData.installationStatus || undefined,
       };
 
-      const response = await furniApi.put(`/api/edit/${editOrder?._id}`, submissionData);
+      const dirtyValues = getDirtyValues(originalFormData, formData);
+      if (Object.keys(dirtyValues).length === 0) {
+        toast.info("No changes to save.");
+        setShowEditModal(false);
+        return;
+      }
+
+      const finalPayload = {};
+      Object.keys(dirtyValues).forEach((key) => {
+        if (Object.prototype.hasOwnProperty.call(submissionData, key)) {
+          finalPayload[key] = submissionData[key];
+        }
+      });
+
+      const response = await furniApi.put(`/api/edit/${editOrder?._id}`, finalPayload);
 
       if (response.data.success) {
         const updatedOrder = response.data.data;
@@ -200,7 +401,20 @@ function Accounts() {
         throw new Error(response.data.message || "Failed to update order");
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to update order", {
+      console.error("Error updating order:", error);
+      let errorMessage = "Something went wrong while updating the order.";
+      if (error.response) {
+        const status = error.response.status;
+        if (status === 400) errorMessage = "Invalid data provided. Please check your inputs.";
+        else if (status === 401) errorMessage = "Your session has expired. Please log in again.";
+        else if (status === 404) errorMessage = "The order you are trying to update was not found.";
+        else if (status === 500) errorMessage = "Server error. Please try again later.";
+        else errorMessage = error.response.data?.message || errorMessage;
+      } else if (error.request) {
+        errorMessage = "Unable to connect to the server. Check your internet.";
+      }
+
+      toast.error(errorMessage, {
         position: "top-right",
         autoClose: 5000,
       });
@@ -393,54 +607,116 @@ function Accounts() {
       </div>
 
       {/* Edit Modal */}
-      <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered>
-        <Modal.Header closeButton style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff" }}>
-          <Modal.Title>Edit Payment Details</Modal.Title>
+      <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered backdrop="static">
+        <Modal.Header closeButton style={MODAL_HEADER_STYLE}>
+          <Modal.Title style={MODAL_TITLE_STYLE}>Edit Payment Collection</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body style={MODAL_BODY_STYLE}>
           <Form onSubmit={handleEditSubmit}>
-            <Form.Group className="mb-3">
-              <Form.Label>Payment Received</Form.Label>
-              <Form.Select value={formData.paymentReceived} onChange={(e) => setFormData((p) => ({ ...p, paymentReceived: e.target.value }))}>
-                <option value="Not Received">Not Received</option>
-                <option value="Received">Received</option>
-              </Form.Select>
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Payment Collected</Form.Label>
-              <Form.Control type="number" value={formData.paymentCollected} onChange={(e) => setFormData((p) => ({ ...p, paymentCollected: e.target.value }))} isInvalid={!!errors.paymentCollected} />
-              <Form.Control.Feedback type="invalid">{errors.paymentCollected}</Form.Control.Feedback>
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Payment Method</Form.Label>
-              <Form.Select value={formData.paymentMethod} onChange={(e) => setFormData((p) => ({ ...p, paymentMethod: e.target.value }))} isInvalid={!!errors.paymentMethod}>
-                <option value="">Select</option>
-                {["Cash", "NEFT", "RTGS", "Cheque"].map((m) => <option key={m} value={m}>{m}</option>)}
-              </Form.Select>
-              <Form.Control.Feedback type="invalid">{errors.paymentMethod}</Form.Control.Feedback>
-            </Form.Group>
-            {formData.paymentMethod === "NEFT" && (
-              <Form.Group className="mb-3">
-                <Form.Label>NEFT Transaction ID</Form.Label>
-                <Form.Control value={formData.neftTransactionId} onChange={(e) => setFormData((p) => ({ ...p, neftTransactionId: e.target.value }))} isInvalid={!!errors.neftTransactionId} />
-                <Form.Control.Feedback type="invalid">{errors.neftTransactionId}</Form.Control.Feedback>
-              </Form.Group>
-            )}
-            {formData.paymentMethod === "Cheque" && (
-              <Form.Group className="mb-3">
-                <Form.Label>Cheque ID</Form.Label>
-                <Form.Control value={formData.chequeId} onChange={(e) => setFormData((p) => ({ ...p, chequeId: e.target.value }))} isInvalid={!!errors.chequeId} />
-                <Form.Control.Feedback type="invalid">{errors.chequeId}</Form.Control.Feedback>
-              </Form.Group>
-            )}
-            <Form.Group className="mb-3">
-              <Form.Label>Remarks <span style={{ color: "red" }}>*</span></Form.Label>
-              <Form.Control as="textarea" rows={3} value={formData.remarksByAccounts} onChange={(e) => setFormData((p) => ({ ...p, remarksByAccounts: e.target.value }))} isInvalid={!!errors.remarksByAccounts} />
-              <Form.Control.Feedback type="invalid">{errors.remarksByAccounts}</Form.Control.Feedback>
-            </Form.Group>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-              <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
-              <Button type="submit" style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none" }}>Save Changes</Button>
+            <MemoizedInput
+              label="Total Payment"
+              name="total"
+              value={formData.total}
+              onChange={handleChange}
+              placeholder="Enter total amount"
+              error={errors.total}
+              step="0.01"
+            />
+
+            <MemoizedInput
+              label="Payment Collected"
+              name="paymentCollected"
+              value={formData.paymentCollected}
+              onChange={handleChange}
+              placeholder="Enter payment collected"
+              error={errors.paymentCollected}
+              step="0.01"
+              disabled={formData.paymentReceived === "Received"}
+            />
+
+            <MemoizedSelect
+              label="Payment Method"
+              name="paymentMethod"
+              value={formData.paymentMethod}
+              onChange={handleChange}
+              options={[
+                { value: "", label: "-- Select Payment Method --" },
+                { value: "Cash", label: "Cash" },
+                { value: "NEFT", label: "NEFT" },
+                { value: "RTGS", label: "RTGS" },
+                { value: "Cheque", label: "Cheque" },
+              ]}
+              error={errors.paymentMethod}
+            />
+
+            <MemoizedInput
+              label="Payment Due"
+              name="paymentDue"
+              value={formData.paymentDue}
+              onChange={handleChange}
+              placeholder="Enter payment due"
+              error={errors.paymentDue}
+              step="0.01"
+              disabled={formData.paymentReceived === "Received"}
+            />
+
+            <MemoizedInput
+              label="NEFT Transaction ID"
+              name="neftTransactionId"
+              value={formData.neftTransactionId}
+              onChange={handleChange}
+              placeholder="Enter NEFT transaction ID"
+              error={errors.neftTransactionId}
+              disabled={formData.paymentMethod !== "NEFT"}
+            />
+
+            <MemoizedInput
+              label="Cheque ID"
+              name="chequeId"
+              value={formData.chequeId}
+              onChange={handleChange}
+              placeholder="Enter cheque ID"
+              error={errors.chequeId}
+              disabled={formData.paymentMethod !== "Cheque"}
+            />
+
+            <MemoizedSelect
+              label="Payment Received"
+              name="paymentReceived"
+              value={formData.paymentReceived}
+              onChange={handleChange}
+              options={[
+                { value: "Not Received", label: "Not Received" },
+                { value: "Received", label: "Received" },
+              ]}
+            />
+
+            <MemoizedTextarea
+              label="Remarks by Accounts"
+              name="remarksByAccounts"
+              value={formData.remarksByAccounts}
+              onChange={handleChange}
+              placeholder="Enter remarks"
+              error={errors.remarksByAccounts}
+              required={true}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "15px" }}>
+              <Button
+                onClick={() => setShowEditModal(false)}
+                style={BUTTON_CANCEL_STYLE}
+                onMouseEnter={handleBtnEnter}
+                onMouseLeave={handleBtnLeave}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                style={BUTTON_SAVE_STYLE}
+                onMouseEnter={handleBtnEnter}
+                onMouseLeave={handleBtnLeave}
+              >
+                Save Changes
+              </Button>
             </div>
           </Form>
         </Modal.Body>

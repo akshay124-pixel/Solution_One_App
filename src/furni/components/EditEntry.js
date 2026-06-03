@@ -96,8 +96,10 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   const [userRole, setUserRole] = useState(localStorage.getItem("role") || "");
   const [installationFile, setInstallationFile] = useState(null);
   const [installationFileError, setInstallationFileError] = useState("");
-  const [poFile, setPoFile] = useState(null);
+  const [poFiles, setPoFiles] = useState([]);
   const [poFileError, setPoFileError] = useState("");
+  const [existingAttachments, setExistingAttachments] = useState([]);
+  const [keepAttachments, setKeepAttachments] = useState([]);
 
   useEffect(() => {
     setUserRole(localStorage.getItem("role") || "");
@@ -144,6 +146,18 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
       setFormData(newFormData);
       setUpdateData({ sostatus: entryToEdit.sostatus || "Pending for Approval", remarks: entryToEdit.remarks || "" });
       reset(newFormData);
+      
+      // Initialize attachments
+      let attachments = [];
+      if (entryToEdit.attachments && entryToEdit.attachments.length > 0) {
+        attachments = [...entryToEdit.attachments];
+      } else if (entryToEdit.poFilePath) {
+        attachments = [entryToEdit.poFilePath];
+      }
+      setExistingAttachments(attachments);
+      setKeepAttachments([...attachments]); // Keep all by default
+      setPoFiles([]); // Reset new files
+      
       setView("options");
       setError(null);
       setShowConfirm(false);
@@ -164,6 +178,57 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
 
   const debouncedHandleInputChange = (name, value) => { if (_debouncedRef.current) _debouncedRef.current(name, value); };
   const handleUpdateInputChange = useCallback((e) => { const { name, value } = e.target; setUpdateData((prev) => ({ ...prev, [name]: value })); }, []);
+
+  // Handle file selection for new PO files
+  const handlePoFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      const allowedTypes = ["application/pdf","image/png","image/jpeg","image/jpg","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document","application/vnd.ms-excel","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
+      const allowedExtensions = ["pdf","png","jpg","jpeg","doc","docx","xls","xlsx"];
+      
+      const validFiles = [];
+      const invalidFiles = [];
+
+      for (const file of files) {
+        const fileExt = file.name.split(".").pop().toLowerCase();
+        const isValidType = allowedTypes.includes(file.type) || allowedExtensions.includes(fileExt);
+        const isValidSize = file.size <= 5 * 1024 * 1024;
+
+        if (!isValidType) {
+          invalidFiles.push(`${file.name} - Invalid file type`);
+        } else if (!isValidSize) {
+          invalidFiles.push(`${file.name} - File size must be less than 5MB`);
+        } else {
+          validFiles.push(file);
+        }
+      }
+
+      if (invalidFiles.length > 0) {
+        setPoFileError(invalidFiles.join(", "));
+        toast.error(`Invalid files: ${invalidFiles.join(", ")}`);
+      } else {
+        setPoFileError("");
+      }
+
+      setPoFiles(prev => [...prev, ...validFiles]);
+    }
+  };
+
+  // Remove a new file from the list
+  const removeNewFile = (index) => {
+    setPoFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Toggle whether to keep an existing attachment
+  const toggleKeepAttachment = (attachmentPath) => {
+    setKeepAttachments(prev => {
+      if (prev.includes(attachmentPath)) {
+        return prev.filter(p => p !== attachmentPath);
+      } else {
+        return [...prev, attachmentPath];
+      }
+    });
+  };
 
   const onEditSubmit = async (data) => {
     if (isReplacement && data.sostatus === "Approved" && replacementApprovalStatus !== "Approved") {
@@ -202,7 +267,14 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
         else if (submissionData[key] !== undefined && submissionData[key] !== null) { formData.append(key, submissionData[key]); }
       });
       if (installationFile) formData.append("installationFile", installationFile);
-      if (poFile) formData.append("poFile", poFile);
+      
+      // Append keepAttachments and new poFiles
+      if (keepAttachments.length > 0) {
+        formData.append("keepAttachments", JSON.stringify(keepAttachments));
+      }
+      if (poFiles.length > 0) {
+        poFiles.forEach(file => formData.append("poFiles", file));
+      }
       const response = await furniApi.put(`/api/edit/${entryToEdit._id}`, formData, { headers: { "Content-Type": "multipart/form-data" } });
       onEntryUpdated(response.data.data);
       setView("options");
@@ -253,37 +325,27 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
     setFormData((prev) => ({ ...prev, products: final }));
   };
 
-  const handleDownload = async (filePath, label = "SalesOrder_Attachment") => {
+  const handleDownload = async (filePath) => {
     if (!filePath || typeof filePath !== "string") { toast.error("Invalid file path!"); return; }
     try {
-      const filename = filePath.split("/").pop();
-      if (!filename) { toast.error("Invalid file path!"); return; }
+      const fileName = filePath.split("/").pop();
+      if (!fileName) { toast.error("Invalid file path!"); return; }
 
-      const response = await furniApi.get(`/api/download/${encodeURIComponent(filename)}`, { responseType: "blob" });
+      const response = await furniApi.get(`/api/download/${encodeURIComponent(fileName)}`, { responseType: "blob" });
       const blob = response.data;
-      const ext = filename.includes(".") ? "." + filename.split(".").pop() : "";
+      const ext = fileName.includes(".") ? "." + fileName.split(".").pop() : "";
+      const baseName = fileName.includes(".") ? fileName.slice(0, -ext.length) : fileName;
       const orderSlug = entryToEdit?.orderId ? `Order_${entryToEdit.orderId}` : "Furni";
-      const downloadFilename = `${orderSlug}_Furni${label ? "_" + label : ""}${ext}`;
+      const downloadFileName = `${orderSlug}_${baseName}${ext}`;
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
-      link.download = downloadFilename;
+      link.download = downloadFileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(link.href);
       toast.success("Download started!");
     } catch (err) { console.error(err); toast.error("Download failed. Check server."); }
-  };
-
-  const handlePoFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { setPoFileError("File size exceeds 5MB limit."); setPoFile(null); return; }
-      const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
-      if (!allowedTypes.includes(file.type)) { setPoFileError("Invalid file type. Only PDF, JPG, PNG, DOCX, XLSX allowed."); setPoFile(null); return; }
-      setPoFile(file);
-      setPoFileError("");
-    }
   };
 
   const handleInstallationFileChange = (e) => {
@@ -432,31 +494,256 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
           {entryToEdit?.installationFile && !installationFile && (
             <div style={{ marginTop: "0.75rem", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <span style={{ color: "#64748b" }}>Current file:</span>
-              <button type="button" onClick={() => handleDownload(entryToEdit.installationFile, "SalesOrder_InstallationReport")} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "20px", background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", fontWeight: "600", fontSize: "0.85rem", border: "none", boxShadow: "0 2px 5px rgba(0,0,0,0.2)", cursor: "pointer" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}><FaDownload /> Download Report</button>
+              <button type="button" onClick={() => handleDownload(entryToEdit.installationFile)} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "20px", background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", fontWeight: "600", fontSize: "0.85rem", border: "none", boxShadow: "0 2px 5px rgba(0,0,0,0.2)", cursor: "pointer" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}><FaDownload /> Download Report</button>
             </div>
           )}
           {installationFileError && (<div style={{ color: "#ef4444", fontSize: "0.85rem", marginTop: "0.5rem", fontWeight: "500" }}>{installationFileError}</div>)}
         </div>
         {/* PO File Upload */}
         <div style={{ marginTop: "1.5rem", marginBottom: "2rem" }}>
-          <Form.Label style={{ fontWeight: "600", color: "#374151", marginBottom: "0.5rem", display: "block" }}>📎File Attachment</Form.Label>
-          <div style={{ width: "100%", maxWidth: "460px", overflow: "hidden", boxSizing: "border-box", border: `2px dashed ${poFile ? "#22c55e" : "#cbd5e1"}`, borderRadius: "1rem", padding: "0.75rem", backgroundColor: poFile ? "#f0fdf4" : "#f8fafc", transition: "all 0.2s ease-in-out" }}>
-            <label htmlFor="poFileEdit" title={poFile ? poFile.name : "Click to upload"} style={{ display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", alignItems: "center", gap: "0.75rem", width: "100%", minHeight: "44px", padding: "0.6rem 0.75rem", borderRadius: "0.75rem", background: "linear-gradient(to right, #ffffff, #f1f5f9)", border: "1px solid #e2e8f0", cursor: "pointer", overflow: "hidden", boxSizing: "border-box" }} onMouseOver={(e) => (e.currentTarget.style.background = "#e2e8f0")} onMouseOut={(e) => (e.currentTarget.style.background = "linear-gradient(to right, #ffffff, #f1f5f9)")}>
+          <Form.Label style={{ fontWeight: "600", color: "#374151", marginBottom: "0.5rem", display: "block" }}>📎 File Attachments</Form.Label>
+          
+          {/* Existing Attachments */}
+          {existingAttachments.length > 0 && (
+            <div style={{ marginBottom: "1rem" }}>
+              <h5 style={{ color: "#64748b", marginBottom: "0.5rem" }}>Existing Attachments:</h5>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {existingAttachments.map((attachmentPath, index) => {
+                  const fileName = attachmentPath.split("/").pop();
+                  const fileExt = fileName.includes(".") ? fileName.split(".").pop().toLowerCase() : "";
+                  const isKept = keepAttachments.includes(attachmentPath);
+
+                  // Get document type label based on extension
+                  const getDocumentTypeLabel = () => {
+                    if (["pdf"].includes(fileExt)) return "PDF Document";
+                    if (["doc", "docx"].includes(fileExt)) return "Word Document";
+                    if (["xls", "xlsx"].includes(fileExt)) return "Excel Document";
+                    if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt)) return "Image Document";
+                    return "Attachment File";
+                  };
+                  
+                  // Get file icon based on extension
+                  const getFileIcon = () => {
+                    if (["pdf"].includes(fileExt)) {
+                      return (
+                        <svg style={{ width: "1.5rem", height: "1.5rem", color: "#ef4444", flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      );
+                    } else if (["doc", "docx"].includes(fileExt)) {
+                      return (
+                        <svg style={{ width: "1.5rem", height: "1.5rem", color: "#3b82f6", flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      );
+                    } else if (["xls", "xlsx"].includes(fileExt)) {
+                      return (
+                        <svg style={{ width: "1.5rem", height: "1.5rem", color: "#22c55e", flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      );
+                    } else if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt)) {
+                      return (
+                        <svg style={{ width: "1.5rem", height: "1.5rem", color: "#f59e0b", flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      );
+                    } else {
+                      return (
+                        <svg style={{ width: "1.5rem", height: "1.5rem", color: "#64748b", flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                      );
+                    }
+                  };
+                  
+                  const documentLabel = getDocumentTypeLabel();
+                  return (
+                    <div
+                      key={index}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "0.75rem 1rem",
+                        backgroundColor: isKept ? "#f0fdf4" : "#fef2f2",
+                        border: `1px solid ${isKept ? "#86efac" : "#fecaca"}`,
+                        borderRadius: "0.5rem",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        {getFileIcon()}
+                        <span style={{ fontSize: "0.9rem", color: "#1e293b", fontWeight: "600" }}>
+                          {documentLabel}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleDownload(attachmentPath)}
+                          style={{
+                            padding: "0.35rem 0.75rem",
+                            borderRadius: "0.375rem",
+                            border: "1px solid #e2e8f0",
+                            backgroundColor: "#fff",
+                            color: "#475569",
+                            fontSize: "0.8rem",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.25rem",
+                          }}
+                        >
+                          <FaDownload /> Download
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleKeepAttachment(attachmentPath)}
+                          style={{
+                            padding: "0.35rem 0.75rem",
+                            borderRadius: "0.375rem",
+                            border: "1px solid #e2e8f0",
+                            backgroundColor: isKept ? "#f87171" : "#4ade80",
+                            color: "#fff",
+                            fontSize: "0.8rem",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {isKept ? "Remove" : "Keep"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* New File Upload */}
+          <div style={{ width: "100%", maxWidth: "460px", overflow: "hidden", boxSizing: "border-box", border: `2px dashed ${poFiles.length > 0 ? "#22c55e" : "#cbd5e1"}`, borderRadius: "1rem", padding: "0.75rem", backgroundColor: poFiles.length > 0 ? "#f0fdf4" : "#f8fafc", transition: "all 0.2s ease-in-out" }}>
+            <label htmlFor="poFileEdit" title="Click to upload files" style={{ display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", alignItems: "center", gap: "0.75rem", width: "100%", minHeight: "44px", padding: "0.6rem 0.75rem", borderRadius: "0.75rem", background: "linear-gradient(to right, #ffffff, #f1f5f9)", border: "1px solid #e2e8f0", cursor: "pointer", overflow: "hidden", boxSizing: "border-box" }} onMouseOver={(e) => (e.currentTarget.style.background = "#e2e8f0")} onMouseOut={(e) => (e.currentTarget.style.background = "linear-gradient(to right, #ffffff, #f1f5f9)")}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "1.4rem", height: "1.4rem" }}>
                 <svg style={{ width: "100%", height: "100%", color: "#4f46e5" }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 16V8m0 0l-4 4m4-4l4 4" /></svg>
               </div>
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#1e293b", fontSize: "0.9rem", fontWeight: "500", display: "block" }}>{poFile ? poFile.name : entryToEdit?.poFilePath ? "Replace existing file" : "Click to upload file"}</span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#1e293b", fontSize: "0.9rem", fontWeight: "500", display: "block" }}>
+                {poFiles.length > 0 ? `${poFiles.length} file(s) selected - click to add more` : "Click to upload files"}
+              </span>
             </label>
-            <input id="poFileEdit" type="file" name="poFile" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.xls" onChange={handlePoFileChange} style={{ display: "none" }} />
+            <input id="poFileEdit" type="file" name="poFile" multiple accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.xls" onChange={handlePoFileChange} style={{ display: "none" }} />
             <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.5rem", textAlign: "center", fontWeight: "500" }}>Supported: PDF, JPG, PNG, DOCX, XLSX</div>
-            {poFile && (<button type="button" onClick={(e) => { e.preventDefault(); setPoFile(null); setPoFileError(""); const input = document.getElementById("poFileEdit"); if (input) input.value = ""; }} style={{ marginTop: "0.75rem", width: "100%", padding: "0.5rem", borderRadius: "0.5rem", border: "1px solid #fecaca", background: "#fee2e2", color: "#b91c1c", fontSize: "0.85rem", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }} onMouseOver={(e) => (e.currentTarget.style.background = "#fca5a5")} onMouseOut={(e) => (e.currentTarget.style.background = "#fee2e2")}><span>✖</span> Remove File</button>)}
           </div>
-          {entryToEdit?.poFilePath && !poFile && (
-            <div style={{ marginTop: "0.75rem", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <span style={{ color: "#64748b" }}>Current file:</span>
-              <button type="button" onClick={() => handleDownload(entryToEdit.poFilePath, "SalesOrder")} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "20px", background: "linear-gradient(135deg, #2575fc, #6a11cb)", color: "#fff", fontWeight: "600", fontSize: "0.85rem", border: "none", boxShadow: "0 2px 5px rgba(0,0,0,0.2)", cursor: "pointer" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}><FaDownload /> Download</button>
+
+          {/* New Selected Files List */}
+          {poFiles.length > 0 && (
+            <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {poFiles.map((file, index) => {
+                const fileExt = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "";
+                  
+                  // Get document type label based on extension
+                  const getDocumentTypeLabel = () => {
+                    if (["pdf"].includes(fileExt)) return "PDF Document";
+                    if (["doc", "docx"].includes(fileExt)) return "Word Document";
+                    if (["xls", "xlsx"].includes(fileExt)) return "Excel Document";
+                    if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt)) return "Image Document";
+                    return "Attachment File";
+                  };
+                  
+                  // Get file icon based on extension
+                  const getFileIcon = () => {
+                    if (["pdf"].includes(fileExt)) {
+                      return (
+                        <svg style={{ width: "1.5rem", height: "1.5rem", color: "#ef4444", flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      );
+                    } else if (["doc", "docx"].includes(fileExt)) {
+                      return (
+                        <svg style={{ width: "1.5rem", height: "1.5rem", color: "#3b82f6", flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      );
+                    } else if (["xls", "xlsx"].includes(fileExt)) {
+                      return (
+                        <svg style={{ width: "1.5rem", height: "1.5rem", color: "#22c55e", flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      );
+                    } else if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt)) {
+                      return (
+                        <svg style={{ width: "1.5rem", height: "1.5rem", color: "#f59e0b", flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      );
+                    } else {
+                      return (
+                        <svg style={{ width: "1.5rem", height: "1.5rem", color: "#64748b", flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                      );
+                    }
+                  };
+                  
+                  const documentLabel = getDocumentTypeLabel();
+                return (
+                <div
+                  key={index}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "0.75rem 1rem",
+                    backgroundColor: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "0.5rem",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    {getFileIcon()}
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      <span style={{ fontSize: "0.9rem", color: "#1e293b", fontWeight: "600" }}>
+                        {documentLabel}
+                      </span>
+                      <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeNewFile(index)}
+                    style={{
+                      padding: "0.25rem",
+                      background: "none",
+                      border: "none",
+                      color: "#ef4444",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      flexShrink: 0,
+                    }}
+                    title="Remove File"
+                  >
+                    <svg
+                      style={{ width: "1.25rem", height: "1.25rem" }}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              )})}
             </div>
           )}
+
           {poFileError && (<div style={{ color: "#ef4444", fontSize: "0.85rem", marginTop: "0.5rem", fontWeight: "500" }}>{poFileError}</div>)}
         </div>
         <Form.Group controlId="remarksByInstallation"><Form.Label>✏️ Remarks by Installation</Form.Label><Form.Control as="textarea" rows={2} {...register("remarksByInstallation")} onChange={(e) => debouncedHandleInputChange("remarksByInstallation", e.target.value)} placeholder="Enter installation remarks" /></Form.Group>

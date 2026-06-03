@@ -1169,54 +1169,68 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
                   )}
 
                   {/* Attachment Download */}
-                  {fullOrderDetails.poFilePath && (
-                    <div style={{ 
-                      marginBottom: "24px", 
-                      padding: "24px", 
-                      background: "rgba(243, 232, 255, 0.9)",
-                      backdropFilter: "blur(10px)",
-                      WebkitBackdropFilter: "blur(10px)",
-                      borderRadius: "0",
-                      border: "1px solid rgba(168, 85, 247, 0.2)",
-                      boxShadow: "0 8px 32px rgba(168, 85, 247, 0.08)",
-                    }}>
-                      <h6 style={{ fontWeight: "700", marginBottom: "16px", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
-                        📎 Attachment
-                      </h6>
-                      <Button
-                        className="btn-hover-animation"
-                        onClick={async () => {
-                          try {
-                            const fullPath = fullOrderDetails.poFilePath;
+                  {(() => {
+                    let attachments = [];
+                    if (fullOrderDetails.attachments && fullOrderDetails.attachments.length > 0) {
+                      attachments = fullOrderDetails.attachments;
+                    } else if (fullOrderDetails.poFilePath) {
+                      attachments = [fullOrderDetails.poFilePath];
+                    }
+                    if (attachments.length === 0) return null;
+                    return (
+                      <div style={{ 
+                        marginBottom: "24px", 
+                        padding: "24px", 
+                        background: "rgba(243, 232, 255, 0.9)",
+                        backdropFilter: "blur(10px)",
+                        WebkitBackdropFilter: "blur(10px)",
+                        borderRadius: "0",
+                        border: "1px solid rgba(168, 85, 247, 0.2)",
+                        boxShadow: "0 8px 32px rgba(168, 85, 247, 0.08)",
+                      }}>
+                        <h6 style={{ fontWeight: "700", marginBottom: "16px", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
+                          📎 Attachments
+                        </h6>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          {attachments.map((fullPath, index) => {
                             const filename = fullPath.split('/').pop();
-                            if (!filename) {
-                              toast.error("Invalid file name!");
-                              return;
-                            }
-                            const orderSource = fullOrderDetails._orderSource || "SO";
-                            const api = orderSource === "Furni" ? furniApi : soApi;
-                            const response = await api.get(`${fullPath}`, { responseType: "blob" });
-                            const blob = response.data;
-                            const ext = filename.includes(".") ? "." + filename.split(".").pop() : "";
-                            const orderId = fullOrderDetails.orderId || selectedLog.orderId || "Order";
-                            const downloadFilename = `Approval_Attachment_${orderId}${ext}`;
-                            const url = window.URL.createObjectURL(blob);
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = downloadFilename;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            window.URL.revokeObjectURL(url);
-                            toast.success("File downloaded successfully!");
-                          } catch (error) {
-                            console.error("Download error:", error);
-                            toast.error(error.response?.data?.message || "Failed to download file.");
-                          }
-                        }}
-                        style={{
-                                             background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
-                                             border: "none",
+                            return (
+                              <div key={index} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", padding: "8px 12px", background: "white", borderRadius: "4px" }}>
+                                <span style={{ fontSize: "0.85rem", color: "#4b5563", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {filename}
+                                </span>
+                                <Button
+                                  className="btn-hover-animation"
+                                  onClick={async () => {
+                                    try {
+                                      if (!filename) {
+                                        toast.error("Invalid file name!");
+                                        return;
+                                      }
+                                      const orderSource = fullOrderDetails._orderSource || "SO";
+                                      const api = orderSource === "Furni" ? furniApi : soApi;
+                                      const response = await api.get(`${fullPath}`, { responseType: "blob" });
+                                      const blob = response.data;
+                                      const ext = filename.includes(".") ? "." + filename.split(".").pop() : "";
+                                      const orderId = fullOrderDetails.orderId || selectedLog.orderId || "Order";
+                                      const downloadFilename = `Approval_Attachment_${orderId}_${index + 1}${ext}`;
+                                      const url = window.URL.createObjectURL(blob);
+                                      const link = document.createElement('a');
+                                      link.href = url;
+                                      link.download = downloadFilename;
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                      window.URL.revokeObjectURL(url);
+                                      toast.success("File downloaded successfully!");
+                                    } catch (error) {
+                                      console.error("Download error:", error);
+                                      toast.error(error.response?.data?.message || "Failed to download file.");
+                                    }
+                                  }}
+                                  style={{
+                                                       background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+                                                       border: "none",
                                              padding: "12px 24px",
                                              borderRadius: "8px",
                                              fontWeight: "600",
@@ -1252,8 +1266,13 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
                                            </svg>
                                            Download Attachment
                                          </Button>
-                    </div>
-                  )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </>
               )}
             </div>

@@ -15,7 +15,7 @@ function AddEntry({ onSubmit, onClose }) {
   const [selectedState, setSelectedState] = useState("");
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState([]);
-  const [poFile, setPoFile] = useState(null);
+  const [poFiles, setPoFiles] = useState([]);
   const [pwcFile, setPwcFile] = useState(null);
   const [fileError, setFileError] = useState("");
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -65,12 +65,16 @@ function AddEntry({ onSubmit, onClose }) {
     const hasDraft =
       Object.values(formData).some((v) => v !== "" && v !== false && v !== "Pending") ||
       products.length > 0 ||
-      poFile;
+      poFiles.length > 0;
     if (hasDraft) {
       setIsConfirmModalOpen(true);
     } else {
       onClose();
     }
+  };
+  
+  const removeFile = (index) => {
+    setPoFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleConfirmDiscard = () => {
@@ -166,24 +170,36 @@ function AddEntry({ onSubmit, onClose }) {
   const handleCityChange = (e) => setFormData((prev) => ({ ...prev, city: e.target.value }));
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
       const allowedTypes = ["application/pdf","image/png","image/jpeg","image/jpg","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document","application/vnd.ms-excel","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
       const allowedExtensions = ["pdf","png","jpg","jpeg","doc","docx","xls","xlsx"];
-      const fileExt = file.name.split(".").pop().toLowerCase();
-      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
-        setFileError("Invalid file type. Only PDF, PNG, JPG, DOCX, XLS, XLSX are allowed.");
-        toast.error("Invalid file type. Only PDF, PNG, JPG, DOCX, XLS, XLSX are allowed.");
-        e.target.value = null; setPoFile(null); return;
+      
+      const validFiles = [];
+      const invalidFiles = [];
+
+      for (const file of files) {
+        const fileExt = file.name.split(".").pop().toLowerCase();
+        const isValidType = allowedTypes.includes(file.type) || allowedExtensions.includes(fileExt);
+        const isValidSize = file.size <= 5 * 1024 * 1024;
+
+        if (!isValidType) {
+          invalidFiles.push(`${file.name} - Invalid file type`);
+        } else if (!isValidSize) {
+          invalidFiles.push(`${file.name} - File size must be less than 5MB`);
+        } else {
+          validFiles.push(file);
+        }
       }
-      if (file.size > 5 * 1024 * 1024) {
-        setFileError("File size must be less than 5MB");
-        toast.error("File size must be less than 5MB");
-        e.target.value = null; setPoFile(null); return;
+
+      if (invalidFiles.length > 0) {
+        setFileError(invalidFiles.join(", "));
+        toast.error(`Invalid files: ${invalidFiles.join(", ")}`);
+      } else {
+        setFileError("");
       }
-      setPoFile(file); setFileError("");
-    } else {
-      setPoFile(null); setFileError("");
+
+      setPoFiles(prev => [...prev, ...validFiles]);
     }
   };
 
@@ -234,7 +250,9 @@ function AddEntry({ onSubmit, onClose }) {
           formDataToSend.append(key, newEntry[key]);
         }
       }
-      if (poFile) formDataToSend.append("poFile", poFile);
+      if (poFiles.length > 0) {
+        poFiles.forEach(file => formDataToSend.append("poFiles", file));
+      }
       if (pwcFile) formDataToSend.append("pwcFile", pwcFile);
       const response = await furniApi.post("/api/orders", formDataToSend);
       clearDraft();
@@ -566,10 +584,10 @@ function AddEntry({ onSubmit, onClose }) {
               </div>
             </div>
           </div>
-          {/* PO File Attachment */}
+          {/* PO File Attachments */}
           <div>
-            <h3 style={sectionHeadingStyle}>📎 Attachment (Optional)</h3>
-            <div style={{ display: "flex", alignItems: "center", border: "1px solid #e2e8f0", borderRadius: "0.75rem", backgroundColor: "#f8fafc", padding: "0.5rem", transition: "border-color 0.3s ease", width: "100%", maxWidth: "400px", height: "2.75rem", boxSizing: "border-box", overflow: "hidden" }}>
+            <h3 style={sectionHeadingStyle}>📎 Attachments (Optional)</h3>
+            <div style={{ display: "flex", alignItems: "center", border: `2px dashed ${poFiles.length > 0 ? "#22c55e" : "#e2e8f0"}`, borderRadius: "1rem", backgroundColor: "#f8fafc", padding: "0.5rem", transition: "border-color 0.3s ease", width: "100%", maxWidth: "600px", boxSizing: "border-box", overflow: "hidden" }}>
               <label htmlFor="furniPoFile" style={{ flex: 1, padding: "0.5rem 0.75rem", background: "linear-gradient(135deg, #e2e8f0, #f8fafc)", borderRadius: "0.5rem", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.95rem", color: "#475569", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", height: "100%" }}
                 onMouseOver={(e) => (e.currentTarget.style.background = "linear-gradient(135deg, #d1d5db, #e5e7eb)")}
                 onMouseOut={(e) => (e.currentTarget.style.background = "linear-gradient(135deg, #e2e8f0, #f8fafc)")}>
@@ -577,17 +595,124 @@ function AddEntry({ onSubmit, onClose }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16V8m0 0l-4 4m4-4l4 4m6-4v8m0 0l4-4m-4 4l-4-4" />
                 </svg>
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
-                  {poFile ? poFile.name : "Upload Attachment (PDF, PNG, JPG, DOCX, XLS, XLSX)"}
+                  {poFiles.length > 0 ? `${poFiles.length} file(s) selected - click to add more` : "Upload Attachments (PDF, PNG, JPG, DOCX, XLS, XLSX)"}
                 </span>
               </label>
-              <input id="furniPoFile" type="file" name="poFile" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.xls" onChange={handleFileChange} style={{ display: "none" }} />
-              {poFile && (
-                <button type="button" onClick={() => { setPoFile(null); setFileError(""); document.getElementById("furniPoFile").value = null; }} style={{ padding: "0.5rem", background: "none", border: "none", color: "#ef4444", cursor: "pointer", display: "flex", alignItems: "center", flexShrink: 0 }} title="Remove File">
-                  <svg style={{ width: "1.25rem", height: "1.25rem" }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              )}
+              <input id="furniPoFile" type="file" name="poFile" multiple accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.xls" onChange={handleFileChange} style={{ display: "none" }} />
             </div>
-            {fileError && <p style={{ color: "#ef4444", fontSize: "0.85rem", marginTop: "0.25rem" }}>{fileError}</p>}
+
+            {/* Selected Files */}
+            {poFiles.length > 0 && (
+              <div style={{ marginTop: "1rem" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {poFiles.map((file, index) => {
+                    const fileExt = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "";
+                      
+                      // Get document type label based on extension
+                      const getDocumentTypeLabel = () => {
+                        if (["pdf"].includes(fileExt)) return "PDF Document";
+                        if (["doc", "docx"].includes(fileExt)) return "Word Document";
+                        if (["xls", "xlsx"].includes(fileExt)) return "Excel Document";
+                        if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt)) return "Image Document";
+                        return "Attachment File";
+                      };
+                      
+                      // Get file icon based on extension
+                      const getFileIcon = () => {
+                        if (["pdf"].includes(fileExt)) {
+                          return (
+                            <svg style={{ width: "1.5rem", height: "1.5rem", color: "#ef4444", flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          );
+                        } else if (["doc", "docx"].includes(fileExt)) {
+                          return (
+                            <svg style={{ width: "1.5rem", height: "1.5rem", color: "#3b82f6", flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          );
+                        } else if (["xls", "xlsx"].includes(fileExt)) {
+                          return (
+                            <svg style={{ width: "1.5rem", height: "1.5rem", color: "#22c55e", flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          );
+                        } else if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt)) {
+                          return (
+                            <svg style={{ width: "1.5rem", height: "1.5rem", color: "#f59e0b", flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          );
+                        } else {
+                          return (
+                            <svg style={{ width: "1.5rem", height: "1.5rem", color: "#64748b", flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                          );
+                        }
+                      };
+                      
+                      const documentLabel = getDocumentTypeLabel();
+                    return (
+                    <div
+                      key={index}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "0.75rem 1rem",
+                        backgroundColor: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "0.5rem",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        {getFileIcon()}
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <span style={{ fontSize: "0.9rem", color: "#1e293b", fontWeight: "600" }}>
+                            {documentLabel}
+                          </span>
+                          <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(index)}
+                        style={{
+                          padding: "0.25rem",
+                          background: "none",
+                          border: "none",
+                          color: "#ef4444",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          flexShrink: 0,
+                        }}
+                        title="Remove File"
+                      >
+                        <svg
+                          style={{ width: "1.25rem", height: "1.25rem" }}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  )})}
+                </div>
+              </div>
+            )}
+
+            {fileError && <p style={{ color: "#ef4444", fontSize: "0.85rem", marginTop: "0.75rem" }}>{fileError}</p>}
           </div>
           {/* Form Actions */}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "1rem" }}>

@@ -301,23 +301,24 @@ const Production = () => {
 
   const isValidPoFilePath = (filePath) => filePath && typeof filePath === "string" && filePath.trim() !== "" && filePath !== "N/A" && filePath !== "/";
 
-  const handleDownload = async (filePath, label = "SalesOrder") => {
+  const handleDownload = async (filePath) => {
     if (!isValidPoFilePath(filePath)) { toast.error("No valid file available to download!"); return; }
     try {
-      const filename = filePath.split("/").pop();
-      if (!filename) { toast.error("Invalid file path!"); return; }
+      const fileName = filePath.split("/").pop();
+      if (!fileName) { toast.error("Invalid file path!"); return; }
 
-      const response = await furniApi.get(`/api/download/${encodeURIComponent(filename)}`, {
+      const response = await furniApi.get(`/api/download/${encodeURIComponent(fileName)}`, {
         responseType: "blob",
       });
 
       const blob = response.data;
-      const ext = filename.includes(".") ? "." + filename.split(".").pop() : "";
+      const ext = fileName.includes(".") ? "." + fileName.split(".").pop() : "";
+      const baseName = fileName.includes(".") ? fileName.slice(0, -ext.length) : fileName;
       const orderSlug = viewOrder?.orderId ? `Order_${viewOrder.orderId}` : "Furni";
-      const downloadFilename = `${orderSlug}_Furni${label ? "_" + label : ""}${ext}`;
+      const downloadFileName = `${orderSlug}_${baseName}${ext}`;
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
-      link.download = downloadFilename;
+      link.download = downloadFileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -427,9 +428,9 @@ const Production = () => {
                           <td style={tdStyle} title={firstProduct.size || "N/A"}>{firstProduct.size || "N/A"}</td>
                           <td style={tdStyle} title={firstProduct.spec || "N/A"}>{firstProduct.spec || "N/A"}</td>
                           <td style={tdStyle} title={firstProduct.modelNos?.length > 0 ? firstProduct.modelNos.join(", ") : "N/A"}>{firstProduct.modelNos?.length > 0 ? firstProduct.modelNos.join(", ") : "N/A"}</td>
-                          <td style={{ ...tdStyle, maxWidth: "150px" }} title={order.poFilePath ? "Attached" : "Not Attached"}>
-                            <Badge style={{ background: order.poFilePath ? "linear-gradient(135deg, #28a745, #4cd964)" : "linear-gradient(135deg, #ff6b6b, #ff8787)", color: "#fff", padding: "6px 14px", borderRadius: "20px", fontWeight: "600", fontSize: "0.9rem", boxShadow: "0 2px 5px rgba(0,0,0,0.15)" }}>
-                              {order.poFilePath ? "Attached" : "Not Attached"}
+                          <td style={{ ...tdStyle, maxWidth: "150px" }} title={(order.poFilePath || (order.attachments && order.attachments.length > 0)) ? "Attached" : "Not Attached"}>
+                            <Badge style={{ background: (order.poFilePath || (order.attachments && order.attachments.length > 0)) ? "linear-gradient(135deg, #28a745, #4cd964)" : "linear-gradient(135deg, #ff6b6b, #ff8787)", color: "#fff", padding: "6px 14px", borderRadius: "20px", fontWeight: "600", fontSize: "0.9rem", boxShadow: "0 2px 5px rgba(0,0,0,0.15)" }}>
+                              {(order.poFilePath || (order.attachments && order.attachments.length > 0)) ? "Attached" : "Not Attached"}
                             </Badge>
                           </td>
                           <td style={tdStyle} title={order.remarks || "N/A"}>{order.remarks || "N/A"}</td>
@@ -612,12 +613,164 @@ const Production = () => {
                         <div><strong>Sales Remarks:</strong> {viewOrder.remarks || "N/A"}</div>
                         <div><strong>SO Status:</strong> <Badge bg={viewOrder.sostatus === "Approved" ? "success" : viewOrder.sostatus === "Accounts Approved" ? "info" : "warning"}>{viewOrder.sostatus || "N/A"}</Badge></div>
                       </div>
-                      {viewOrder.poFilePath && (
-                        <div style={{ marginTop: "1rem" }}>
-                          <strong>📎 Attachment: </strong>
-                          <Button size="sm" onClick={() => handleDownload(viewOrder.poFilePath, "SalesOrder")} style={{ background: "linear-gradient(135deg, #2575fc, #6a11cb)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px", transition: "all 0.25s ease", boxShadow: "0 3px 8px rgba(37,117,252,0.35)" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px) scale(1.04)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(37,117,252,0.5)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0) scale(1)"; e.currentTarget.style.boxShadow = "0 3px 8px rgba(37,117,252,0.35)"; }} onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.97)"; }} onMouseUp={(e) => { e.currentTarget.style.transform = "translateY(-2px) scale(1.04)"; }}>Download 📥</Button>
-                        </div>
-                      )}
+                      {(() => {
+                        let attachments = [];
+                        if (viewOrder.attachments && viewOrder.attachments.length > 0) {
+                          attachments = viewOrder.attachments;
+                        } else if (viewOrder.poFilePath) {
+                          attachments = [viewOrder.poFilePath];
+                        }
+                        if (attachments.length === 0) return null;
+                        return (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: "1rem" }}>
+                            <strong>📎 Attachments ({attachments.length}):</strong>
+                            {attachments.map((filePath, index) => {
+                              const fileName = filePath.split("/").pop();
+                              const fileExt = fileName.includes(".") ? fileName.split(".").pop().toLowerCase() : "";
+                              
+                              // Get document type label based on extension
+                              const getDocumentTypeLabel = () => {
+                                if (["pdf"].includes(fileExt)) return "PDF Document";
+                                if (["doc", "docx"].includes(fileExt)) return "Word Document";
+                                if (["xls", "xlsx"].includes(fileExt)) return "Excel Document";
+                                if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt)) return "Image Document";
+                                return "Attachment File";
+                              };
+                              
+                              // Get file icon based on extension
+                              const getFileIcon = () => {
+                                if (["pdf"].includes(fileExt)) {
+                                  return (
+                                    <svg style={{ width: "32px", height: "32px", color: "#ef4444" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                  );
+                                } else if (["doc", "docx"].includes(fileExt)) {
+                                  return (
+                                    <svg style={{ width: "32px", height: "32px", color: "#3b82f6" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                  );
+                                } else if (["xls", "xlsx"].includes(fileExt)) {
+                                  return (
+                                    <svg style={{ width: "32px", height: "32px", color: "#22c55e" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                  );
+                                } else if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt)) {
+                                  return (
+                                    <svg style={{ width: "32px", height: "32px", color: "#f59e0b" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                  );
+                                } else {
+                                  return (
+                                    <svg style={{ width: "32px", height: "32px", color: "#6366f1" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                  );
+                                }
+                              };
+
+                              const getFileExtBadgeColor = () => {
+                                if (["pdf"].includes(fileExt)) return { bg: "#fef2f2", color: "#dc2626" };
+                                if (["doc", "docx"].includes(fileExt)) return { bg: "#eff6ff", color: "#2563eb" };
+                                if (["xls", "xlsx"].includes(fileExt)) return { bg: "#f0fdf4", color: "#16a34a" };
+                                if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt)) return { bg: "#fffbeb", color: "#d97706" };
+                                return { bg: "#f5f3ff", color: "#7c3aed" };
+                              };
+
+                              const badgeStyle = getFileExtBadgeColor();
+                              const documentLabel = getDocumentTypeLabel();
+
+                              return (
+                                <div
+                                  key={index}
+                                  style={{
+                                    display: "flex",
+                                    flexDirection: ["column", "row"],
+                                    alignItems: ["flex-start", "center"],
+                                    gap: ["0.75rem", "1rem"],
+                                    padding: "0.875rem 1.125rem",
+                                    background: "#ffffff",
+                                    borderRadius: "12px",
+                                    border: "1px solid #e5e7eb",
+                                    boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+                                    transition: "all 0.2s ease",
+                                    cursor: "pointer",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)";
+                                    e.currentTarget.style.borderColor = "#d1d5db";
+                                    e.currentTarget.style.transform = "translateY(-1px)";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.boxShadow = "0 1px 2px 0 rgba(0, 0, 0, 0.05)";
+                                    e.currentTarget.style.borderColor = "#e5e7eb";
+                                    e.currentTarget.style.transform = "translateY(0)";
+                                  }}
+                                >
+                                  <div style={{ display: "flex", alignItems: "center", gap: "0.875rem", flex: 1, minWidth: 0 }}>
+                                    {getFileIcon()}
+                                    <div style={{ minWidth: 0 }}>
+                                      <span
+                                        title={documentLabel}
+                                        style={{
+                                          fontSize: "0.9375rem",
+                                          fontWeight: 500,
+                                          color: "#111827",
+                                          overflow: "hidden",
+                                          textOverflow: "ellipsis",
+                                          whiteSpace: "nowrap",
+                                          display: "block",
+                                        }}
+                                      >
+                                        {documentLabel}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleDownload(filePath)}
+                                    style={{
+                                      background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                                      padding: "0.625rem 1.25rem",
+                                      borderRadius: "10px",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "0.5rem",
+                                      fontSize: "0.875rem",
+                                      fontWeight: 600,
+                                      color: "#ffffff",
+                                      border: "none",
+                                      boxShadow: "0 4px 6px -1px rgba(99, 102, 241, 0.3), 0 2px 4px -1px rgba(99, 102, 241, 0.2)",
+                                      transition: "all 0.2s ease",
+                                      cursor: "pointer",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.transform = "scale(1.05)";
+                                      e.currentTarget.style.boxShadow = "0 10px 15px -3px rgba(99, 102, 241, 0.4), 0 4px 6px -2px rgba(99, 102, 241, 0.3)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.transform = "scale(1)";
+                                      e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(99, 102, 241, 0.3), 0 2px 4px -1px rgba(99, 102, 241, 0.2)";
+                                    }}
+                                    onMouseDown={(e) => {
+                                      e.currentTarget.style.transform = "scale(0.98)";
+                                    }}
+                                  >
+                                    <svg style={{ width: "18px", height: "18px" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                    Download
+                                  </Button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </Accordion.Body>
                   </Accordion.Item>
                   <Accordion.Item eventKey="1">
@@ -662,7 +815,7 @@ const Production = () => {
                       {viewOrder.installationFile && (
                         <div style={{ marginTop: "1rem" }}>
                           <strong>Installation Report: </strong>
-                          <Button size="sm" onClick={() => handleDownload(viewOrder.installationFile, "SalesOrder_InstallationReport")} style={{ background: "linear-gradient(135deg, #17a2b8, #138496)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px", transition: "all 0.25s ease", boxShadow: "0 3px 8px rgba(23,162,184,0.35)" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px) scale(1.04)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(23,162,184,0.5)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0) scale(1)"; e.currentTarget.style.boxShadow = "0 3px 8px rgba(23,162,184,0.35)"; }} onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.97)"; }} onMouseUp={(e) => { e.currentTarget.style.transform = "translateY(-2px) scale(1.04)"; }}>Download Report 📥</Button>
+                          <Button size="sm" onClick={() => handleDownload(viewOrder.installationFile)} style={{ background: "linear-gradient(135deg, #17a2b8, #138496)", border: "none", color: "white", marginLeft: "10px", borderRadius: "20px", padding: "5px 15px", transition: "all 0.25s ease", boxShadow: "0 3px 8px rgba(23,162,184,0.35)" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px) scale(1.04)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(23,162,184,0.5)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0) scale(1)"; e.currentTarget.style.boxShadow = "0 3px 8px rgba(23,162,184,0.35)"; }} onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.97)"; }} onMouseUp={(e) => { e.currentTarget.style.transform = "translateY(-2px) scale(1.04)"; }}>Download Report 📥</Button>
                         </div>
                       )}
                     </Accordion.Body>

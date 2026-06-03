@@ -165,7 +165,7 @@ const BillGeneration = () => {
     setIsEditModalOpen(true);
   };
   const getRowBackground = (order) => {
-    if (order.poFilePath) return "#d4f4e6"; // PO uploaded highlight
+    if (order.poFilePath || (order.attachments && order.attachments.length > 0)) return "#d4f4e6"; // PO uploaded highlight
     return "#ffffff"; // normal
   };
   const handleEntryUpdated = (updatedOrder) => {

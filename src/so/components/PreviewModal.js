@@ -35,7 +35,7 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
       filePath !== "/"
     );
   };
-  const handleDownload = async (filePath, label = "AV_EdTech") => {
+  const handleDownload = async (filePath) => {
     const targetPath = filePath || entry?.poFilePath;
 
     if (!isValidPoFilePath(targetPath)) {
@@ -56,8 +56,9 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
 
       const blob = response.data;
       const ext = fileName.includes(".") ? "." + fileName.split(".").pop() : "";
+      const baseName = fileName.includes(".") ? fileName.slice(0, -ext.length) : fileName;
       const orderSlug = entry?.orderId ? `Order_${entry.orderId}` : "SO";
-      const downloadFileName = `${orderSlug}_SO_${label}${ext}`;
+      const downloadFileName = `${orderSlug}_${baseName}${ext}`;
 
       const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
@@ -593,13 +594,6 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
             transform: scale(1.1);
             background: rgba(255, 255, 255, 0.2);
           }
-          .logo-image {
-            width: 110px;
-            height: auto;
-            margin-left: 15px;
-            margin-top: 17px;
-            filter: brightness(0) invert(1);
-          }
           .print-btn {
             background: linear-gradient(135deg, #10b981, #34d399);
             border: none;
@@ -631,16 +625,14 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
         `}
       </style>
       <Modal.Header className="p-0 border-0">
-        <div className="invoice-header w-100">
-          <div className="flex items-center gap-4">
-            <img src="logo.png" alt="Promark Logo" className="logo-image" />
-            <div>
-              <p className="text-sm opacity-80" style={{ marginLeft: "20px" }}>
-                OrderId: {entry.orderId || "N/A"}
-              </p>
-            </div>
+        <div className="invoice-header w-100" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <span style={{ fontSize: '0.875rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(255, 255, 255, 0.8)' }}>Order ID</span>
+            <span style={{ fontSize: '1.75rem', fontWeight: 800, color: 'white', lineHeight: 1.2 }}>
+              {entry.orderId || "N/A"}
+            </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Button
               className="print-btn"
               onClick={handlePrint}
@@ -721,66 +713,85 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
                     {entry.customerEmail || "N/A"}
                   </span>
                 </div>
-                {entry.poFilePath && isValidPoFilePath(entry.poFilePath) && (
-                  <div
-                    className="mb-2"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                    }}
-                  >
-                    <strong className="text-gray-700">Attachment:</strong>
-
-                    {entry.poFilePath && (
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => handleDownload(entry.poFilePath)}
-                        style={{
-                          background:
-                            "linear-gradient(135deg, #2575fc, #6a11cb)",
-                          padding: "6px 12px",
-                          borderRadius: "20px",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          fontSize: "0.85rem",
-                          fontWeight: "600",
-                          color: "#ffffff",
-                          border: "1px solid #ffffff22",
-                          boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
-                          transition:
-                            "transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease",
-                          cursor: "pointer",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.transform = "scale(1.05)";
-                          e.target.style.boxShadow =
-                            "0 4px 12px rgba(106, 17, 203, 0.4)";
-                          e.target.style.background =
-                            "linear-gradient(135deg, #3b82f6, #7e22ce)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.transform = "scale(1)";
-                          e.target.style.boxShadow =
-                            "0 2px 6px rgba(0, 0, 0, 0.15)";
-                          e.target.style.background =
-                            "linear-gradient(135deg, #2575fc, #6a11cb)";
-                        }}
-                        onMouseDown={(e) => {
-                          e.target.style.transform = "scale(0.95)";
-                        }}
-                        onMouseUp={(e) => {
-                          e.target.style.transform = "scale(1.05)";
-                        }}
-                      >
-                        <Download size={14} />
-                        Download
-                      </Button>
-                    )}
-                  </div>
-                )}
+                {(() => {
+                  let attachments = [];
+                  if (entry.attachments && entry.attachments.length > 0) {
+                    attachments = entry.attachments;
+                  } else if (entry.poFilePath && isValidPoFilePath(entry.poFilePath)) {
+                    attachments = [entry.poFilePath];
+                  }
+                  if (attachments.length === 0) return null;
+                  return (
+                    <div className="mb-2">
+                      <strong className="text-gray-700">Attachments:</strong>
+                      <div style={{ marginTop: "0.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                        {attachments.map((filePath, index) => {
+                          const fileName = filePath.split("/").pop();
+                          const fileExt = fileName.includes(".") ? fileName.split(".").pop().toLowerCase() : "";
+                          
+                          // Get document type label based on extension
+                          const getDocumentTypeLabel = () => {
+                            if (["pdf"].includes(fileExt)) return "PDF Document";
+                            if (["doc", "docx"].includes(fileExt)) return "Word Document";
+                            if (["xls", "xlsx"].includes(fileExt)) return "Excel Document";
+                            if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt)) return "Image Document";
+                            return "Attachment File";
+                          };
+                          
+                          const documentLabel = getDocumentTypeLabel();
+                          
+                          return (
+                            <div key={index} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", padding: "0.5rem 0.75rem", background: "#f1f5f9", borderRadius: "0.5rem" }}>
+                              <span style={{ fontSize: "0.9rem", color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {documentLabel}
+                              </span>
+                              <Button
+                                variant="outline-primary"
+                                size="sm"
+                                onClick={() => handleDownload(filePath)}
+                                style={{
+                                  background:
+                                    "linear-gradient(135deg, #2575fc, #6a11cb)",
+                                  padding: "4px 10px",
+                                  borderRadius: "20px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  fontSize: "0.75rem",
+                                  fontWeight: "600",
+                                  color: "#ffffff",
+                                  border: "1px solid #ffffff22",
+                                  boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
+                                  transition:
+                                    "transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease",
+                                  cursor: "pointer",
+                                  flexShrink: 0,
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.target.style.transform = "scale(1.05)";
+                                  e.target.style.boxShadow =
+                                    "0 4px 12px rgba(106, 17, 203, 0.4)";
+                                  e.target.style.background =
+                                    "linear-gradient(135deg, #3b82f6, #7e22ce)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.target.style.transform = "scale(1)";
+                                  e.target.style.boxShadow =
+                                    "0 2px 6px rgba(0, 0, 0, 0.15)";
+                                  e.target.style.background =
+                                    "linear-gradient(135deg, #2575fc, #6a11cb)";
+                                }}
+                              >
+                                <Download size={12} />
+                                Download
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
                 {entry.gemOrderNumber && (
                   <div className="mb-2">
                     <strong className="text-gray-700">Gem Order Number:</strong>{" "}

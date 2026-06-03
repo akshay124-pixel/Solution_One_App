@@ -100,6 +100,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   const [poFileError, setPoFileError] = useState("");
   const [existingAttachments, setExistingAttachments] = useState([]);
   const [keepAttachments, setKeepAttachments] = useState([]);
+  const [originalFormData, setOriginalFormData] = useState(initialFormData);
 
   useEffect(() => {
     setUserRole(localStorage.getItem("role") || "");
@@ -144,6 +145,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
         createdBy: entryToEdit.createdBy && typeof entryToEdit.createdBy === "object" ? entryToEdit.createdBy.username || "Unknown" : typeof entryToEdit.createdBy === "string" ? entryToEdit.createdBy : "",
       };
       setFormData(newFormData);
+      setOriginalFormData(newFormData);
       setUpdateData({ sostatus: entryToEdit.sostatus || "Pending for Approval", remarks: entryToEdit.remarks || "" });
       reset(newFormData);
       
@@ -231,7 +233,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   };
 
   const onEditSubmit = async (data) => {
-    if (isReplacement && data.sostatus === "Approved" && replacementApprovalStatus !== "Approved") {
+    if (isReplacement && data.sostatus === "Approved" && originalFormData.sostatus !== "Approved" && replacementApprovalStatus !== "Approved") {
       toast.error("Cannot approve replacement order without Global Admin approval!");
       return;
     }
@@ -289,7 +291,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   };
 
   const onUpdateSubmit = async () => {
-    if (isReplacement && updateData.sostatus === "Approved" && replacementApprovalStatus !== "Approved") {
+    if (isReplacement && updateData.sostatus === "Approved" && entryToEdit.sostatus !== "Approved" && replacementApprovalStatus !== "Approved") {
       toast.error("Cannot approve replacement order without Global Admin approval!");
       return;
     }

@@ -941,6 +941,7 @@ export const salesPersonlist = [
   "Kulwinder Singh",
   "Manish CS Lange",
   "Madeeha Hasan",
+  "Meenakshi Soni",
   "Manjit Singh Chowhan",
   "Mayank Goutam",
   "Mukul Kubba",

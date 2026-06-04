@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Button, Form, Badge, InputGroup } from "react-bootstrap";
-import { FaEye, FaSearch, FaFilter, FaTimes, FaFileExcel } from "react-icons/fa";
+import {
+  FaEye,
+  FaSearch,
+  FaFilter,
+  FaTimes,
+  FaFileExcel,
+} from "react-icons/fa";
 import ViewEntry from "./ViewEntry";
 import EditBill from "./EditBill";
 import soApi from "../../so/axiosSetup";
@@ -57,9 +63,7 @@ const BillGeneration = () => {
   const fetchOrders = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await soApi.get(
-        `/api/get-bill-orders`
-      );
+      const response = await soApi.get(`/api/get-bill-orders`);
       setOrders(response.data.data);
     } catch (error) {
       console.error("Error fetching bill orders:", error);
@@ -104,9 +108,9 @@ const BillGeneration = () => {
       filtered = filtered.filter((order) => {
         const productDetails = order.products
           ? order.products
-            .map((p) => `${p.productType} (${p.qty})`)
-            .join(", ")
-            .toLowerCase()
+              .map((p) => `${p.productType} (${p.qty})`)
+              .join(", ")
+              .toLowerCase()
           : "";
         const total = order.total ? order.total.toFixed(2).toString() : "0.00";
         const soDate = order.soDate
@@ -133,23 +137,39 @@ const BillGeneration = () => {
     }
 
     if (billStatusFilter !== "All") {
-      filtered = filtered.filter((order) => order.billStatus === billStatusFilter)
+      filtered = filtered.filter(
+        (order) => order.billStatus === billStatusFilter,
+      );
     }
-    // Sort in descending order by soDate to show newest orders first
     filtered.sort((a, b) => {
-      const dateA = a.soDate ? new Date(a.soDate) : new Date(0);
-      const dateB = b.soDate ? new Date(b.soDate) : new Date(0);
-      return dateB - dateA; // Descending: newer dates first
-    });
+      // Priority 1: Latest Approval Timestamp
+      const approvalA = a.approvalTimestamp
+        ? new Date(a.approvalTimestamp)
+        : new Date(0);
 
+      const approvalB = b.approvalTimestamp
+        ? new Date(b.approvalTimestamp)
+        : new Date(0);
+
+      if (approvalB - approvalA !== 0) {
+        return approvalB - approvalA;
+      }
+
+      // Priority 2: Latest SO Date
+      const soDateA = a.soDate ? new Date(a.soDate) : new Date(0);
+
+      const soDateB = b.soDate ? new Date(b.soDate) : new Date(0);
+
+      return soDateB - soDateA;
+    });
 
     setFilteredOrders(filtered);
   };
 
   const handleClearFilter = () => {
-    setSearchTerm("")
-    setBillStatusFilter("All")
-  }
+    setSearchTerm("");
+    setBillStatusFilter("All");
+  };
 
   const handleViewClick = (order) => {
     setSelectedOrder(order);
@@ -165,7 +185,8 @@ const BillGeneration = () => {
     setIsEditModalOpen(true);
   };
   const getRowBackground = (order) => {
-    if (order.poFilePath || (order.attachments && order.attachments.length > 0)) return "#d4f4e6"; // PO uploaded highlight
+    if (order.poFilePath || (order.attachments && order.attachments.length > 0))
+      return "#d4f4e6"; // PO uploaded highlight
     return "#ffffff"; // normal
   };
   const handleEntryUpdated = (updatedOrder) => {
@@ -178,78 +199,76 @@ const BillGeneration = () => {
     // Toast notification is handled by EditBill component
   };
 
- const handleExportToXLSX = async () => {
-  // Prepare table data
-  const tableData = filteredOrders.map((order, index) => {
-    const totalUnitPrice = order.products
-      ? order.products.reduce(
-          (sum, p) => sum + (p.unitPrice || 0) * (p.qty || 0),
-          0
-        )
-      : 0;
+  const handleExportToXLSX = async () => {
+    // Prepare table data
+    const tableData = filteredOrders.map((order, index) => {
+      const totalUnitPrice = order.products
+        ? order.products.reduce(
+            (sum, p) => sum + (p.unitPrice || 0) * (p.qty || 0),
+            0,
+          )
+        : 0;
 
-    return {
-      "Seq No": index + 1,
-      "Order ID": order.orderId || "-",
-      "Customer Name": order.customername || "-",
-      "Contact No": order.contactNo || "-",
-      "SO Date": order.soDate
-        ? new Date(order.soDate).toLocaleDateString("en-GB")
-        : "-",
+      return {
+        "Seq No": index + 1,
+        "Order ID": order.orderId || "-",
+        "Customer Name": order.customername || "-",
+        "Contact No": order.contactNo || "-",
+        "SO Date": order.soDate
+          ? new Date(order.soDate).toLocaleDateString("en-GB")
+          : "-",
 
-      Total: order.total ? `₹${order.total.toFixed(2)}` : "₹0.00",
+        Total: order.total ? `₹${order.total.toFixed(2)}` : "₹0.00",
 
-      // 🔥 Added field
-      "Total Unit Price": `₹${totalUnitPrice.toFixed(2)}`,
+        // 🔥 Added field
+        "Total Unit Price": `₹${totalUnitPrice.toFixed(2)}`,
 
-      "Bill Number": order.billNumber || "-",
-      "PI Number": order.piNumber || "-",
-      "Invoice Date": order.invoiceDate
-        ? new Date(order.invoiceDate).toLocaleDateString("en-GB")
-        : "-",
-      "Bill Status": order.billStatus || "-",
-      "Remarks by Billing": order.remarksByBilling || "-",
+        "Bill Number": order.billNumber || "-",
+        "PI Number": order.piNumber || "-",
+        "Invoice Date": order.invoiceDate
+          ? new Date(order.invoiceDate).toLocaleDateString("en-GB")
+          : "-",
+        "Bill Status": order.billStatus || "-",
+        "Remarks by Billing": order.remarksByBilling || "-",
 
-      "Product Details": order.products
-        ? order.products
-            .map((p) => `${p.productType} (${p.qty})`)
-            .join(", ")
-        : "-",
-    };
-  });
+        "Product Details": order.products
+          ? order.products.map((p) => `${p.productType} (${p.qty})`).join(", ")
+          : "-",
+      };
+    });
 
-  // 🔥 Grand Total calculation
-  const grandTotal = filteredOrders.reduce((acc, order) => {
-    const total = order.products
-      ? order.products.reduce(
-          (sum, p) => sum + (p.unitPrice || 0) * (p.qty || 0),
-          0
-        )
-      : 0;
+    // 🔥 Grand Total calculation
+    const grandTotal = filteredOrders.reduce((acc, order) => {
+      const total = order.products
+        ? order.products.reduce(
+            (sum, p) => sum + (p.unitPrice || 0) * (p.qty || 0),
+            0,
+          )
+        : 0;
 
-    return acc + total;
-  }, 0);
+      return acc + total;
+    }, 0);
 
-  // 🔥 Add final total row
-  tableData.push({
-    "Seq No": "",
-    "Order ID": "TOTAL",
-    "Customer Name": "",
-    "Contact No": "",
-    "SO Date": "",
-    Total: "",
-    "Total Unit Price": `₹${grandTotal.toFixed(2)}`,
-    "Bill Number": "",
-    "PI Number": "",
-    "Invoice Date": "",
-    "Bill Status": "",
-    "Remarks by Billing": "",
-    "Product Details": "",
-  });
+    // 🔥 Add final total row
+    tableData.push({
+      "Seq No": "",
+      "Order ID": "TOTAL",
+      "Customer Name": "",
+      "Contact No": "",
+      "SO Date": "",
+      Total: "",
+      "Total Unit Price": `₹${grandTotal.toFixed(2)}`,
+      "Bill Number": "",
+      "PI Number": "",
+      "Invoice Date": "",
+      "Bill Status": "",
+      "Remarks by Billing": "",
+      "Product Details": "",
+    });
 
-  // Create Excel sheet
-  await exportToExcel(tableData, "Bill Orders", "Bill_Orders.xlsx");
-};
+    // Create Excel sheet
+    await exportToExcel(tableData, "Bill Orders", "Bill_Orders.xlsx");
+  };
 
   // Calculate total pending orders (billStatus === "Pending")
   const totalPending = filteredOrders.filter(
@@ -333,9 +352,31 @@ const BillGeneration = () => {
           marginTop: "-2px",
         }}
       >
-        <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", alignItems: "center", flex: "1 1 auto" }}>
-          <InputGroup style={{ maxWidth: "450px", boxShadow: "0 5px 15px rgba(0,0,0,0.2)", borderRadius: "30px", overflow: "hidden" }}>
-            <InputGroup.Text style={{ background: "rgba(255,255,255,0.95)", border: "none", paddingLeft: "20px", color: "#6b7280" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "15px",
+            flexWrap: "wrap",
+            alignItems: "center",
+            flex: "1 1 auto",
+          }}
+        >
+          <InputGroup
+            style={{
+              maxWidth: "450px",
+              boxShadow: "0 5px 15px rgba(0,0,0,0.2)",
+              borderRadius: "30px",
+              overflow: "hidden",
+            }}
+          >
+            <InputGroup.Text
+              style={{
+                background: "rgba(255,255,255,0.95)",
+                border: "none",
+                paddingLeft: "20px",
+                color: "#6b7280",
+              }}
+            >
               <FaSearch />
             </InputGroup.Text>
             <Form.Control
@@ -356,7 +397,16 @@ const BillGeneration = () => {
           </InputGroup>
 
           <div style={{ position: "relative" }}>
-            <FaFilter style={{ position: "absolute", top: "50%", left: "15px", transform: "translateY(-50%)", color: "#6b7280", pointerEvents: "none" }} />
+            <FaFilter
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "15px",
+                transform: "translateY(-50%)",
+                color: "#6b7280",
+                pointerEvents: "none",
+              }}
+            />
             <select
               value={billStatusFilter}
               onChange={(e) => setBillStatusFilter(e.target.value)}
@@ -381,7 +431,14 @@ const BillGeneration = () => {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "15px",
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
           <Button
             onClick={handleClearFilter}
             style={{
@@ -398,8 +455,14 @@ const BillGeneration = () => {
               gap: "8px",
               transition: "all 0.3s ease",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.3)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.2)"; e.currentTarget.style.transform = "translateY(0)"; }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(255,255,255,0.3)";
+              e.currentTarget.style.transform = "translateY(-2px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(255,255,255,0.2)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
           >
             <FaTimes /> Clear Filters
           </Button>
@@ -420,8 +483,16 @@ const BillGeneration = () => {
               boxShadow: "0 4px 15px rgba(40, 167, 69, 0.4)",
               transition: "all 0.3s ease",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(40, 167, 69, 0.6)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 15px rgba(40, 167, 69, 0.4)"; }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow =
+                "0 6px 20px rgba(40, 167, 69, 0.6)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow =
+                "0 4px 15px rgba(40, 167, 69, 0.4)";
+            }}
           >
             <FaFileExcel /> Export to XLSX
           </Button>
@@ -636,8 +707,8 @@ const BillGeneration = () => {
                     >
                       {order.invoiceDate
                         ? new Date(order.invoiceDate).toLocaleDateString(
-                          "en-GB",
-                        )
+                            "en-GB",
+                          )
                         : "-"}
                     </td>
                     <td
@@ -750,8 +821,8 @@ const BillGeneration = () => {
                       title={
                         order.products
                           ? order.products
-                            .map((p) => `${p.productType} (${p.qty})`)
-                            .join(", ")
+                              .map((p) => `${p.productType} (${p.qty})`)
+                              .join(", ")
                           : "-"
                       }
                       style={{
@@ -766,8 +837,8 @@ const BillGeneration = () => {
                     >
                       {order.products
                         ? order.products
-                          .map((p) => `${p.productType} (${p.qty})`)
-                          .join(", ")
+                            .map((p) => `${p.productType} (${p.qty})`)
+                            .join(", ")
                         : "-"}
                     </td>
                     <td

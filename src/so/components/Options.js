@@ -295,11 +295,11 @@ export const productOptions = {
     sizes: ["Standard"],
     specs: ["Standard"],
   },
-  Aicharya: {
+  "Ai White Board": {
     sizes: ["N/A"],
     specs: ["Standard"],
   },
-  TripodStand: {
+  "Tripod Stand": {
     sizes: ["N/A"],
     specs: ["Standard"],
   },

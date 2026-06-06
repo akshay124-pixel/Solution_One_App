@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button, Form, Badge, InputGroup } from "react-bootstrap";
 import {
   FaEye,
@@ -136,13 +136,26 @@ const BillGeneration = () => {
       });
     }
 
-    if (billStatusFilter !== "All") {
-      filtered = filtered.filter(
-        (order) => order.billStatus === billStatusFilter,
-      );
-    }
+   if (billStatusFilter !== "All") {
+  if (billStatusFilter === "BillPending") {
+    filtered = filtered.filter(
+      (order) =>
+        !order.billNumber ||
+        order.billNumber.trim() === ""
+    );
+  } else if (billStatusFilter === "PIPending") {
+    filtered = filtered.filter(
+      (order) =>
+        !order.piNumber ||
+        order.piNumber.trim() === ""
+    );
+  } else {
+    filtered = filtered.filter(
+      (order) => order.billStatus === billStatusFilter
+    );
+  }
+}
     filtered.sort((a, b) => {
-      // Priority 1: Latest Approval Timestamp
       const approvalA = a.approvalTimestamp
         ? new Date(a.approvalTimestamp)
         : new Date(0);
@@ -155,7 +168,7 @@ const BillGeneration = () => {
         return approvalB - approvalA;
       }
 
-      // Priority 2: Latest SO Date
+  
       const soDateA = a.soDate ? new Date(a.soDate) : new Date(0);
 
       const soDateB = b.soDate ? new Date(b.soDate) : new Date(0);
@@ -186,8 +199,8 @@ const BillGeneration = () => {
   };
   const getRowBackground = (order) => {
     if (order.poFilePath || (order.attachments && order.attachments.length > 0))
-      return "#d4f4e6"; // PO uploaded highlight
-    return "#ffffff"; // normal
+      return "#d4f4e6"; 
+    return "#ffffff"; 
   };
   const handleEntryUpdated = (updatedOrder) => {
     setOrders((prevOrders) =>
@@ -196,7 +209,7 @@ const BillGeneration = () => {
         .filter((order) => order.billStatus !== "Billing Complete"),
     );
     setIsEditModalOpen(false);
-    // Toast notification is handled by EditBill component
+   
   };
 
   const handleExportToXLSX = async () => {
@@ -220,7 +233,7 @@ const BillGeneration = () => {
 
         Total: order.total ? `₹${order.total.toFixed(2)}` : "₹0.00",
 
-        // 🔥 Added field
+       
         "Total Unit Price": `₹${totalUnitPrice.toFixed(2)}`,
 
         "Bill Number": order.billNumber || "-",
@@ -427,6 +440,8 @@ const BillGeneration = () => {
               <option value="All">All Bill Status</option>
               <option value="Pending">Pending</option>
               <option value="Under Billing">Under Billing</option>
+              <option value="BillPending">Bill No. Pending</option>
+              <option value="PIPending">PI No. Pending</option>
             </select>
           </div>
         </div>
@@ -532,7 +547,6 @@ const BillGeneration = () => {
                   { header: "Seq No", width: "80px" },
                   { header: "Order ID", width: "120px" },
                   { header: "Customer Name", width: "400px" },
-
                   { header: "SO Date", width: "110px" },
                   { header: "Total", width: "120px" },
                   { header: "Bill Number", width: "120px" },

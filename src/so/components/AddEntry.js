@@ -30,6 +30,7 @@ function AddEntry({ onSubmit, onClose }) {
   const [fileError, setFileError] = useState("");
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [expandedProduct, setExpandedProduct] = useState(null);
 
   const [currentProduct, setCurrentProduct] = useState({
     productType: "",
@@ -1786,34 +1787,70 @@ function AddEntry({ onSubmit, onClose }) {
                     <div
                       key={index}
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "1.5rem",
-                        padding: "0.6rem 0.75rem",
                         background: "#f1f5f9",
                         borderRadius: "0.5rem",
                         marginBottom: "0.5rem",
-                        flexWrap: "nowrap",
-                        overflowX: "auto",
+                        overflow: "hidden",
                       }}
                     >
-                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", minWidth: "120px" }}>Type: {product.productType}</span>
-                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Size: {product.size || "N/A"}</span>
-                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Spec: {product.spec || "N/A"}</span>
-                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Qty: {product.qty}</span>
-                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>₹{product.unitPrice}</span>
-                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>GST: {product.gst}</span>
-                      {product.warranty && <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Warranty: {product.warranty}</span>}
-                      {product.modelNos && <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Model: {product.modelNos}</span>}
-                      {product.productType === "Fujifilm-Printer" && product.productCode && <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Code: {product.productCode}</span>}
-                      {product.productType === "IFPD" && product.brand && <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Brand: {product.brand}</span>}
-                      <button
-                        type="button"
-                        onClick={() => removeProduct(index)}
-                        style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "0.9rem", whiteSpace: "nowrap", marginLeft: "auto", flexShrink: 0 }}
+                      {/* Collapsed View */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.75rem",
+                          padding: "0.6rem 0.75rem",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => {
+                          setExpandedProduct(expandedProduct === index ? null : index);
+                        }}
                       >
-                        Remove
-                      </button>
+                        <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 0, width: "130px" }} title={product.productType}>Type: {product.productType}</span>
+                        <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 0, width: "100px" }} title={product.size || "N/A"}>Size: {product.size || "N/A"}</span>
+                        <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 0, width: "100px" }} title={product.spec || "N/A"}>Spec: {product.spec || "N/A"}</span>
+                        <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 0, width: "80px" }}>Qty: {product.qty}</span>
+                        <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 0, width: "100px" }}>₹{product.unitPrice}</span>
+                        <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 0, width: "80px" }}>GST: {product.gst}</span>
+                        <span style={{ fontSize: "1rem", color: "#475569", marginLeft: "auto", flexShrink: 0 }}>
+                          {expandedProduct === index ? "▼" : "▶"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeProduct(index);
+                          }}
+                          style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "0.9rem", whiteSpace: "nowrap", flexShrink: 0 }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+
+                      {/* Expanded View */}
+                      {expandedProduct === index && (
+                        <div
+                          style={{
+                            padding: "0.75rem 1rem",
+                            borderTop: "1px solid #e2e8f0",
+                            background: "#f8fafc",
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                            gap: "0.75rem",
+                          }}
+                        >
+                          <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>Type:</strong> {product.productType}</div>
+                          <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>Size:</strong> {product.size || "N/A"}</div>
+                          <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>Spec:</strong> {product.spec || "N/A"}</div>
+                          <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>Qty:</strong> {product.qty}</div>
+                          <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>Unit Price:</strong> ₹{product.unitPrice}</div>
+                          <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>GST:</strong> {product.gst}</div>
+                          {product.warranty && <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>Warranty:</strong> {product.warranty}</div>}
+                          {product.modelNos && <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>Model:</strong> {product.modelNos}</div>}
+                          {product.productType === "Fujifilm-Printer" && product.productCode && <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>Code:</strong> {product.productCode}</div>}
+                          {product.productType === "IFPD" && product.brand && <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>Brand:</strong> {product.brand}</div>}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

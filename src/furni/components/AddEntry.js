@@ -19,6 +19,7 @@ function AddEntry({ onSubmit, onClose }) {
   const [pwcFile, setPwcFile] = useState(null);
   const [fileError, setFileError] = useState("");
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [expandedProduct, setExpandedProduct] = useState(null);
   const [currentProduct, setCurrentProduct] = useState({ productType: "", size: "", spec: "", qty: "", modelNos: "", unitPrice: "", gst: "18", customProduct: "" });
   const [formData, setFormData] = useState({
     soDate: new Date().toISOString(), name: "", city: "", state: "", pinCode: "", contactNo: "", alterno: "",
@@ -435,15 +436,55 @@ function AddEntry({ onSubmit, onClose }) {
                 <h4 style={{ fontSize: "calc(1rem + 0.2vw)", color: "#475569", marginBottom: "0.75rem" }}>Added Products:</h4>
                 <div style={{ maxHeight: "calc(40vh)", overflowY: "auto", scrollBehavior: "smooth", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "0.5rem", background: "#fff" }}>
                   {products.map((product, index) => (
-                    <div key={index} style={{ display: "flex", alignItems: "center", gap: "1.5rem", padding: "0.6rem 0.75rem", background: "#f1f5f9", borderRadius: "0.5rem", marginBottom: "0.5rem", flexWrap: "nowrap", overflowX: "auto", transition: "background 0.2s ease" }} onMouseOver={(e) => (e.currentTarget.style.background = "#e2e8f0")} onMouseOut={(e) => (e.currentTarget.style.background = "#f1f5f9")}>
-                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", minWidth: "120px" }}>Type: {product.productType}</span>
-                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Size: {product.size || "N/A"}</span>
-                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Spec: {product.spec || "N/A"}</span>
-                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Qty: {product.qty}</span>
-                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>₹{product.unitPrice}</span>
-                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>GST: {product.gst}</span>
-                      <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap" }}>Model: {product.modelNos || "N/A"}</span>
-                      <button type="button" onClick={() => removeProduct(index)} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "0.9rem", whiteSpace: "nowrap", marginLeft: "auto", flexShrink: 0 }} aria-label={`Remove product ${product.productType}`}>Remove</button>
+                    <div key={index} style={{ background: "#f1f5f9", borderRadius: "0.5rem", marginBottom: "0.5rem", overflow: "hidden" }}>
+                      {/* Collapsed View */}
+                      <div 
+                        style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.6rem 0.75rem", cursor: "pointer" }}
+                        onClick={() => setExpandedProduct(expandedProduct === index ? null : index)}
+                      >
+                        <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 0, width: "130px" }} title={product.productType}>Type: {product.productType}</span>
+                        <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 0, width: "100px" }} title={product.size || "N/A"}>Size: {product.size || "N/A"}</span>
+                        <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 0, width: "100px" }} title={product.spec || "N/A"}>Spec: {product.spec || "N/A"}</span>
+                        <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 0, width: "80px" }}>Qty: {product.qty}</span>
+                        <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 0, width: "100px" }}>₹{product.unitPrice}</span>
+                        <span style={{ fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 0, width: "80px" }}>GST: {product.gst}</span>
+                        <span style={{ fontSize: "1rem", color: "#475569", marginLeft: "auto", flexShrink: 0 }}>
+                          {expandedProduct === index ? "▼" : "▶"}
+                        </span>
+                        <button 
+                          type="button" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeProduct(index);
+                          }} 
+                          style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "0.9rem", whiteSpace: "nowrap", flexShrink: 0 }}
+                          aria-label={`Remove product ${product.productType}`}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      
+                      {/* Expanded View */}
+                      {expandedProduct === index && (
+                        <div 
+                          style={{
+                            padding: "0.75rem 1rem", 
+                            borderTop: "1px solid #e2e8f0", 
+                            background: "#f8fafc", 
+                            display: "grid", 
+                            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+                            gap: "0.75rem"
+                          }}
+                        >
+                          <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>Type:</strong> {product.productType}</div>
+                          <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>Size:</strong> {product.size || "N/A"}</div>
+                          <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>Spec:</strong> {product.spec || "N/A"}</div>
+                          <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>Qty:</strong> {product.qty}</div>
+                          <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>Unit Price:</strong> ₹{product.unitPrice}</div>
+                          <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>GST:</strong> {product.gst}</div>
+                          <div style={{ fontSize: "0.9rem", wordBreak: "break-word", overflowWrap: "break-word" }}><strong style={{ color: "#475569" }}>Model:</strong> {product.modelNos || "N/A"}</div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

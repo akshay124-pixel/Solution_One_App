@@ -20,20 +20,22 @@ const MOD  = {
 };
 
 const ROLE_OPTIONS = [
-  { value:"globaladmin",       label:"Global Admin",         group:"Global" },
-  { value:"superadmin",        label:"Superadmin",           group:"Global" },
-  { value:"admin",             label:"Admin",                group:"Global" },
-  { value:"salesperson",       label:"Salesperson",          group:"Global" },
-  { value:"service",           label:"Service Engineer",     group:"Global" },
-  { value:"part_replacement",  label:"Part Replacement",     group:"Global" },
-  { value:"Production",        label:"Production",           group:"Operational" },
-  { value:"ProductionApproval",label:"Production Approval",  group:"Operational" },
-  { value:"Installation",      label:"Installation",         group:"Operational" },
-  { value:"Finish",            label:"Finish",               group:"Operational" },
-  { value:"Accounts",          label:"Accounts",             group:"Operational" },
-  { value:"Verification",      label:"Verification",         group:"Operational" },
-  { value:"Bill",              label:"Bill",                 group:"Operational" },
-  { value:"Watch",             label:"Watch",                group:"Operational" },
+  { value:"globaladmin",            label:"Global Admin",          group:"Global" },
+  { value:"superadmin",             label:"Superadmin",            group:"Global" },
+  { value:"admin",                  label:"Admin",                 group:"Global" },
+  { value:"salesperson",            label:"Salesperson",           group:"Global" },
+  { value:"service",                label:"Service Engineer",      group:"Global" },
+  { value:"part_replacement",       label:"Part Replacement",      group:"Global" },
+  { value:"av_edtech_incomplete",   label:"AV EdTech Incomplete",  group:"Incomplete Orders" },
+  { value:"furniture_incomplete",   label:"Furniture Incomplete",  group:"Incomplete Orders" },
+  { value:"Production",             label:"Production",            group:"Operational" },
+  { value:"ProductionApproval",     label:"Production Approval",   group:"Operational" },
+  { value:"Installation",           label:"Installation",          group:"Operational" },
+  { value:"Finish",                 label:"Finish",                group:"Operational" },
+  { value:"Accounts",               label:"Accounts",              group:"Operational" },
+  { value:"Verification",           label:"Verification",          group:"Operational" },
+  { value:"Bill",                   label:"Bill",                  group:"Operational" },
+  { value:"Watch",                  label:"Watch",                 group:"Operational" },
 ];
 
 const MODULE_COMBOS = [
@@ -661,10 +663,10 @@ const CreateUserTab = ({ onCreated }) => {
 
   // Section tabs (mirrors Signup.jsx)
   const sections = [
-    { key:"crm",     label:"CRM / Global",  roles:["globaladmin","superadmin","admin","salesperson"] },
+    { key:"crm",     label:"CRM / Global",  roles:["globaladmin","superadmin","admin","salesperson","service"] },
     { key:"so",      label:"Sales Order",   roles:["Watch","Production","ProductionApproval","Installation","Finish","Accounts","Verification","Bill"] },
     { key:"furni",   label:"Furni Only",    roles:["Production","ProductionApproval","Installation","Finish","Accounts","Verification","Bill"] },
-    { key:"service", label:"Service",       roles:["part_replacement"] },
+    { key:"service", label:"Service",       roles:["part_replacement","av_edtech_incomplete","furniture_incomplete"] },
   ];
 
   const activeRoles = sections.find(s => s.key === form.activeSection)?.roles || [];

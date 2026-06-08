@@ -94,6 +94,28 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
       }
     });
 
+    socket.on("incompleteOrderCreated", (notification) => {
+      if (isSuperAdmin) {
+        console.log("[ServiceSocket] New incomplete order received:", notification);
+        fetchSuperAdminNotifications(false);
+        toast.success(`📦 New Incomplete Order: ${notification.orderNumber}`, {
+          position: "top-right",
+          autoClose: 5000,
+        });
+      }
+    });
+
+    socket.on("incompleteOrderUpdated", (notification) => {
+      if (isSuperAdmin) {
+        console.log("[ServiceSocket] Incomplete order updated:", notification);
+        fetchSuperAdminNotifications(false);
+        toast.info(`📦 Incomplete Order Updated: ${notification.orderNumber}`, {
+          position: "top-right",
+          autoClose: 5000,
+        });
+      }
+    });
+
     socket.on("approvalNotification", (notification) => {
       if (isGlobalAdmin || isSuperAdmin) {
         console.log("[ServiceSocket] New approval received:", notification);
@@ -561,14 +583,14 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                           {!log.isRead && (
-                            <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: log.type === "followup" ? primaryThemeColor : "#10b981", flexShrink: 0 }}></div>
+                            <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: log.type === "incomplete_order_created" || log.type === "incomplete_order_updated" ? "#059669" : log.type === "followup" ? primaryThemeColor : "#10b981", flexShrink: 0 }}></div>
                           )}
                           <div style={{ fontWeight: "700", color: "#1e293b", fontSize: "0.95rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {log.complaintNumber}
+                            {log.orderNumber || log.complaintNumber}
                           </div>
                         </div>
                         
-                        <div style={{ fontSize: "0.85rem", color: log.type === "part_new" ? "#059669" : log.type === "part_update" ? "#2563eb" : "#475569", fontWeight: "600" }}>
+                        <div style={{ fontSize: "0.85rem", color: log.type === "incomplete_order_created" ? "#059669" : log.type === "incomplete_order_updated" ? "#2563eb" : log.type === "part_new" ? "#059669" : log.type === "part_update" ? "#2563eb" : "#475569", fontWeight: "600" }}>
                           {log.message}
                         </div>
                         
@@ -586,7 +608,7 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
                           <Clock size={12} />
                           {formatDate(log.createdAt)}
                           {log.updatedBy && <span>• By: {log.updatedBy}</span>}
-                          {log.createdBy && log.type === "part_new" && <span>• By: {log.createdBy}</span>}
+                          {log.createdBy && (log.type === "part_new" || log.type === "incomplete_order_created") && <span>• By: {log.createdBy}</span>}
                         </div>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px", flexShrink: 0, marginLeft: "12px" }}>
@@ -617,16 +639,16 @@ const ApprovalNotificationBell = ({ userRole, onApprovalAction }) => {
                         )}
                         <div style={{ 
                           padding: "4px 10px", 
-                          background: log.type?.startsWith("part") ? "rgba(16, 185, 129, 0.15)" : "rgba(37, 117, 252, 0.15)",
-                          color: log.type?.startsWith("part") ? "#059669" : "#1e40af",
+                          background: log.type?.startsWith("incomplete_order") ? "rgba(5, 150, 105, 0.15)" : log.type?.startsWith("part") ? "rgba(16, 185, 129, 0.15)" : "rgba(37, 117, 252, 0.15)",
+                          color: log.type?.startsWith("incomplete_order") ? "#059669" : log.type?.startsWith("part") ? "#059669" : "#1e40af",
                           borderRadius: "6px", 
                           fontSize: "0.7rem", 
                           fontWeight: "700",
                           textTransform: "uppercase",
                           letterSpacing: "0.5px",
-                          border: log.type?.startsWith("part") ? "1px solid rgba(16, 185, 129, 0.2)" : "1px solid rgba(37, 117, 252, 0.2)"
+                          border: log.type?.startsWith("incomplete_order") ? "1px solid rgba(5, 150, 105, 0.2)" : log.type?.startsWith("part") ? "1px solid rgba(16, 185, 129, 0.2)" : "1px solid rgba(37, 117, 252, 0.2)"
                         }}>
-                          {log.type === "part_new" ? "New Request" : log.type === "part_update" ? log.status : "Follow-up"}
+                          {log.type === "part_new" ? "New Request" : log.type === "part_update" ? log.status : log.type === "incomplete_order_created" ? "New Order" : log.type === "incomplete_order_updated" ? "Updated Order" : "Follow-up"}
                         </div>
                       </div>
                     </div>

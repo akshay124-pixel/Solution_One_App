@@ -15,6 +15,7 @@ const CRM_ROLES = [
   { value: "superadmin",  label: "Superadmin" },
   { value: "admin",       label: "Admin" },
   { value: "salesperson", label: "Salesperson" },
+  { value: "service",     label: "Service Engineer" },
 ];
 
 // SO roles — these users also get Furni access (SO + Furni)
@@ -43,6 +44,8 @@ const FURNI_ONLY_ROLES = [
 
 const SERVICE_ROLES = [
   { value: "part_replacement",  label: "Part Replacement" },
+  { value: "av_edtech_incomplete", label: "AV EdTech Incomplete" },
+  { value: "furniture_incomplete", label: "Furniture Incomplete" },
 ];
 
 const soRoleRoute = (role) => {
@@ -148,6 +151,7 @@ const Signup = () => {
         else if (hint === "so-dashboard")      navigate(soRoleRoute(userRole), { replace: true });
         else if (hint === "service-dashboard") {
           if (userRole === "part_replacement") navigate("/service/part-replacement", { replace: true });
+          else if (["av_edtech_incomplete", "furniture_incomplete"].includes(userRole)) navigate("/service/incomplete-orders", { replace: true });
           else navigate("/service", { replace: true });
         }
         else navigate("/crm/dashboard", { replace: true });
@@ -198,7 +202,7 @@ const Signup = () => {
 
             {/* Section tabs */}
             <div style={{ display: "flex", gap: "6px", marginBottom: "4px" }}>
-              {["crm", "so", "furni"].map((s) => (
+              {["crm", "so", "furni", "service"].map((s) => (
                 <button key={s} type="button" onClick={() => handleSectionChange(s)}
                   style={{
                     flex: 1, padding: "7px 4px", fontSize: "12px", fontWeight: 600,

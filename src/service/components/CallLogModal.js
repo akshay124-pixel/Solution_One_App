@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import { Phone, User, MessageSquare, Calendar, Send, X, Paperclip } from "lucide-react";
 import serviceApi from "../axiosSetup";
 
-const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
+const CallLogModal = ({ isOpen, onClose, order, onSuccess, onIncompleteOrderSelect }) => {
   const [callStatus, setCallStatus] = useState("");
   const [serviceRequestName, setServiceRequestName] = useState("");
   const [serviceRequestMobile, setServiceRequestMobile] = useState("");
@@ -43,6 +43,14 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
       setSelectedSalesperson("");
     }
   }, [order]);
+
+  // Handle Incomplete Order selection
+  useEffect(() => {
+    if (callStatus === "Incomplete Order" && onIncompleteOrderSelect) {
+      onIncompleteOrderSelect(order);
+      setCallStatus(""); // Reset the select to not submit the call log form
+    }
+  }, [callStatus, onIncompleteOrderSelect, order]);
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -326,6 +334,7 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess }) => {
                 <option value="Installation">🔧 Installation</option>
                 <option value="Inspection">✅ Inspection</option>
                 <option value="Service Request">📝 Service Request</option>
+                <option value="Incomplete Order">⚠️ Incomplete Order</option>
               </Form.Select>
             </Form.Group>
 

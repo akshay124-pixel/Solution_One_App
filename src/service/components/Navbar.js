@@ -1,11 +1,14 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Navbar, Nav, Container, Button } from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
-import { LogOut, Package } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { LogOut, AlertCircle } from "lucide-react";
 import ApprovalNotificationBell from "./ApprovalNotificationBell";
+
 
 const ServiceNavbar = ({ isAuthenticated, onLogout, userRole, onApprovalAction }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isActive = (path) => location.pathname === path;
 
   return (
     <>
@@ -24,6 +27,9 @@ const ServiceNavbar = ({ isAuthenticated, onLogout, userRole, onApprovalAction }
             to { transform: translateX(0); opacity: 1; }
           }
         
+          .service-navbar {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+          }
           .service-navbar .navbar-brand {
             animation: slideInLeft 0.3s ease-out;
             font-weight: bold;
@@ -31,6 +37,23 @@ const ServiceNavbar = ({ isAuthenticated, onLogout, userRole, onApprovalAction }
             color: white !important;
             cursor: pointer;
             transition: all 0.3s ease;
+          }
+          
+          .service-navbar .nav-link {
+            color: rgba(255, 255, 255, 0.85) !important;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            margin: 0 0.25rem;
+          }
+          .service-navbar .nav-link:hover {
+            color: white !important;
+            background: rgba(255, 255, 255, 0.15);
+          }
+          .service-navbar .nav-link.active {
+            color: white !important;
+            background: rgba(255, 255, 255, 0.2);
           }
           
           .service-navbar .nav-item {
@@ -96,6 +119,18 @@ const ServiceNavbar = ({ isAuthenticated, onLogout, userRole, onApprovalAction }
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="service-navbar-nav" />
           <Navbar.Collapse id="service-navbar-nav">
+            <Nav className="me-auto align-items-center">
+              {(isAuthenticated && userRole?.toLowerCase() === "globaladmin") && (
+                <Nav.Link
+                  onClick={() => navigate("/service/incomplete-orders")}
+                  active={isActive("/service/incomplete-orders")}
+                  className="d-flex align-items-center gap-2"
+                >
+                  <AlertCircle size={16} />
+                  Incomplete Orders
+                </Nav.Link>
+              )}
+            </Nav>
             <Nav className="ms-auto align-items-center">
               {isAuthenticated && (
                 <>

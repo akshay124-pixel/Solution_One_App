@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { Form, Button, Row, Col, Card } from "react-bootstrap";
-import { Search, X, Filter, FilePlus } from "lucide-react";
+import { Search, X, Filter, FilePlus, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 import serviceApi from "../axiosSetup";
 import { toast } from "react-toastify";
 
-const SearchSection = ({ onSearch, onClear, onManualRequest }) => {
+const SearchSection = ({ onSearch, onClear, onManualRequest, onManualIncompleteRequest }) => {
   const [billNumber, setBillNumber] = useState("");
   const [orderId, setOrderId] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
@@ -206,6 +206,21 @@ const SearchSection = ({ onSearch, onClear, onManualRequest }) => {
             box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
             background: linear-gradient(135deg, #059669, #047857);
           }
+          .incomplete-btn {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            border: none;
+            border-radius: 12px;
+            padding: 14px 24px;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(245, 158, 11, 0.2);
+          }
+          .incomplete-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
+            background: linear-gradient(135deg, #d97706, #b45309);
+          }
           .button-group {
             animation: fadeInScale 0.6s ease-out 0.2s both;
           }
@@ -305,6 +320,13 @@ const SearchSection = ({ onSearch, onClear, onManualRequest }) => {
                 >
                   <FilePlus size={18} style={{ marginRight: "8px" }} />
                   Manual Service Request
+                </Button>
+                <Button
+                  onClick={onManualIncompleteRequest}
+                  className="incomplete-btn"
+                >
+                  <AlertTriangle size={18} style={{ marginRight: "8px" }} />
+                  Manual Incomplete Order Request
                 </Button>
               </div>
             </Form>

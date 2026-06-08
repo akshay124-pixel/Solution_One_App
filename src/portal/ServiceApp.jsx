@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { usePortalAuth } from "./PortalAuthContext";
+import { isIncompleteOrderRole } from "../constants/roles";
 
 import ServiceDashboard from "../service/components/ServiceDashboard";
 import PartReplacementDashboard from "../service/components/PartReplacementDashboard";
+import IncompleteOrderDashboard from "../service/components/IncompleteOrderDashboard";
 import ServiceNavbar from "../service/components/Navbar";
 import ServiceChangePassword from "../service/Auth/ChangePassword";
 import { PasswordExpiryBanner } from "./PasswordExpiryBanner";
@@ -76,7 +78,9 @@ const ServiceApp = () => {
         <Route
           path="/"
           element={
-            user?.role === "part_replacement" ? (
+            isIncompleteOrderRole(user?.role) ? (
+              <Navigate to="/service/incomplete-orders" replace />
+            ) : user?.role === "part_replacement" ? (
               <Navigate to="/service/part-replacement" replace />
             ) : (
               <ServiceDashboard refreshTrigger={refreshTrigger} onApprovalAction={handleApprovalAction} />
@@ -84,6 +88,7 @@ const ServiceApp = () => {
           }
         />
         <Route path="/part-replacement" element={<PartReplacementDashboard />} />
+        <Route path="/incomplete-orders" element={<IncompleteOrderDashboard />} />
         <Route path="/change-password" element={<ServiceChangePassword />} />
         <Route path="*" element={<Navigate to="/service" replace />} />
       </Routes>

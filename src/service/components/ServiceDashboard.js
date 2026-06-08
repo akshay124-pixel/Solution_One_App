@@ -11,11 +11,17 @@ import ViewServiceLog from "./ViewServiceLog";
 import EditServiceLog from "./EditServiceLog";
 import DeleteServiceLogModal from "./DeleteServiceLogModal";
 import ManualServiceRequestModal from "./ManualServiceRequestModal";
+import CreateIncompleteOrderModal from "./CreateIncompleteOrderModal";
 import ReplacementDemoLogsTable from "./ReplacementDemoLogsTable";
 import ReplacementDemoLogsFilters from "./ReplacementDemoLogsFilters";
 import ViewReplacementDemoLog from "./ViewReplacementDemoLog";
 import EditReplacementDemoLog from "./EditReplacementDemoLog";
 import DeleteReplacementDemoLogModal from "./DeleteReplacementDemoLogModal";
+import IncompleteOrdersTable from "./IncompleteOrdersTable";
+import IncompleteOrdersFilters from "./IncompleteOrdersFilters";
+import ViewIncompleteOrderModal from "./ViewIncompleteOrderModal";
+import EditIncompleteOrderModal from "./EditIncompleteOrderModal";
+import DeleteIncompleteOrderModal from "./DeleteIncompleteOrderModal";
 import serviceApi from "../axiosSetup";
 import { toast } from "react-toastify";
 
@@ -34,6 +40,8 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   const [showDeleteLogModal, setShowDeleteLogModal] = useState(false);
   const [showViewOrderModal, setShowViewOrderModal] = useState(false);
   const [showManualRequestModal, setShowManualRequestModal] = useState(false);
+  const [showCreateIncompleteOrderModal, setShowCreateIncompleteOrderModal] = useState(false);
+  const [initialOrderForIncomplete, setInitialOrderForIncomplete] = useState(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshingReplacementLogs, setRefreshingReplacementLogs] = useState(false);
@@ -99,6 +107,31 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
     total: 0, pending: 0, proceedForApproval: 0, approved: 0, rejected: 0, closed: 0
   });
 
+  // Incomplete Orders State
+  const [incompleteOrders, setIncompleteOrders] = useState([]);
+  const [selectedIncompleteOrder, setSelectedIncompleteOrder] = useState(null);
+  const [showViewIncompleteOrder, setShowViewIncompleteOrder] = useState(false);
+  const [showEditIncompleteOrder, setShowEditIncompleteOrder] = useState(false);
+  const [showDeleteIncompleteOrder, setShowDeleteIncompleteOrder] = useState(false);
+  const [incompleteOrdersLoading, setIncompleteOrdersLoading] = useState(false);
+  const [refreshingIncompleteOrders, setRefreshingIncompleteOrders] = useState(false);
+
+  // Incomplete Orders Filters
+  const [incompleteSearch, setIncompleteSearch] = useState("");
+  const [incompleteStatusFilter, setIncompleteStatusFilter] = useState("");
+  const [incompleteProductCategoryFilter, setIncompleteProductCategoryFilter] = useState("");
+  const [incompleteStartDate, setIncompleteStartDate] = useState("");
+  const [incompleteEndDate, setIncompleteEndDate] = useState("");
+
+  // Pagination State for Incomplete Orders
+  const [incompletePage, setIncompletePage] = useState(1);
+  const [incompleteLimit, setIncompleteLimit] = useState(20);
+  const [incompleteTotalPages, setIncompleteTotalPages] = useState(1);
+  const [debouncedIncompleteSearch, setDebouncedIncompleteSearch] = useState("");
+  const [incompleteStats, setIncompleteStats] = useState({
+    total: 0, pending: 0, inProgress: 0, dispatched: 0, delivered: 0, closed: 0
+  });
+
   // Debounce searches
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedServiceLogsSearch(serviceLogsSearch), 500);
@@ -110,6 +143,11 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
     return () => clearTimeout(timer);
   }, [replacementSearchTerm]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedIncompleteSearch(incompleteSearch), 500);
+    return () => clearTimeout(timer);
+  }, [incompleteSearch]);
+
   // Reset pagination when filters change
   useEffect(() => {
     setServicePage(1);
@@ -118,6 +156,10 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   useEffect(() => {
     setReplacementPage(1);
   }, [debouncedReplacementSearch, replacementApprovalStatusFilter, replacementStartDate, replacementEndDate, replacementSalesPersonFilter]);
+
+  useEffect(() => {
+    setIncompletePage(1);
+  }, [debouncedIncompleteSearch, incompleteStatusFilter, incompleteProductCategoryFilter, incompleteStartDate, incompleteEndDate]);
 
   // Fetch active salespersons list on mount
   useEffect(() => {
@@ -157,6 +199,10 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   useEffect(() => {
     fetchReplacementDemoLogs();
   }, [replacementPage, replacementLimit, debouncedReplacementSearch, replacementApprovalStatusFilter, replacementStartDate, replacementEndDate, replacementSalesPersonFilter]);
+
+  useEffect(() => {
+    fetchIncompleteOrders();
+  }, [incompletePage, incompleteLimit, debouncedIncompleteSearch, incompleteStatusFilter, incompleteProductCategoryFilter, incompleteStartDate, incompleteEndDate]);
 
   useEffect(() => {
     fetchUserRole();
@@ -235,6 +281,38 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
       setReplacementDemoLoading(false);
     }
   };
+
+  const fetchIncompleteOrders = async () => {
+    setIncompleteOrdersLoading(true);
+    try {
+      const response = await serviceApi.get("/incomplete-orders", {
+        params: {
+          page: incompletePage,
+          limit: incompleteLimit,
+          search: debouncedIncompleteSearch,
+          status: incompleteStatusFilter,
+          productCategory: incompleteProductCategoryFilter,
+          startDate: incompleteStartDate,
+          endDate: incompleteEndDate
+        }
+      });
+      if (response.data.success) {
+        setIncompleteOrders(response.data.data || []);
+        if (response.data.pagination) {
+          setIncompleteTotalPages(response.data.pagination.pages);
+        }
+        if (response.data.stats) {
+          setIncompleteStats(response.data.stats);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch incomplete orders:", error);
+      toast.error("Failed to load incomplete orders");
+      setIncompleteOrders([]); 
+    } finally {
+      setIncompleteOrdersLoading(false);
+    }
+  };
   
   const fetchUserRole = () => {
     // Get user role from localStorage or context
@@ -257,6 +335,95 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   const handleManualRequestSuccess = () => {
     fetchServiceLogs();
     setShowManualRequestModal(false);
+  };
+
+  const handleManualIncompleteRequest = () => {
+    setInitialOrderForIncomplete(null);
+    setShowCreateIncompleteOrderModal(true);
+  };
+
+  const handleIncompleteOrderSuccess = () => {
+    setShowCreateIncompleteOrderModal(false);
+    setInitialOrderForIncomplete(null);
+    fetchIncompleteOrders();
+  };
+
+  // Incomplete Orders Handlers
+  const handleViewIncompleteOrder = (order) => {
+    setSelectedIncompleteOrder(order);
+    setShowViewIncompleteOrder(true);
+  };
+
+  const handleEditIncompleteOrder = (order) => {
+    setSelectedIncompleteOrder(order);
+    setShowEditIncompleteOrder(true);
+  };
+
+  const handleIncompleteOrderUpdate = () => {
+    fetchIncompleteOrders();
+    setShowEditIncompleteOrder(false);
+  };
+
+  const handleDeleteIncompleteOrder = (order) => {
+    setSelectedIncompleteOrder(order);
+    setShowDeleteIncompleteOrder(true);
+  };
+
+  const handleConfirmDeleteIncompleteOrder = async (order) => {
+    try {
+      const response = await serviceApi.delete(`/incomplete-orders/${order._id}`);
+      if (response.data.success) {
+        fetchIncompleteOrders();
+        toast.success("Incomplete order deleted successfully!");
+      }
+    } catch (error) {
+      console.error("Failed to delete incomplete order:", error);
+      toast.error("Failed to delete incomplete order");
+      throw error;
+    }
+  };
+
+  const handleRefreshIncompleteOrders = async () => {
+    setRefreshingIncompleteOrders(true);
+    await fetchIncompleteOrders();
+    setRefreshingIncompleteOrders(false);
+    toast.success("Incomplete orders refreshed successfully!");
+  };
+
+  const handleExportIncompleteOrders = async () => {
+    try {
+      toast.info("Preparing export...");
+      const response = await serviceApi.get("/incomplete-orders/export", {
+        params: {
+          search: debouncedIncompleteSearch,
+          status: incompleteStatusFilter,
+          productCategory: incompleteProductCategoryFilter,
+          startDate: incompleteStartDate,
+          endDate: incompleteEndDate
+        },
+        responseType: "blob",
+      });
+
+      const blob = response.data;
+      const link = document.createElement("a");
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `incomplete-orders-${Date.now()}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(link.href);
+
+      toast.success("Incomplete orders exported successfully!");
+    } catch (error) {
+      toast.error("Failed to export incomplete orders");
+      console.error("Export error:", error);
+    }
+  };
+
+  const handleIncompleteOrderSelectFromCallLog = (order) => {
+    setShowCallLogModal(false);
+    setInitialOrderForIncomplete(order);
+    setShowCreateIncompleteOrderModal(true);
   };
 
   const handleViewOrder = (order) => {
@@ -483,6 +650,14 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
       gradient: "linear-gradient(135deg, #667eea, #764ba2)",
       color: "#667eea",
       bgColor: "#f0f4ff",
+    },
+    {
+      title: "Incomplete Orders",
+      value: incompleteStats.total,
+      icon: <Package size={24} />,
+      gradient: "linear-gradient(135deg, #f093fb, #f5576c)",
+      color: "#f5576c",
+      bgColor: "#fff0f5",
     },
      {
       title: "Replacement Total Logs",
@@ -756,6 +931,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
               onSearch={handleSearch} 
               onClear={handleClearSearch}
               onManualRequest={handleManualRequest}
+              onManualIncompleteRequest={handleManualIncompleteRequest}
             />
           </div>
 
@@ -894,12 +1070,69 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
             />
           </div>
 
+          {/* Incomplete Orders Section */}
+          <div style={{ marginBottom: "40px" }}>
+            <div className="section-header">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h4 className="section-title">
+                  Incomplete Orders
+                </h4>
+                <div className="action-buttons" style={{ display: "flex", gap: "12px" }}>
+                  <Button
+                    className="action-btn refresh-btn"
+                    onClick={handleRefreshIncompleteOrders}
+                    disabled={refreshingIncompleteOrders}
+                  >
+                    <RefreshCw size={16} className={refreshingIncompleteOrders ? "fa-spin" : ""} />
+                    {refreshingIncompleteOrders ? "Refreshing..." : "Refresh"}
+                  </Button>
+                  <Button
+                    className="action-btn export-btn"
+                    onClick={handleExportIncompleteOrders}
+                  >
+                    <Download size={16} />
+                    Export
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Incomplete Orders Filters */}
+            <IncompleteOrdersFilters
+              search={incompleteSearch}
+              setSearch={setIncompleteSearch}
+              statusFilter={incompleteStatusFilter}
+              setStatusFilter={setIncompleteStatusFilter}
+              productCategoryFilter={incompleteProductCategoryFilter}
+              setProductCategoryFilter={setIncompleteProductCategoryFilter}
+              startDate={incompleteStartDate}
+              setStartDate={setIncompleteStartDate}
+              endDate={incompleteEndDate}
+              setEndDate={setIncompleteEndDate}
+              userRole={userRole}
+              filteredCount={incompleteStats.total}
+            />
+
+            <IncompleteOrdersTable
+              orders={incompleteOrders}
+              onView={handleViewIncompleteOrder}
+              onEdit={handleEditIncompleteOrder}
+              onDelete={handleDeleteIncompleteOrder}
+              loading={incompleteOrdersLoading}
+              page={incompletePage}
+              setPage={setIncompletePage}
+              totalPages={incompleteTotalPages}
+              totalRecords={incompleteStats.total}
+            />
+          </div>
+
           {/* Modals */}
           <CallLogModal
             isOpen={showCallLogModal}
             onClose={() => setShowCallLogModal(false)}
             order={selectedOrder}
             onSuccess={handleCallLogSuccess}
+            onIncompleteOrderSelect={handleIncompleteOrderSelectFromCallLog}
           />
 
           <ViewServiceLog
@@ -928,6 +1161,17 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
             onSuccess={handleManualRequestSuccess}
           />
 
+          <CreateIncompleteOrderModal
+            isOpen={showCreateIncompleteOrderModal}
+            onClose={() => {
+              setShowCreateIncompleteOrderModal(false);
+              setInitialOrderForIncomplete(null);
+            }}
+            onSuccess={handleIncompleteOrderSuccess}
+            initialOrder={initialOrderForIncomplete}
+            userRole={userRole}
+          />
+
           {/* Replacement/Demo Log Modals */}
           <ViewReplacementDemoLog
             isOpen={showViewReplacementDemoLog}
@@ -948,6 +1192,27 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
             onClose={() => setShowDeleteReplacementDemoLog(false)}
             log={selectedReplacementDemoLog}
             onDelete={handleConfirmDeleteReplacementDemoLog}
+          />
+
+          {/* Incomplete Orders Modals */}
+          <ViewIncompleteOrderModal
+            isOpen={showViewIncompleteOrder}
+            onClose={() => setShowViewIncompleteOrder(false)}
+            order={selectedIncompleteOrder}
+          />
+
+          <EditIncompleteOrderModal
+            isOpen={showEditIncompleteOrder}
+            onClose={() => setShowEditIncompleteOrder(false)}
+            order={selectedIncompleteOrder}
+            onUpdate={handleIncompleteOrderUpdate}
+          />
+
+          <DeleteIncompleteOrderModal
+            isOpen={showDeleteIncompleteOrder}
+            onClose={() => setShowDeleteIncompleteOrder(false)}
+            order={selectedIncompleteOrder}
+            onDelete={handleConfirmDeleteIncompleteOrder}
           />
 
           {/* Rejection Reason Modal */}

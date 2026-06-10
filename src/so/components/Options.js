@@ -122,10 +122,7 @@ export const productOptions = {
   },
   "Document Camera": {
     sizes: ["N/A"],
-    specs: [
-      "Hydraulic Wall Mount Visualizer",
-      "Visualizer",
-    ],
+    specs: ["Hydraulic Wall Mount Visualizer", "Visualizer"],
   },
   UPS: {
     sizes: ["Standard"],
@@ -136,7 +133,8 @@ export const productOptions = {
     specs: ["Standard"],
   },
   "Stylus Pen": { sizes: ["N/A"], specs: ["N/A"] },
-  "Dual sliding shutter": { sizes: ["65 inch", "75 inch", "86 inch", "98 inch"],
+  "Dual sliding shutter": {
+    sizes: ["65 inch", "75 inch", "86 inch", "98 inch"],
     specs: [
       "Common",
       "White Writing Board & Blue Display Board",
@@ -147,7 +145,8 @@ export const productOptions = {
       "Both Side Main & Display White Writing Board",
       "White Writing Board (Main) & Green Writing Board (Display)",
       "One White Writing & One Green Writing Board with red display board",
-    ], },
+    ],
+  },
   "Single Sliding Shutter": {
     sizes: ["65 inch", "75 inch", "86 inch", "98 inch"],
     specs: [
@@ -279,7 +278,7 @@ export const productOptions = {
     ],
   },
   "Google TV": {
-    sizes: ["43 inch", "50 inch", "55 inch", "75 inch","86 inch"],
+    sizes: ["43 inch", "50 inch", "55 inch", "75 inch", "86 inch"],
     specs: ["4GB RAM / 32GB ROM 4K"],
   },
   "Wriety Software": { sizes: ["N/A"], specs: ["N/A"] },
@@ -291,7 +290,7 @@ export const productOptions = {
     sizes: ["65 inch", "75 inch", "86 inch", "98 inch"],
     specs: ["Plain", "White Boards", "Green Boards"],
   },
-   "K-12 Content": {
+  "K-12 Content": {
     sizes: ["Standard"],
     specs: ["Standard"],
   },
@@ -1277,7 +1276,7 @@ export const salesPersonlist = [
   { label: "Gem Team", value: "Gem Team" },
   { label: "Gurnam Bhullar", value: "Gurnam Bhullar" },
   { label: "Harish Kumar", value: "Harish Kumar" },
-  { label: "Heena Mehra", value:"Heena Mehra"},
+  { label: "Heena Mehra", value: "Heena Mehra" },
   { label: "Harpreet Singh", value: "Harpeet Singh" }, // Old DB value (typo)
   { label: "J P Sharma", value: "J P Sharma" },
   { label: "Jagan Lal", value: "Jagan Lal" },
@@ -1334,6 +1333,7 @@ export const salesPersonlist = [
   { label: "Seema", value: "Seema" },
   { label: "Vageesh Bhardwaj", value: "Vageesh Bhardwaj" },
   { label: "Varun Budhiraja", value: "Varun Budhiraja" },
+  { label: "Virender Kumar", value: "Virender Kumar" },
   { label: "Vaseem Khan", value: "Vaseem Khan" },
 ];
 
@@ -1350,6 +1350,7 @@ export const Reportinglist = [
   { label: "J P Sharma", value: "J P Sharma" },
   { label: "Manjit Singh Chowhan", value: "Manjit Singh Chowhan" },
   { label: "Mukul Kubba", value: "Mukul Kubba" },
+  { label: "Narinder Singh", value: "Narinder Singh" },
   { label: "PS Brar", value: "PS Brar" },
   { label: "Priya Sharma", value: "Priya Sharma" },
   { label: "Purnendu Kumar", value: "Purnendu Kumar" },
@@ -1570,5 +1571,3 @@ export const productCode = [
   "859K01543",
   "052K15520",
 ];
-
-

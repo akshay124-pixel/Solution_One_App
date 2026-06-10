@@ -1019,6 +1019,7 @@ export const Reportinglist = [
   "Rajeev Pal Singh",
   "Sahil Gupta",
   "Susheel Kumar",
+  "Savita Mamgain",
   "Sukhvir Singh",
   "Savir Khan",
   "Sukhjinder Pal Singh",

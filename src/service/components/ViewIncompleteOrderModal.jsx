@@ -1,17 +1,59 @@
-import React, { useEffect, useRef } from "react";
-import { Modal, Badge, Alert, Accordion, Button } from "react-bootstrap";
-import { User, Calendar, Clock, History, X, Eye, FileText, Download, Package } from "lucide-react";
+import React, { useEffect, useRef, useState, Suspense } from "react";
+import { Modal, Badge, Alert, Accordion, Button, Spinner } from "react-bootstrap";
+import { User, Calendar, Clock, History, X, Eye, FileText, Download, Package, ShoppingCart, ExternalLink } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { toast } from "react-toastify";
 import serviceApi from "../axiosSetup";
 
+// Lazy-load sales order view components (same pattern as ViewReplacementDemoLog)
+const SOViewEntry = React.lazy(() => import("../../so/components/ViewEntry"));
+const FurniViewEntry = React.lazy(() => import("../../furni/components/ViewEntry"));
+
 const ViewIncompleteOrderModal = ({ isOpen, onClose, order }) => {
   const modalBodyRef = useRef(null);
 
+  // Sales order lookup state
+  const [saleOrder, setSaleOrder] = useState(null);
+  const [saleOrderLoading, setSaleOrderLoading] = useState(false);
+  const [saleOrderChecked, setSaleOrderChecked] = useState(false);
+  const [showSaleOrder, setShowSaleOrder] = useState(false);
+
+  // Fetch sales order whenever the modal opens with a new order
   useEffect(() => {
-    // Component is now read-only, no state management needed
-  }, [order]);
+    if (isOpen && order?.orderId) {
+      setSaleOrder(null);
+      setSaleOrderChecked(false);
+      setShowSaleOrder(false);
+      fetchSaleOrder(order.orderId);
+    }
+    // Reset when closed
+    if (!isOpen) {
+      setSaleOrder(null);
+      setSaleOrderChecked(false);
+      setShowSaleOrder(false);
+    }
+  }, [isOpen, order?.orderId]);
+
+  const fetchSaleOrder = async (orderId) => {
+    setSaleOrderLoading(true);
+    try {
+      const res = await serviceApi.get(`/search-orders?orderId=${encodeURIComponent(orderId)}`);
+      if (res.data.success && res.data.orders?.length > 0) {
+        // Prefer an exact match first, then fall back to first result
+        const exact = res.data.orders.find(
+          (o) => o.orderId?.toLowerCase() === orderId.toLowerCase()
+        );
+        setSaleOrder(exact || res.data.orders[0]);
+      }
+    } catch (err) {
+      // Silently ignore — the button simply won't appear
+      console.warn("Sales order lookup failed:", err.message);
+    } finally {
+      setSaleOrderLoading(false);
+      setSaleOrderChecked(true);
+    }
+  };
 
   const handleDownloadPDF = async () => {
     if (!modalBodyRef.current) return;
@@ -180,12 +222,22 @@ const ViewIncompleteOrderModal = ({ isOpen, onClose, order }) => {
   };
 
   const handleClose = () => {
+    setSaleOrder(null);
+    setSaleOrderChecked(false);
+    setShowSaleOrder(false);
     onClose();
   };
 
   if (!order) return null;
 
   return (
+    <>
+    <style>{`
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `}</style>
     <Modal 
       show={isOpen} 
       onHide={handleClose} 
@@ -239,6 +291,61 @@ const ViewIncompleteOrderModal = ({ isOpen, onClose, order }) => {
               </p>
             </div>
             <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              {/* View Sales Order button — shown only when a linked order exists */}
+              {saleOrderChecked && saleOrder && (
+                <button
+                  onClick={() => setShowSaleOrder(true)}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.2)",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "8px 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    color: "white",
+                    backdropFilter: "blur(10px)",
+                    transition: "all 0.2s ease",
+                    gap: "8px",
+                    fontSize: "0.85rem",
+                    fontWeight: "600"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
+                  }}
+                  title="View linked sales order"
+                >
+                  <ShoppingCart size={18} />
+                  <span>View Order</span>
+                </button>
+              )}
+              {/* Spinner while checking for linked order */}
+              {saleOrderLoading && (
+                <div style={{
+                  background: "rgba(255, 255, 255, 0.15)",
+                  borderRadius: "8px",
+                  padding: "8px 12px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "0.85rem",
+                  color: "rgba(255,255,255,0.8)"
+                }}>
+                  <div style={{
+                    width: "16px",
+                    height: "16px",
+                    border: "2px solid rgba(255,255,255,0.4)",
+                    borderTop: "2px solid white",
+                    borderRadius: "50%",
+                    animation: "spin 0.8s linear infinite"
+                  }} />
+                  <span>Checking order...</span>
+                </div>
+              )}
               <button
                 onClick={handleDownloadPDF}
                 style={{
@@ -640,7 +747,7 @@ const ViewIncompleteOrderModal = ({ isOpen, onClose, order }) => {
                     gap: "8px"
                   }}>
                     <Package size={18} />
-                    Pending Parts ({order.pendingParts.length})
+                    Pending Products ({order.pendingParts.length})
                   </h6>
                   <div style={{ display: "grid", gap: "8px" }}>
                     {order.pendingParts.map((part, index) => (
@@ -876,10 +983,150 @@ const ViewIncompleteOrderModal = ({ isOpen, onClose, order }) => {
                 </Accordion>
               </div>
             )}
+
+            {/* ── Linked Sales Order Banner ─────────────────────────────── */}
+            {saleOrderChecked && saleOrder && (
+              <div style={{
+                marginTop: "24px",
+                padding: "16px 20px",
+                background: "linear-gradient(135deg, #f0fdf4, #dcfce7)",
+                border: "1px solid #86efac",
+                borderRadius: "12px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "16px",
+                flexWrap: "wrap"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div style={{
+                    width: "40px",
+                    height: "40px",
+                    borderRadius: "10px",
+                    background: "linear-gradient(135deg, #22c55e, #16a34a)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0
+                  }}>
+                    <ShoppingCart size={20} color="white" />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: "700", color: "#15803d", fontSize: "0.95rem" }}>
+                      Sales Order Found
+                    </div>
+                    <div style={{ fontSize: "0.8rem", color: "#166534", marginTop: "2px" }}>
+                      Order ID: <strong>{saleOrder.orderId}</strong>
+                      {saleOrder.customername && (
+                        <span style={{ marginLeft: "10px" }}>
+                          Customer: <strong>{saleOrder.customername}</strong>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowSaleOrder(true)}
+                  style={{
+                    background: "linear-gradient(135deg, #22c55e, #16a34a)",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "10px 20px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    color: "white",
+                    fontWeight: "700",
+                    fontSize: "0.875rem",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    boxShadow: "0 2px 8px rgba(22, 163, 74, 0.3)",
+                    flexShrink: 0
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(22, 163, 74, 0.4)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(22, 163, 74, 0.3)";
+                  }}
+                >
+                  <ExternalLink size={16} />
+                  View Sales Order
+                </button>
+              </div>
+            )}
+
+            {/* No linked order indicator (only show when orderId exists but no match found) */}
+            {saleOrderChecked && !saleOrder && order?.orderId && (
+              <div style={{
+                marginTop: "24px",
+                padding: "12px 16px",
+                background: "#fef9f0",
+                border: "1px solid #fed7aa",
+                borderRadius: "10px",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                fontSize: "0.8rem",
+                color: "#9a3412"
+              }}>
+                <ShoppingCart size={16} style={{ flexShrink: 0, opacity: 0.6 }} />
+                <span>
+                  No sales order found for Order ID <strong>{order.orderId}</strong> in the database.
+                </span>
+              </div>
+            )}
           </div>
         </Modal.Body>
       </div>
     </Modal>
+
+    {/* ── Sales Order Viewer (lazy loaded, same pattern as ViewReplacementDemoLog) ── */}
+    {showSaleOrder && saleOrder && (
+      <Suspense
+        fallback={
+          <div style={{
+            position: "fixed",
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999
+          }}>
+            <div style={{
+              background: "white",
+              padding: "40px",
+              borderRadius: "12px",
+              textAlign: "center",
+              boxShadow: "0 10px 40px rgba(0,0,0,0.3)"
+            }}>
+              <Spinner animation="border" variant="primary" style={{ width: "50px", height: "50px" }} />
+              <p style={{ marginTop: "20px", color: "#6b7280", fontSize: "1rem", fontWeight: "500" }}>
+                Loading sales order...
+              </p>
+            </div>
+          </div>
+        }
+      >
+        {saleOrder.systemType === "furniture" ? (
+          <FurniViewEntry
+            isOpen={showSaleOrder}
+            onClose={() => setShowSaleOrder(false)}
+            entry={saleOrder}
+          />
+        ) : (
+          <SOViewEntry
+            isOpen={showSaleOrder}
+            onClose={() => setShowSaleOrder(false)}
+            entry={saleOrder}
+          />
+        )}
+      </Suspense>
+    )}
+    </>
   );
 };
 

@@ -510,129 +510,131 @@ const EditIncompleteOrderModal = ({ isOpen, onClose, order, onUpdate }) => {
                   </Form.Select>
                 </Form.Group>
               )}
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "12px",
-                  marginBottom: "16px",
-                }}
-              >
-                <Form.Group>
-                  <Form.Label
+              {["Dispatched", "Delivered", "Closed"].includes(status) && (
+                <>
+                  <div
                     style={{
-                      fontWeight: "500",
-                      color: "#374151",
-                      fontSize: "0.875rem",
-                      marginBottom: "6px",
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "12px",
+                      marginBottom: "16px",
                     }}
                   >
-                    Transporter Name
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={transporterName}
-                    onChange={(e) => setTransporterName(e.target.value)}
-                    placeholder="Enter transporter name..."
-                    style={{
-                      borderRadius: "8px",
-                      border: "1px solid #d1d5db",
-                      padding: "10px 12px",
-                      fontSize: "0.875rem",
-                      transition:
-                        "border-color 0.15s ease, box-shadow 0.15s ease",
-                      background: "white",
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = "#059669";
-                      e.target.style.boxShadow =
-                        "0 0 0 3px rgba(5, 150, 105, 0.1)";
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = "#d1d5db";
-                      e.target.style.boxShadow = "none";
-                    }}
-                  />
-                </Form.Group>
+                    <Form.Group>
+                      <Form.Label
+                        style={{
+                          fontWeight: "500",
+                          color: "#374151",
+                          fontSize: "0.875rem",
+                          marginBottom: "6px",
+                        }}
+                      >
+                        Transporter Name
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={transporterName}
+                        onChange={(e) => setTransporterName(e.target.value)}
+                        placeholder="Enter transporter name..."
+                        style={{
+                          borderRadius: "8px",
+                          border: "1px solid #d1d5db",
+                          padding: "10px 12px",
+                          fontSize: "0.875rem",
+                          transition:
+                            "border-color 0.15s ease, box-shadow 0.15s ease",
+                          background: "white",
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = "#059669";
+                          e.target.style.boxShadow =
+                            "0 0 0 3px rgba(5, 150, 105, 0.1)";
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = "#d1d5db";
+                          e.target.style.boxShadow = "none";
+                        }}
+                      />
+                    </Form.Group>
 
-                <Form.Group>
-                  <Form.Label
-                    style={{
-                      fontWeight: "500",
-                      color: "#374151",
-                      fontSize: "0.875rem",
-                      marginBottom: "6px",
-                    }}
-                  >
-                    Docket Number
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={docketNumber}
-                    onChange={(e) => setDocketNumber(e.target.value)}
-                    placeholder="Enter docket number..."
-                    style={{
-                      borderRadius: "8px",
-                      border: "1px solid #d1d5db",
-                      padding: "10px 12px",
-                      fontSize: "0.875rem",
-                      transition:
-                        "border-color 0.15s ease, box-shadow 0.15s ease",
-                      background: "white",
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = "#059669";
-                      e.target.style.boxShadow =
-                        "0 0 0 3px rgba(5, 150, 105, 0.1)";
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = "#d1d5db";
-                      e.target.style.boxShadow = "none";
-                    }}
-                  />
-                </Form.Group>
-              </div>
+                    <Form.Group>
+                      <Form.Label
+                        style={{
+                          fontWeight: "500",
+                          color: "#374151",
+                          fontSize: "0.875rem",
+                          marginBottom: "6px",
+                        }}
+                      >
+                        Docket Number
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={docketNumber}
+                        onChange={(e) => setDocketNumber(e.target.value)}
+                        placeholder="Enter docket number..."
+                        style={{
+                          borderRadius: "8px",
+                          border: "1px solid #d1d5db",
+                          padding: "10px 12px",
+                          fontSize: "0.875rem",
+                          transition:
+                            "border-color 0.15s ease, box-shadow 0.15s ease",
+                          background: "white",
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = "#059669";
+                          e.target.style.boxShadow =
+                            "0 0 0 3px rgba(5, 150, 105, 0.1)";
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = "#d1d5db";
+                          e.target.style.boxShadow = "none";
+                        }}
+                      />
+                    </Form.Group>
+                  </div>
 
-              <Form.Group className="mb-3">
-                <Form.Label
-                  style={{
-                    fontWeight: "500",
-                    color: "#374151",
-                    fontSize: "0.875rem",
-                    marginBottom: "6px",
-                  }}
-                >
-                  Transporter Details
-                </Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={2}
-                  value={transporterDetails}
-                  onChange={(e) => setTransporterDetails(e.target.value)}
-                  placeholder="Enter transporter details..."
-                  style={{
-                    borderRadius: "8px",
-                    border: "1px solid #d1d5db",
-                    padding: "10px 12px",
-                    fontSize: "0.875rem",
-                    transition:
-                      "border-color 0.15s ease, box-shadow 0.15s ease",
-                    background: "white",
-                    resize: "vertical",
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = "#059669";
-                    e.target.style.boxShadow =
-                      "0 0 0 3px rgba(5, 150, 105, 0.1)";
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = "#d1d5db";
-                    e.target.style.boxShadow = "none";
-                  }}
-                />
-              </Form.Group>
-
+                  <Form.Group className="mb-3">
+                    <Form.Label
+                      style={{
+                        fontWeight: "500",
+                        color: "#374151",
+                        fontSize: "0.875rem",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      Transporter Details
+                    </Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={2}
+                      value={transporterDetails}
+                      onChange={(e) => setTransporterDetails(e.target.value)}
+                      placeholder="Enter transporter details..."
+                      style={{
+                        borderRadius: "8px",
+                        border: "1px solid #d1d5db",
+                        padding: "10px 12px",
+                        fontSize: "0.875rem",
+                        transition:
+                          "border-color 0.15s ease, box-shadow 0.15s ease",
+                        background: "white",
+                        resize: "vertical",
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = "#059669";
+                        e.target.style.boxShadow =
+                          "0 0 0 3px rgba(5, 150, 105, 0.1)";
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = "#d1d5db";
+                        e.target.style.boxShadow = "none";
+                      }}
+                    />
+                  </Form.Group>
+                </>
+              )}
               <Form.Group className="mb-3">
                 <Form.Label
                   style={{
@@ -707,7 +709,8 @@ const EditIncompleteOrderModal = ({ isOpen, onClose, order, onUpdate }) => {
                 <option value="Pending">Pending</option>
 
                 {(userRole?.toLowerCase() === "av_edtech_incomplete" ||
-                  userRole?.toLowerCase() === "furniture_incomplete" || userRole?.toLowerCase() === "globaladmin")  && (
+                  userRole?.toLowerCase() === "furniture_incomplete" ||
+                  userRole?.toLowerCase() === "globaladmin") && (
                   <>
                     <option value="In Progress">In Progress</option>
                     <option value="Dispatched">Dispatched</option>
@@ -716,8 +719,8 @@ const EditIncompleteOrderModal = ({ isOpen, onClose, order, onUpdate }) => {
                 )}
                 {(userRole?.toLowerCase() === "globaladmin" ||
                   userRole?.toLowerCase() === "superadmin") && (
-                    <option value="Closed">Closed</option>
-                  )}
+                  <option value="Closed">Closed</option>
+                )}
               </Form.Select>
             </Form.Group>
 
@@ -799,7 +802,7 @@ const EditIncompleteOrderModal = ({ isOpen, onClose, order, onUpdate }) => {
                   <span style={{ marginRight: "8px" }}>
                     <Package size={16} />
                   </span>
-                  Pending Parts
+                  Pending Products
                 </h6>
                 <Button
                   variant="outline-warning"
@@ -839,7 +842,7 @@ const EditIncompleteOrderModal = ({ isOpen, onClose, order, onUpdate }) => {
                         marginBottom: "4px",
                       }}
                     >
-                      Part Name
+                      Product Name
                     </Form.Label>
                     <Form.Control
                       type="text"
@@ -847,7 +850,7 @@ const EditIncompleteOrderModal = ({ isOpen, onClose, order, onUpdate }) => {
                       onChange={(e) =>
                         updatePendingPart(index, "partName", e.target.value)
                       }
-                      placeholder="Enter part name..."
+                      placeholder="Enter product name..."
                       style={{
                         borderRadius: "6px",
                         border: "1px solid #d1d5db",

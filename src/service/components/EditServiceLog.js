@@ -952,7 +952,7 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
             )}
 
             {/* Engineers and Call Type Section - Only show when Service Status is "In Progress" */}
-            {serviceStatus === "In Progress" && (
+            {(serviceStatus === "In Progress"  || serviceStatus === "Resolved" || serviceStatus === "Closed") && (
               <div style={{ 
                 marginBottom: "24px",
                 padding: "16px",

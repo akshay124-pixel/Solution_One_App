@@ -9,6 +9,8 @@ import html2canvas from "html2canvas";
 import { useRef } from "react";
 import { Spinner } from "react-bootstrap";
 import { salesPersonlist } from "./Options";
+// 🔥 EDIT HISTORY: Import the timeline component
+import EditHistoryTimeline from "./EditHistoryTimeline";
 
 // Helper function to get salesperson label from value
 const getSalesPersonLabel = (value) => {
@@ -879,6 +881,12 @@ function ViewEntry({ isOpen, onClose, entry }) {
       title: "🚚 Logistics & Installation",
       fields: logisticsInfoFields,
     },
+    {
+      eventKey: "6", // 🔥 NEW: Edit History Section
+      title: "📝 Edit History",
+      condition: true, // Always show section (component handles empty state)
+      isEditHistory: true, // Flag to identify this section for special rendering
+    },
   ].filter((section) => {
     if (section.condition !== undefined) return section.condition;
     return section.fields?.some(
@@ -1465,7 +1473,10 @@ function ViewEntry({ isOpen, onClose, entry }) {
                     boxShadow: "0 4px 15px rgba(0, 0, 0, 0.1)",
                   }}
                 >
-                  {section.eventKey === "2" ? (
+                  {/* 🔥 EDIT HISTORY: Special rendering for Edit History section */}
+                  {section.isEditHistory ? (
+                    <EditHistoryTimeline orderId={entry._id} />
+                  ) : section.eventKey === "2" ? (
                     isValidField(entry.products) ? (
                       entry.products.map((product, index) => (
                         <Card

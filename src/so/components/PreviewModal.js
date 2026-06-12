@@ -4,6 +4,8 @@ import { Download } from "lucide-react";
 import soApi from "../../so/axiosSetup";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { salesPersonlist } from "./Options";
+// 🔥 EDIT HISTORY: Import the timeline component
+import EditHistoryTimeline from "./EditHistoryTimeline";
 
 // Helper function to get salesperson label from value
 const getSalesPersonLabel = (value) => {
@@ -1049,6 +1051,13 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
               </p>
             </div>
           </div>
+          
+          {/* 🔥 EDIT HISTORY SECTION */}
+          <div className="invoice-section">
+            <h4 className="text-lg mb-3">📝 Edit History</h4>
+            <EditHistoryTimeline orderId={entry._id || entry.orderId} />
+          </div>
+
           <div className="footer-branding">
             <p className="font-semibold">Thank you for your business!</p>
             <p>

@@ -463,7 +463,7 @@ const CreateIncompleteOrderModal = ({ isOpen, onClose, onSuccess, initialOrder =
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
                 <h6 style={{ fontWeight: "600", color: "#92400e", fontSize: "0.875rem", margin: 0 }}>
                   <span style={{ marginRight: "8px" }}><Package size={16} /></span>
-                  Pending Parts
+                  Pending Products
                 </h6>
                 <Button
                   variant="outline-warning"
@@ -475,7 +475,7 @@ const CreateIncompleteOrderModal = ({ isOpen, onClose, onSuccess, initialOrder =
                     padding: "6px 12px"
                   }}
                 >
-                  + Add Part
+                  + Add Product
                 </Button>
               </div>
 
@@ -486,7 +486,7 @@ const CreateIncompleteOrderModal = ({ isOpen, onClose, onSuccess, initialOrder =
                   color: "#92400e",
                   fontSize: "0.875rem"
                 }}>
-                  No pending parts added. Click "+ Add Part" to add parts.
+                  No pending products added. Click "+ Add Product" to add parts.
                 </div>
               )}
               
@@ -509,13 +509,13 @@ const CreateIncompleteOrderModal = ({ isOpen, onClose, onSuccess, initialOrder =
                       fontSize: "0.75rem",
                       marginBottom: "4px"
                     }}>
-                      Part Name
+                      Product Name
                     </Form.Label>
                     <Form.Control
                       type="text"
                       value={part.partName}
                       onChange={(e) => updatePendingPart(index, "partName", e.target.value)}
-                      placeholder="Enter part name..."
+                      placeholder="Enter product name..."
                       style={{
                         borderRadius: "6px",
                         border: "1px solid #d1d5db",

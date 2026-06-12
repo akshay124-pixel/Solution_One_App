@@ -980,10 +980,10 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
               statusFilter={statusFilter}
               setStatusFilter={setStatusFilter}
               callTypeFilter={callTypeFilter}
-            setCallTypeFilter={setCallTypeFilter}
-            systemTypeFilter={systemTypeFilter}
-            setSystemTypeFilter={setSystemTypeFilter}
-            stateFilter={stateFilter}
+              setCallTypeFilter={setCallTypeFilter}
+              systemTypeFilter={systemTypeFilter}
+              setSystemTypeFilter={setSystemTypeFilter}
+              stateFilter={stateFilter}
               setStateFilter={setStateFilter}
               partReplacementStatusFilter={partReplacementStatusFilter}
               setPartReplacementStatusFilter={setPartReplacementStatusFilter}

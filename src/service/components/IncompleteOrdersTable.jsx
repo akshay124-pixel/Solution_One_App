@@ -333,7 +333,7 @@ const IncompleteOrdersTable = ({ orders, onView, onEdit, onDelete, loading, page
                 textAlign: "center",
                 border: "none",
                 color: "white"
-              }}>Pending Parts</th>
+              }}>Pending Products</th>
               <th style={{
                 padding: "10px 15px",
                 height: "50px",

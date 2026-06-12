@@ -16,6 +16,21 @@ import { getDirtyValues } from "../utils/formUtils"; // Import the Diff Utility
 import { statesAndCities } from "./Options";
 import { getFinancialYear } from "../../shared/financialYear";
 
+// 🔥 EDIT HISTORY: Browser-compatible UUID generator for audit requests
+const generateUUID = () => {
+  // Use native browser crypto.randomUUID if available (modern browsers)
+  if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  
+  // Fallback UUID v4 generator for older browsers
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 const StyledModal = styled(Modal)`
   .modal-content {
     border-radius: 12px;
@@ -233,6 +248,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   const [installationFile, setInstallationFile] = useState(null);
   const [fileError, setFileError] = useState("");
   const [installationFileError, setInstallationFileError] = useState("");
+  const [, forceUpdate] = useState(0);
   const [originalFormData, setOriginalFormData] = useState(initialFormData); // Store original state for diffing
   const [updateData, setUpdateData] = useState(initialUpdateData);
   const [view, setView] = useState("options");
@@ -286,6 +302,69 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
   const dispatchFrom = watch("dispatchFrom");
   const fulfillingStatus = watch("fulfillingStatus");
   const currentFinancialYear = getFinancialYear(watch("soDate") || entryToEdit?.soDate);
+  
+  // Watch fields for auto-calculation - use watch with subscribe for immediate updates
+  const [calculationTrigger, setCalculationTrigger] = useState(0);
+  
+  // Get form values directly for calculation
+  const formValues = watch();
+  const freightcs = formValues.freightcs || "";
+  const installation = formValues.installation || "";
+  const paymentCollected = formValues.paymentCollected || "";
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TOTAL CALCULATION LOGIC (Exactly same as AddEntry)
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  const calculateTotal = useCallback(() => {
+    // Get latest form values directly
+    const currentProducts = getValues("products") || [];
+    const currentFreight = Number(getValues("freightcs")) || 0;
+    const currentInstallation = Number(getValues("installation")) || 0;
+    
+    const subtotalWithGST = currentProducts.reduce((sum, product) => {
+      const qty = Number(product.qty) || 0;
+      const unitPrice = Number(product.unitPrice) || 0;
+      const gstRate =
+        product.gst === "including" ? 0 : Number(product.gst) || 0;
+
+      const base = qty * unitPrice;
+      const gst = base * (gstRate / 100);
+
+      return sum + base + gst;
+    }, 0);
+
+    return Math.round(subtotalWithGST + currentFreight + currentInstallation);
+  }, [getValues]);
+
+  const calculatePaymentDue = useCallback((paymentCollectedAmount) => {
+    const total = calculateTotal();
+    const due = total - paymentCollectedAmount;
+    return Number(due.toFixed(2));
+  }, [calculateTotal]);
+  
+  // Auto-update total and paymentDue in form fields when calculation inputs change
+  useEffect(() => {
+    if (isOpen && calculationTrigger > 0) {
+      // Calculate new values using latest form data
+      const newTotal = calculateTotal();
+      const currentPaymentCollected = Number(getValues("paymentCollected")) || 0;
+      const newPaymentDue = calculatePaymentDue(currentPaymentCollected);
+      
+      // Get current values to avoid unnecessary updates
+      const currentTotal = getValues("total");
+      const currentPaymentDue = getValues("paymentDue");
+      
+      // Only update if value actually changed (avoid infinite loops)
+      if (String(currentTotal) !== String(newTotal)) {
+        setValue("total", newTotal.toString(), { shouldDirty: true, shouldValidate: false });
+      }
+      
+      if (String(currentPaymentDue) !== String(newPaymentDue)) {
+        setValue("paymentDue", newPaymentDue.toString(), { shouldDirty: true, shouldValidate: false });
+      }
+    }
+  }, [calculationTrigger, isOpen, calculateTotal, calculatePaymentDue, setValue, getValues]);
 
   useEffect(() => {
     if (isOpen && entryToEdit) {
@@ -615,6 +694,10 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
     }
     setLoading(true);
     try {
+      // ═══════════════════════════════════════════════════════════════════
+      // 🔥 EDIT HISTORY: Generate auditSource and requestId for Full Details
+      // ═══════════════════════════════════════════════════════════════════
+      
       const submissionData = {
         soDate: data.soDate ? new Date(data.soDate) : undefined,
         dispatchFrom: data.dispatchFrom || null,
@@ -657,10 +740,10 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
           brand: p.brand || null,
           warranty: p.warranty || null,
         })),
-        total: data.total ? Number(data.total) : undefined,
+        total: data.total ? Number(data.total) : undefined, // Use form value (auto-filled or manually edited)
         paymentCollected: data.paymentCollected || null,
         paymentMethod: data.paymentMethod || null,
-        paymentDue: data.paymentDue || null,
+        paymentDue: data.paymentDue ? Number(data.paymentDue) : null, // Use form value (auto-filled or manually edited)
         paymentTerms: data.paymentTerms || null,
         creditDays: data.creditDays || null,
         neftTransactionId: data.neftTransactionId || null,
@@ -707,9 +790,11 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
           : null,
         remarks: data.remarks || null,
         sostatus: data.sostatus || "Pending for Approval",
-
-        stockStatus: data.stockStatus || "In Stock",
+        stockStatus: data.stockStatus || "In Stock"
       };
+
+      // Note: auditSource and requestId are added explicitly in API calls below,
+      // not in submissionData to avoid dirty field conflicts
 
       // ---------------------------------------------------------
       // PATCH REFACTOR: Only send changed fields
@@ -743,6 +828,11 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
             }
           }
         });
+        
+        // ▼ 🔥 EDIT HISTORY: Always append auditSource and requestId (not part of dirty check)
+        formDataPayload.append("auditSource", "EDIT_FULL_DETAILS");
+        formDataPayload.append("requestId", generateUUID());
+        
         // Add keepAttachments
         formDataPayload.append("keepAttachments", JSON.stringify(keepAttachments));
         // Add new files
@@ -773,6 +863,10 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
             finalPayload[key] = submissionData[key];
           }
         });
+        
+        // ▼ 🔥 EDIT HISTORY: Always include auditSource and requestId (not part of dirty check)
+        finalPayload.auditSource = "EDIT_FULL_DETAILS";
+        finalPayload.requestId = generateUUID();
 
         response = await soApi.patch(
           `/api/edit/${entryToEdit._id}`,
@@ -2162,6 +2256,9 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
                         onChange={(e) => {
                           const value = e.target.value.replace(/[^0-9]/g, "");
                           e.target.value = value;
+                          // Update form value immediately for real-time calculation
+                          setValue(`products.${index}.qty`, value, { shouldValidate: false, shouldDirty: true });
+                          setCalculationTrigger(prev => prev + 1); // Trigger recalculation
                           debouncedHandleInputChange(
                             `products.${index}.qty`,
                             value,
@@ -2250,6 +2347,9 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
                           if (!/^\d*\.?\d{0,4}$/.test(value)) return;
 
                           e.target.value = value;
+                          // Update form value immediately for real-time calculation
+                          setValue(`products.${index}.unitPrice`, value, { shouldValidate: false, shouldDirty: true });
+                          setCalculationTrigger(prev => prev + 1); // Trigger recalculation
                           debouncedHandleInputChange(
                             `products.${index}.unitPrice`,
                             value,
@@ -2572,8 +2672,15 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
             Add ➕
           </StyledButton>
         </div>
-        <Form.Group controlId="total">
-          <Form.Label>💵 Total *</Form.Label>
+        
+        {/* Total Field - Auto-calculated but editable */}
+        <Form.Group controlId="total" style={{ marginBottom: "1rem" }}>
+          <Form.Label>
+            💵 Total Amount *
+            <small style={{ color: "#10b981", fontSize: "0.85rem", marginLeft: "0.5rem", fontWeight: "600" }}>
+              ✨ Auto-calculated
+            </small>
+          </Form.Label>
           <Form.Control
             type="tel"
             {...register("total", {
@@ -2584,27 +2691,23 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
               },
               min: { value: 0, message: "Total cannot be negative" },
             })}
-            onChange={(e) => {
-              // Only allow numbers and decimal point
-              const value = e.target.value.replace(/[^0-9.]/g, "");
-              // Ensure only one decimal point and max 2 decimal places
-              const parts = value.split(".");
-              if (parts.length > 2) {
-                e.target.value = parts[0] + "." + parts[1].slice(0, 2);
-              } else if (parts.length === 2 && parts[1].length > 2) {
-                e.target.value = parts[0] + "." + parts[1].slice(0, 2);
-              } else {
-                e.target.value = value;
-              }
-              debouncedHandleInputChange("total", e.target.value);
-            }}
             isInvalid={!!errors.total}
-            placeholder="e.g., 10000.50"
+            placeholder="Auto-calculated from products"
+            style={{
+              backgroundColor: "#f0fdf4",
+              fontWeight: "600",
+              fontSize: "1rem",
+              border: "2px solid #86efac"
+            }}
           />
           <Form.Control.Feedback type="invalid">
             {errors.total?.message}
           </Form.Control.Feedback>
+          <small style={{ color: "#64748b", fontSize: "0.85rem" }}>
+            Automatically calculated from product details, freight, and installation charges. Manual override supported for special pricing adjustments.
+          </small>
         </Form.Group>
+        
         <Form.Group controlId="paymentCollected">
           <Form.Label>💰 Payment Collected</Form.Label>
           <Form.Control
@@ -2625,6 +2728,9 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
               } else {
                 e.target.value = value;
               }
+              // Update form value immediately for real-time calculation
+              setValue("paymentCollected", e.target.value, { shouldValidate: false, shouldDirty: true });
+              setCalculationTrigger(prev => prev + 1); // Trigger recalculation
               debouncedHandleInputChange("paymentCollected", e.target.value);
             }}
             isInvalid={!!errors.paymentCollected}
@@ -2682,8 +2788,15 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
             {errors.chequeId?.message}
           </Form.Control.Feedback>
         </Form.Group>
-        <Form.Group controlId="paymentDue">
-          <Form.Label>💰 Payment Due</Form.Label>
+        
+        {/* Payment Due Field - Auto-calculated but editable */}
+        <Form.Group controlId="paymentDue" style={{ marginBottom: "1rem" }}>
+          <Form.Label>
+            💰 Payment Due
+            <small style={{ color: "#10b981", fontSize: "0.85rem", marginLeft: "0.5rem", fontWeight: "600" }}>
+              ✨ Auto-calculated
+            </small>
+          </Form.Label>
           <Form.Control
             type="tel"
             {...register("paymentDue", {
@@ -2692,25 +2805,30 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
                 message: "Payment Due must be a valid number",
               },
             })}
-            onChange={(e) => {
-              // Only allow numbers and decimal point
-              const value = e.target.value.replace(/[^0-9.]/g, "");
-              // Ensure only one decimal point
-              const parts = value.split(".");
-              if (parts.length > 2) {
-                e.target.value = parts[0] + "." + parts.slice(1).join("");
-              } else {
-                e.target.value = value;
-              }
-              debouncedHandleInputChange("paymentDue", e.target.value);
-            }}
             isInvalid={!!errors.paymentDue}
-            placeholder="e.g., 2000"
+            placeholder="Auto-calculated: Total - Payment Collected"
+            style={{
+              backgroundColor: paymentCollected > 0 && calculatePaymentDue(Number(paymentCollected) || 0) <= 0 
+                ? "#dcfce7" 
+                : "#fef3c7",
+              fontWeight: "600",
+              fontSize: "1rem",
+              color: paymentCollected > 0 && calculatePaymentDue(Number(paymentCollected) || 0) <= 0 
+                ? "#15803d" 
+                : "#b45309",
+              border: paymentCollected > 0 && calculatePaymentDue(Number(paymentCollected) || 0) <= 0 
+                ? "2px solid #86efac" 
+                : "2px solid #fcd34d"
+            }}
           />
           <Form.Control.Feedback type="invalid">
             {errors.paymentDue?.message}
           </Form.Control.Feedback>
+          <small style={{ color: "#64748b", fontSize: "0.85rem" }}>
+            Automatically computed as Total Amount minus Payment Collected. Editable for custom payment terms or adjustments.
+          </small>
         </Form.Group>
+        
         <Form.Group controlId="paymentTerms">
           <Form.Label>📝 Payment Terms</Form.Label>
           <Controller
@@ -2780,6 +2898,9 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
               } else {
                 e.target.value = value;
               }
+              // Update form value immediately for real-time calculation
+              setValue("freightcs", e.target.value, { shouldValidate: false, shouldDirty: true });
+              setCalculationTrigger(prev => prev + 1); // Trigger recalculation
               debouncedHandleInputChange("freightcs", e.target.value);
             }}
             isInvalid={!!errors.freightcs}
@@ -2896,6 +3017,9 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
               } else {
                 e.target.value = value;
               }
+              // Update form value immediately for real-time calculation
+              setValue("installation", e.target.value, { shouldValidate: false, shouldDirty: true });
+              setCalculationTrigger(prev => prev + 1); // Trigger recalculation
               debouncedHandleInputChange("installation", e.target.value);
             }}
             isInvalid={!!errors.installation}

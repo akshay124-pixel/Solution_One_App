@@ -6,6 +6,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 
 import { PortalAuthProvider } from "./portal/PortalAuthContext";
 import AppRouter from "./portal/AppRouter";
+import { OfflineBanner } from "./components/OfflineBanner";
 
 // SO axios interceptors (token attachment + 401 handling for SO components)
 import "./so/axiosSetup";
@@ -15,6 +16,7 @@ function App() {
     <Router>
       <PortalAuthProvider>
         <ToastContainer />
+        <OfflineBanner />
         <AppRouter />
       </PortalAuthProvider>
     </Router>

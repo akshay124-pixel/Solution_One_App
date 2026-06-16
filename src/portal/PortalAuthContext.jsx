@@ -139,7 +139,17 @@ export const refreshPortalToken = async () => {
       }
       throw new Error("Refresh failed");
     })
-    .catch((err) => { setPortalAccessToken(null); throw err; })
+    .catch((err) => { 
+      setPortalAccessToken(null);
+      // Enhanced error information for better handling
+      const isNetworkError = err.code === 'ERR_NETWORK' || err.code === 'ECONNABORTED' || err.message === 'Network Error';
+      const isSessionExpired = err.response?.status === 401 || err.response?.status === 403;
+      const enhancedError = new Error(err.message || 'Token refresh failed');
+      enhancedError.isNetworkError = isNetworkError;
+      enhancedError.isSessionExpired = isSessionExpired;
+      enhancedError.originalError = err;
+      throw enhancedError;
+    })
     .finally(() => { _refreshPromise = null; });
   return _refreshPromise;
 };

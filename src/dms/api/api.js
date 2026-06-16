@@ -4,6 +4,7 @@
  * Base URL points to /api/dms on the unified server.
  */
 import axios from "axios";
+import axiosRetry from "axios-retry";
 import { getPortalAccessToken, setPortalAccessToken } from "../../portal/PortalAuthContext";
 
 
@@ -11,8 +12,32 @@ const BASE_URL = (process.env.REACT_APP_PORTAL_URL || "http://localhost:5050") +
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 120000,
+  timeout: 30000, // 30 seconds - standard requests (reduced from 120s)
   headers: { "Content-Type": "application/json" },
+});
+
+// ── Axios Retry Configuration ────────────────────────────────────────────────
+axiosRetry(api, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    if (axiosRetry.isNetworkOrIdempotentRequestError(error)) {
+      return true;
+    }
+    if (error.code === 'ECONNABORTED') {
+      return true;
+    }
+    if (error.response?.status >= 500 && error.response?.status <= 599) {
+      return true;
+    }
+    if (error.response?.status === 408 || error.response?.status === 429) {
+      return true;
+    }
+    return false;
+  },
+  onRetry: (retryCount, error, requestConfig) => {
+    console.log(`[DMS API Retry] Attempt ${retryCount} for ${requestConfig.url}`);
+  },
 });
 
 let isRefreshing = false;
@@ -67,12 +92,38 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        window.location.href = "/login";
+        
+        // CRITICAL: Only logout on actual session expiry, NOT on network errors
+        const isNetworkError = refreshError.code === 'ERR_NETWORK' || refreshError.code === 'ECONNABORTED' || refreshError.message === 'Network Error';
+        const isSessionExpired = refreshError.response?.status === 401 || refreshError.response?.status === 403;
+        
+        if (isNetworkError) {
+          console.warn('[DMS API] Token refresh failed due to network error - NOT logging out');
+          // Don't redirect to login on network errors
+          return Promise.reject(refreshError);
+        }
+        
+        // Only redirect to login when session is actually expired
+        if (isSessionExpired) {
+          window.location.href = "/login";
+        } else {
+          // Other errors - redirect to login
+          window.location.href = "/login";
+        }
+        
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
     }
+    
+    // Add network error handling
+    const isNetwork = error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED' || error.message === 'Network Error';
+    if (isNetwork) {
+      console.error('[DMS API] Network error:', error);
+      // Let the error propagate for component-level handling
+    }
+    
     return Promise.reject(error);
   }
 );

@@ -3,6 +3,7 @@
  * Token is read from in-memory PortalAuthContext
  */
 import axios from "axios";
+import axiosRetry from "axios-retry";
 import { toast } from "react-toastify";
 import {
   refreshPortalToken,
@@ -17,6 +18,31 @@ export const BASE_URL =
 const serviceApi = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
+  timeout: 30000, // 30 seconds - prevents infinite hangs on slow networks
+});
+
+// ── Axios Retry Configuration ────────────────────────────────────────────────
+axiosRetry(serviceApi, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    if (axiosRetry.isNetworkOrIdempotentRequestError(error)) {
+      return true;
+    }
+    if (error.code === 'ECONNABORTED') {
+      return true;
+    }
+    if (error.response?.status >= 500 && error.response?.status <= 599) {
+      return true;
+    }
+    if (error.response?.status === 408 || error.response?.status === 429) {
+      return true;
+    }
+    return false;
+  },
+  onRetry: (retryCount, error, requestConfig) => {
+    console.log(`[Service API Retry] Attempt ${retryCount} for ${requestConfig.url}`);
+  },
 });
 
 // ── Request interceptor: attach in-memory portal token ────────────────────────
@@ -68,9 +94,20 @@ serviceApi.interceptors.response.use(
         setPortalAccessToken(result.accessToken);
         originalRequest.headers = originalRequest.headers || {};
         originalRequest.headers.Authorization = `Bearer ${result.accessToken}`;
+        originalRequest._tokenAlreadySet = true; // Prevent double token attachment
         return serviceApi(originalRequest);
-      } catch (_) {
-        forceLogout("Session expired. Please log in again.");
+      } catch (refreshError) {
+        // CRITICAL: Only logout on actual session expiry, NOT on network errors
+        if (refreshError.isNetworkError) {
+          console.warn('[Service API] Token refresh failed due to network error - NOT logging out');
+          // Don't show toast here - OfflineBanner will handle it
+          return Promise.reject(error);
+        }
+        if (refreshError.isSessionExpired) {
+          forceLogout("Session expired. Please log in again.");
+        } else {
+          forceLogout("Authentication error. Please log in again.");
+        }
         return Promise.reject(error);
       }
     }
@@ -79,7 +116,8 @@ serviceApi.interceptors.response.use(
     let displayMessage = "";
 
     if (isNetwork) {
-      displayMessage = "Connection lost. Please check your internet.";
+      // Don't show toast for network errors - OfflineBanner will handle it
+      displayMessage = "";
     } else if (status === 413) {
       displayMessage = "File too large. Please upload a smaller file.";
     } else if (status === 403) {

@@ -4,6 +4,7 @@
  * Mirrors the SO axiosSetup pattern exactly.
  */
 import axios from "axios";
+import axiosRetry from "axios-retry";
 import { toast } from "react-toastify";
 import {
   refreshPortalToken,
@@ -19,6 +20,31 @@ export const BASE_URL =
 const furniApi = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
+  timeout: 30000, // 30 seconds - prevents infinite hangs on slow networks
+});
+
+// ── Axios Retry Configuration ────────────────────────────────────────────────
+axiosRetry(furniApi, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    if (axiosRetry.isNetworkOrIdempotentRequestError(error)) {
+      return true;
+    }
+    if (error.code === 'ECONNABORTED') {
+      return true;
+    }
+    if (error.response?.status >= 500 && error.response?.status <= 599) {
+      return true;
+    }
+    if (error.response?.status === 408 || error.response?.status === 429) {
+      return true;
+    }
+    return false;
+  },
+  onRetry: (retryCount, error, requestConfig) => {
+    console.log(`[Furni API Retry] Attempt ${retryCount} for ${requestConfig.url}`);
+  },
 });
 
 // ── Request interceptor: attach in-memory portal token ────────────────────────────────────
@@ -78,8 +104,18 @@ furniApi.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${result.accessToken}`;
         originalRequest._tokenAlreadySet = true;
         return furniApi(originalRequest);
-      } catch (_) {
-        forceLogout("Session expired. Please log in again.");
+      } catch (refreshError) {
+        // CRITICAL: Only logout on actual session expiry, NOT on network errors
+        if (refreshError.isNetworkError) {
+          console.warn('[Furni API] Token refresh failed due to network error - NOT logging out');
+          // Don't show toast here - OfflineBanner will handle it
+          return Promise.reject(error);
+        }
+        if (refreshError.isSessionExpired) {
+          forceLogout("Session expired. Please log in again.");
+        } else {
+          forceLogout("Authentication error. Please log in again.");
+        }
         return Promise.reject(error);
       }
     }
@@ -88,7 +124,8 @@ furniApi.interceptors.response.use(
     let displayMessage = "";
 
     if (isNetwork) {
-      displayMessage = "Connection lost. Please check your internet.";
+      // Don't show toast for network errors - OfflineBanner will handle it
+      displayMessage = "";
     } else if (status === 413) {
       displayMessage = "File too large. Please upload a smaller file (max 10MB).";
     } else if (status === 403) {

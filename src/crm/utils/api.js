@@ -1,4 +1,5 @@
 import axios from "axios";
+import axiosRetry from "axios-retry";
 import { toast } from "react-toastify";
 
 
@@ -6,6 +7,31 @@ import { toast } from "react-toastify";
 const api = axios.create({
     baseURL: process.env.REACT_APP_CRM_URL || "http://localhost:5050/api/crm",
     withCredentials: true, // Important for Cookies
+    timeout: 30000, // 30 seconds - prevents infinite hangs on slow networks
+});
+
+// ── Axios Retry Configuration ────────────────────────────────────────────────
+axiosRetry(api, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    if (axiosRetry.isNetworkOrIdempotentRequestError(error)) {
+      return true;
+    }
+    if (error.code === 'ECONNABORTED') {
+      return true;
+    }
+    if (error.response?.status >= 500 && error.response?.status <= 599) {
+      return true;
+    }
+    if (error.response?.status === 408 || error.response?.status === 429) {
+      return true;
+    }
+    return false;
+  },
+  onRetry: (retryCount, error, requestConfig) => {
+    console.log(`[CRM API Retry] Attempt ${retryCount} for ${requestConfig.url}`);
+  },
 });
 
 // Memory Storage for Access Token and Refresh Logic
@@ -43,7 +69,14 @@ export const refreshAccessToken = async () => {
     })
     .catch(error => {
         setAccessToken(null);
-        throw error;
+        // Enhanced error information for better handling
+        const isNetworkError = error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED' || error.message === 'Network Error';
+        const isSessionExpired = error.response?.status === 401 || error.response?.status === 403;
+        const enhancedError = new Error(error.message || 'Token refresh failed');
+        enhancedError.isNetworkError = isNetworkError;
+        enhancedError.isSessionExpired = isSessionExpired;
+        enhancedError.originalError = error;
+        throw enhancedError;
     })
     .finally(() => {
         refreshPromise = null;
@@ -88,24 +121,49 @@ api.interceptors.response.use(
                 originalRequest._tokenAlreadySet = true;
                 return api(originalRequest);
             } catch (refreshError) {
-                console.error("Session expired:", refreshError);
+                console.error("Token refresh error:", refreshError);
 
-                // Avoid toast loop on startup check or specific endpoints
-                if (!originalRequest.url.includes("/auth/refresh")) {
-                    toast.error("Session expired. Please log in again.", {
+                // CRITICAL: Only logout on actual session expiry, NOT on network errors
+                if (refreshError.isNetworkError) {
+                    console.warn('[CRM API] Token refresh failed due to network error - NOT logging out');
+                    if (!originalRequest.url.includes("/auth/refresh")) {
+                        toast.error("Connection lost. Please check your internet.", {
+                            position: "top-right",
+                            autoClose: 3000,
+                            theme: "colored",
+                            toastId: 'crm-network-error',
+                        });
+                    }
+                    return Promise.reject(refreshError);
+                }
+
+                // Only logout when session is actually expired
+                if (refreshError.isSessionExpired) {
+                    if (!originalRequest.url.includes("/auth/refresh")) {
+                        toast.error("Session expired. Please log in again.", {
+                            position: "top-right",
+                            autoClose: 3000,
+                            theme: "colored",
+                        });
+                    }
+                    window.dispatchEvent(new Event("auth:logout"));
+                } else {
+                    // Other errors (unlikely but handle gracefully)
+                    toast.error("Authentication error. Please log in again.", {
                         position: "top-right",
                         autoClose: 3000,
                         theme: "colored",
                     });
+                    window.dispatchEvent(new Event("auth:logout"));
                 }
-
-                window.dispatchEvent(new Event("auth:logout"));
+                
                 return Promise.reject(refreshError);
             }
         }
 
         // Handle Network Errors
-        if (error.message === "Network Error" && !originalRequest._retry) {
+        const isNetwork = error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED' || error.message === 'Network Error';
+        if (isNetwork && !originalRequest._retry) {
             toast.error("Network problem. Please check your connection.", {
                 position: "top-right",
                 autoClose: 3000,

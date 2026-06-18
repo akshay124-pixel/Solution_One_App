@@ -49,6 +49,43 @@ const ReplacementDemoLogsTable = ({ logs, onView, onEdit, onApprove, onReject, o
       </Badge>
     );
   };
+  
+  const getDispatchStatusBadge = (status) => {
+    const statusConfig = {
+      "Not Dispatched": { bg: "#f97316", icon: "📦" },
+      "Dispatched": { bg: "#3b82f6", icon: "🚚" },
+      "Delivered": { bg: "#10b981", icon: "✅" },
+      "Docket Awaited Dispatched": { bg: "#06b6d4", icon: "📋" },
+      "Hold by Salesperson": { bg: "#eab308", icon: "⏸️" },
+      "Hold by Customer": { bg: "#eab308", icon: "🛑" },
+      "Order Cancelled": { bg: "#ef4444", icon: "❌" },
+      "Partially Shipped": { bg: "#a855f7", icon: "📦" },
+    };
+    
+    const config = statusConfig[status] || { bg: "#6b7280", icon: "❓" };
+    const displayText = status || "Unknown";
+    
+    return (
+      <Badge 
+        style={{ 
+          backgroundColor: config.bg, 
+          color: "white",
+          fontSize: "0.85rem", 
+          padding: "6px 12px",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "4px",
+          borderRadius: "6px",
+          fontWeight: "600",
+          minWidth: "140px",
+          justifyContent: "center"
+        }}
+      >
+        <span>{config.icon}</span>
+        {displayText}
+      </Badge>
+    );
+  };
 
   const getOrderTypeBadge = (orderType) => {
     const config = orderType === "Replacement" 
@@ -116,7 +153,7 @@ const ReplacementDemoLogsTable = ({ logs, onView, onEdit, onApprove, onReject, o
 
   const renderEmptyState = () => (
     <tr>
-      <td colSpan="9" style={{ padding: 0 }}>
+      <td colSpan="10" style={{ padding: 0 }}>
         <div style={{
           display: "flex",
           flexDirection: "column",
@@ -224,6 +261,7 @@ const ReplacementDemoLogsTable = ({ logs, onView, onEdit, onApprove, onReject, o
               <th style={headerStyle}>Customer Name</th>
               <th style={headerStyle}>Sales Person</th>
               <th style={headerStyle}>Approval Status</th>
+              <th style={headerStyle}>Dispatch Status</th>
               <th style={headerStyle}>Created Date</th>
               <th style={headerStyle}>Actions</th>
             </tr>
@@ -264,6 +302,9 @@ const ReplacementDemoLogsTable = ({ logs, onView, onEdit, onApprove, onReject, o
                   </td>
                   <td style={{ ...cellStyle, textAlign: "center" }}>
                     {getStatusBadge(log.approvalStatus)}
+                  </td>
+                  <td style={{ ...cellStyle, textAlign: "center" }}>
+                    {getDispatchStatusBadge(log.dispatchStatus)}
                   </td>
                   <td style={{ ...cellStyle, color: "#6b7280" }}>
                     {formatDate(log.createdAt)}

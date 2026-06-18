@@ -97,11 +97,13 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   const [replacementStartDate, setReplacementStartDate] = useState("");
   const [replacementEndDate, setReplacementEndDate] = useState("");
   const [replacementSalesPersonFilter, setReplacementSalesPersonFilter] = useState("");
+  const [dispatchStatusFilter, setDispatchStatusFilter] = useState("");  // NEW: Dispatch Status Filter
 
   // Pagination State for Replacement Logs
   const [replacementPage, setReplacementPage] = useState(1);
   const [replacementLimit, setReplacementLimit] = useState(20);
   const [replacementTotalPages, setReplacementTotalPages] = useState(1);
+  const [replacementTotalRecords, setReplacementTotalRecords] = useState(0);  // NEW: Track actual filtered total
   const [debouncedReplacementSearch, setDebouncedReplacementSearch] = useState("");
   const [replacementStats, setReplacementStats] = useState({
     total: 0, pending: 0, proceedForApproval: 0, approved: 0, rejected: 0, closed: 0
@@ -198,7 +200,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
 
   useEffect(() => {
     fetchReplacementDemoLogs();
-  }, [replacementPage, replacementLimit, debouncedReplacementSearch, replacementApprovalStatusFilter, replacementStartDate, replacementEndDate, replacementSalesPersonFilter]);
+  }, [replacementPage, replacementLimit, debouncedReplacementSearch, replacementApprovalStatusFilter, replacementStartDate, replacementEndDate, replacementSalesPersonFilter, dispatchStatusFilter]);
 
   useEffect(() => {
     fetchIncompleteOrders();
@@ -260,6 +262,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
           search: debouncedReplacementSearch,
           approvalStatus: replacementApprovalStatusFilter,
           salesPerson: replacementSalesPersonFilter,
+          dispatchStatus: dispatchStatusFilter,  // NEW: Dispatch Status Filter
           startDate: replacementStartDate,
           endDate: replacementEndDate
         }
@@ -268,6 +271,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
         setReplacementDemoLogs(response.data.data || []);
         if (response.data.pagination) {
           setReplacementTotalPages(response.data.pagination.pages);
+          setReplacementTotalRecords(response.data.pagination.total);  // NEW: Set actual filtered total
         }
         if (response.data.counts) {
           setReplacementStats(response.data.counts);
@@ -620,6 +624,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
           search: debouncedReplacementSearch,
           approvalStatus: replacementApprovalStatusFilter,
           salesPerson: replacementSalesPersonFilter,
+          dispatchStatus: dispatchStatusFilter,  // NEW: Dispatch Status Filter
           startDate: replacementStartDate,
           endDate: replacementEndDate
         },
@@ -1048,10 +1053,12 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
               setStartDate={setReplacementStartDate}
               endDate={replacementEndDate}
               setEndDate={setReplacementEndDate}
-              filteredCount={replacementStats.total}
+              filteredCount={replacementTotalRecords}
               salespersons={replacementSalespersons}
               salesPersonFilter={replacementSalesPersonFilter}
               setSalesPersonFilter={setReplacementSalesPersonFilter}
+              dispatchStatusFilter={dispatchStatusFilter}
+              setDispatchStatusFilter={setDispatchStatusFilter}
             />
             
             <ReplacementDemoLogsTable
@@ -1066,7 +1073,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
               page={replacementPage}
               setPage={setReplacementPage}
               totalPages={replacementTotalPages}
-              totalRecords={replacementStats.total}
+              totalRecords={replacementTotalRecords}
             />
           </div>
 

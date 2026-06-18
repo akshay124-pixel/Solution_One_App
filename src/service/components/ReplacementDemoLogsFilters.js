@@ -13,11 +13,13 @@ const ReplacementDemoLogsFilters = ({
   filteredCount,
   salespersons = [],
   salesPersonFilter,
-  setSalesPersonFilter
+  setSalesPersonFilter,
+  dispatchStatusFilter,
+  setDispatchStatusFilter
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const hasActiveFilters = searchTerm || approvalStatusFilter || startDate || endDate || salesPersonFilter;
+  const hasActiveFilters = searchTerm || approvalStatusFilter || startDate || endDate || salesPersonFilter || dispatchStatusFilter;
 
   const clearAllFilters = () => {
     setSearchTerm("");
@@ -25,6 +27,7 @@ const ReplacementDemoLogsFilters = ({
     setStartDate("");
     setEndDate("");
     setSalesPersonFilter("");
+    setDispatchStatusFilter("");
   };
 
   const handleSalespersonSelect = (value) => {
@@ -249,6 +252,33 @@ const ReplacementDemoLogsFilters = ({
           )}
         </div>
 
+        {/* Dispatch Status Filter */}
+        <div style={{ flex: "0 0 auto" }}>
+          <select
+            value={dispatchStatusFilter}
+            onChange={(e) => setDispatchStatusFilter(e.target.value)}
+            style={{
+              padding: "10px 12px",
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+              fontSize: "0.875rem",
+              background: "white",
+              minWidth: "180px",
+              cursor: "pointer"
+            }}
+          >
+            <option value="">All Dispatch Status</option>
+            <option value="Not Dispatched">📦 Not Dispatched</option>
+            <option value="Docket Awaited Dispatched">📋 Docket Awaited</option>
+            <option value="Hold by Salesperson">⏸️ Hold by Salesperson</option>
+            <option value="Hold by Customer">🛑 Hold by Customer</option>
+            <option value="Order Cancelled">❌ Order Cancelled</option>
+            <option value="Partially Shipped">📦 Partially Shipped</option>
+            <option value="Dispatched">🚚 Dispatched</option>
+            <option value="Delivered">✅ Delivered</option>
+          </select>
+        </div>
+
         {/* Clear Filters Button */}
         {hasActiveFilters && (
           <button
@@ -353,6 +383,18 @@ const ReplacementDemoLogsFilters = ({
                 fontWeight: "500"
               }}>
                 Salesperson: {salesPersonFilter}
+              </span>
+            )}
+            {dispatchStatusFilter && (
+              <span style={{
+                padding: "4px 10px",
+                background: "#06b6d4",
+                color: "white",
+                borderRadius: "6px",
+                fontSize: "0.75rem",
+                fontWeight: "500"
+              }}>
+                Dispatch: {dispatchStatusFilter}
               </span>
             )}
             <span style={{

@@ -45,6 +45,9 @@ import ViewEntry from "./ViewEntry";
 import TeamBuilder from "./TeamBuilder";
 import AdminDrawer from "./AdminDrawer";
 import ValueAnalyticsDrawer from "./ValueAnalyticsDrawer.js";
+import BulkUploadModal from "./BulkUpload/BulkUploadModal";
+import NormalBulkUploadModal from "./BulkUpload/NormalBulkUploadModal";
+import BulkUploadOptionsModal from "./BulkUpload/BulkUploadOptionsModal";
 import { FixedSizeList } from "react-window";
 import TablePagination from "./TablePagination";
 import io from "socket.io-client";
@@ -231,6 +234,10 @@ function DashBoard() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isTeamBuilderOpen, setIsTeamBuilderOpen] = useState(false);
+  const [isBulkUploadOptionsOpen, setIsBulkUploadOptionsOpen] = useState(false);
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
+  const [isNormalBulkUploadModalOpen, setIsNormalBulkUploadModalOpen] = useState(false);
+  const [bulkUploadMode, setBulkUploadMode] = useState("default"); // "default" or "asUser"
   const [drawerState, setDrawerState] = useState({
     isOpen: false,
     type: null, // 'admin', 'team', 'value', 'attendance', 'analyticsModal'
@@ -911,6 +918,36 @@ function DashBoard() {
     },
     [usernames, fetchAnalyticsEntries, applyStatsDelta, matchesContext],
   );
+
+  // Handler for bulk upload completion
+  const handleBulkUploadComplete = useCallback(
+    (result) => {
+      if (result && result.success) {
+        // Refresh entries to show newly uploaded data
+        fetchEntries();
+        fetchAnalyticsEntries();
+        
+        toast.success(
+          `Successfully uploaded ${result.count} entries as ${result.targetUser?.username || 'selected user'}!`,
+          { autoClose: 5000 }
+        );
+      }
+    },
+    [fetchEntries, fetchAnalyticsEntries]
+  );
+
+  // Handler for bulk upload options selection
+  const handleSelectDefaultUpload = useCallback(() => {
+    // Open normal bulk upload modal (for all users)
+    setBulkUploadMode("default");
+    setIsNormalBulkUploadModalOpen(true);
+  }, []);
+
+  const handleSelectUploadAsUser = useCallback(() => {
+    // Open the "Upload as User" modal
+    setBulkUploadMode("asUser");
+    setIsBulkUploadModalOpen(true);
+  }, []);
 
   // Keep stable refs to the latest callbacks so the socket effect never needs to re-run
   const matchesContextRef = useRef(matchesContext);
@@ -2405,20 +2442,23 @@ function DashBoard() {
               Attendance
             </motion.button>
             {(role === "superadmin" || role === "globaladmin") && (
-              <motion.label
+              <motion.button
+                onClick={() => {
+                  if (role === "globaladmin") {
+                    // Global admin sees options modal (default or as user)
+                    setIsBulkUploadOptionsOpen(true);
+                  } else {
+                    // Superadmin opens normal bulk upload modal
+                    setIsNormalBulkUploadModalOpen(true);
+                  }
+                }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 style={actionButtonStyle}
               >
                 <FaUpload size={16} />
                 Bulk Upload
-                <input
-                  type="file"
-                  onChange={handleFileUpload}
-                  accept=".xlsx, .xls"
-                  style={{ display: "none" }}
-                />
-              </motion.label>
+              </motion.button>
             )}
             <motion.button
               onClick={() => setIsAddModalOpen(true)}
@@ -2837,6 +2877,36 @@ function DashBoard() {
               userRole={role}
               userId={userId}
             />
+
+            {role === "globaladmin" && (
+              <>
+                <BulkUploadOptionsModal
+                  isOpen={isBulkUploadOptionsOpen}
+                  onClose={() => setIsBulkUploadOptionsOpen(false)}
+                  onSelectDefault={handleSelectDefaultUpload}
+                  onSelectAsUser={handleSelectUploadAsUser}
+                />
+                <NormalBulkUploadModal
+                  isOpen={isNormalBulkUploadModalOpen}
+                  onClose={() => setIsNormalBulkUploadModalOpen(false)}
+                  onFileSelected={handleFileUpload}
+                />
+                <BulkUploadModal
+                  isOpen={isBulkUploadModalOpen}
+                  onClose={() => setIsBulkUploadModalOpen(false)}
+                  onUploadComplete={handleBulkUploadComplete}
+                  currentUser={{ id: userId, role, username: user?.username }}
+                />
+              </>
+            )}
+
+            {role === "superadmin" && (
+              <NormalBulkUploadModal
+                isOpen={isNormalBulkUploadModalOpen}
+                onClose={() => setIsNormalBulkUploadModalOpen(false)}
+                onFileSelected={handleFileUpload}
+              />
+            )}
 
             {(role === "superadmin" || role === "globaladmin") && (
               <TeamAnalyticsDrawer

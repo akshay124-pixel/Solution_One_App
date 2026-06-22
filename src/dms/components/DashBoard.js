@@ -49,6 +49,7 @@ import {
 import { normalizeId } from "./Analytics/sharedUtilities";
 import { motion } from "framer-motion";
 import api, { getAuthData, logout, setNavigationFunction, clearNavigationFunction } from "../api/api";
+import DMSBulkUploadModal from "./BulkUpload/DMSBulkUploadModal";
 
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -271,6 +272,7 @@ function DashBoard() {
   const [authLoading, setAuthLoading] = useState(true);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
   const [selectedEntries, setSelectedEntries] = useState([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [doubleClickInitiated, setDoubleClickInitiated] = useState(false);
@@ -1890,8 +1892,9 @@ function DashBoard() {
               <FaFileExport />
               Export
             </button>
-          )} <label
+          )} <button
             className="button"
+            onClick={() => setIsBulkUploadModalOpen(true)}
             style={{
               padding: "12px 20px",
               background: "linear-gradient(90deg, #6a11cb, #2575fc)",
@@ -1907,24 +1910,12 @@ function DashBoard() {
               alignItems: "center",
               gap: "8px",
             }}
-            onMouseEnter={(e) => {
-              e.target.style.transform = "translateY(-2px)";
-              e.target.style.boxShadow = "0px 6px 12px rgba(0, 0, 0, 0.2)";
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = "translateY(0)";
-              e.target.style.boxShadow = "0px 4px 6px rgba(0, 0, 0, 0.1)";
-            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0px 6px 12px rgba(0,0,0,0.2)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0px 4px 6px rgba(0,0,0,0.1)"; }}
           >
             <FaUpload />
             Bulk Upload
-            <input
-              type="file"
-              onChange={handleFileUpload}
-              accept=".xlsx, .xls"
-              style={{ display: "none" }}
-            />
-          </label>
+          </button>
           <button
             className="button"
             onClick={() => setIsAnalyticsModalOpen(true)}
@@ -2502,6 +2493,11 @@ function DashBoard() {
           onClose={handleMailModalClose}
           entryId={selectedEntryForMail?._id}
           entryData={selectedEntryForMail}
+        />
+        <DMSBulkUploadModal
+          isOpen={isBulkUploadModalOpen}
+          onClose={() => setIsBulkUploadModalOpen(false)}
+          onUploadComplete={() => { fetchEntries(); fetchEntryCounts?.(); }}
         />
         <Modal
           show={isAnalyticsModalOpen}

@@ -164,7 +164,7 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
   const renderEmptyState = () => (
     <tr>
       <td 
-        colSpan="15" 
+        colSpan="16" 
         style={{ 
           height: "550px", 
           textAlign: "center", 
@@ -228,7 +228,7 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
           position: "relative"
         }}
       >
-        <Table hover style={{ margin: 0, width: "100%", minWidth: "1600px" }}>
+        <Table hover style={{ margin: 0, width: "100%", minWidth: "1750px" }}>
           <thead
             className="gradient-table-header"
             style={{
@@ -437,6 +437,20 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
                 border: "none",
                 color: "white"
               }}>Actions</th>
+              <th style={{ 
+                padding: "10px 15px", 
+                height: "50px",
+                lineHeight: "30px",
+                fontSize: "0.95rem",
+                fontWeight: "600",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                borderBottom: "2px solid rgba(255, 255, 255, 0.2)",
+                whiteSpace: "nowrap",
+                textAlign: "center",
+                border: "none",
+                color: "white"
+              }}>Vendor</th>
               <th style={{ 
                 padding: "10px 15px", 
                 height: "50px",
@@ -816,6 +830,45 @@ const ServiceLogsTable = ({ logs, onView, onEdit, onDelete, loading, page, setPa
                       </button>
                     )}
                   </div>
+                </td>
+                <td style={{
+                  padding: "10px 15px",
+                  height: "50px",
+                  lineHeight: "30px",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  textAlign: "center",
+                  verticalAlign: "middle",
+                  borderBottom: "1px solid #f3f4f6"
+                }}>
+                  {log.vendor ? (() => {
+                    const vendorColors = {
+                      "Promark":  { bg: "#dbeafe", color: "#1d4ed8", border: "#93c5fd" },
+                      "DLS":      { bg: "#dcfce7", color: "#15803d", border: "#86efac" },
+                      "TrueView": { bg: "#fef3c7", color: "#b45309", border: "#fcd34d" },
+                      "Newline":  { bg: "#f3e8ff", color: "#7e22ce", border: "#d8b4fe" },
+                    };
+                    const vc = vendorColors[log.vendor] || { bg: "#f1f5f9", color: "#475569", border: "#cbd5e1" };
+                    return (
+                      <span style={{
+                        display: "inline-block",
+                        padding: "4px 10px",
+                        background: vc.bg,
+                        color: vc.color,
+                        border: `1px solid ${vc.border}`,
+                        borderRadius: "6px",
+                        fontSize: "0.775rem",
+                        fontWeight: "700",
+                        letterSpacing: "0.2px",
+                        whiteSpace: "nowrap"
+                      }}>
+                        {log.vendor}
+                      </span>
+                    );
+                  })() : (
+                    <span style={{ color: "#9ca3af", fontSize: "0.8rem" }}>—</span>
+                  )}
                 </td>
                 <td
                   style={{

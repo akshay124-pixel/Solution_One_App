@@ -19,11 +19,19 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
     systemType: "av&edtech",
     followUpDate: "",
     salesPerson: "",
+    vendor: "",
   });
   const [attachments, setAttachments] = useState([]);
   const [fileError, setFileError] = useState("");
   const [loading, setLoading] = useState(false);
   const [salespersons, setSalespersons] = useState([]);
+
+ const vendors = [
+    { name: "Promark" },
+    { name: "DLS" },
+    { name: "TrueView" },
+    { name: "Newline" },
+  ];
 
   useEffect(() => {
     const fetchSalespersons = async () => {
@@ -40,7 +48,7 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
   }, []);
 
   const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleFileChange = (e) => {
@@ -55,14 +63,26 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "application/vnd.ms-excel",
     ];
-    const allowedExtensions = ["jpg", "jpeg", "png", "pdf", "doc", "docx", "xlsx", "xls"];
+    const allowedExtensions = [
+      "jpg",
+      "jpeg",
+      "png",
+      "pdf",
+      "doc",
+      "docx",
+      "xlsx",
+      "xls",
+    ];
 
     const validFiles = [];
     let error = "";
 
     files.forEach((file) => {
       const fileExt = file.name.split(".").pop().toLowerCase();
-      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
+      if (
+        !allowedTypes.includes(file.type) &&
+        !allowedExtensions.includes(fileExt)
+      ) {
         error = `Invalid file type: ${file.name}`;
       } else if (file.size > 10 * 1024 * 1024) {
         error = `File too large: ${file.name} (Max 10MB)`;
@@ -87,7 +107,13 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
 
   const handleSubmit = async () => {
     // Validation
-    if (!formData.customerName || !formData.contactNo || !formData.issue || !formData.warrantyStatus || !formData.followUpDate) {
+    if (
+      !formData.customerName ||
+      !formData.contactNo ||
+      !formData.issue ||
+      !formData.warrantyStatus ||
+      !formData.followUpDate
+    ) {
       toast.warning("Please fill all required fields");
       return;
     }
@@ -113,16 +139,20 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
       formDataToSend.append("systemType", formData.systemType);
       formDataToSend.append("followUpDate", formData.followUpDate);
       formDataToSend.append("salesPerson", formData.salesPerson);
-      
+      formDataToSend.append("vendor", formData.vendor);
       attachments.forEach((file) => {
         formDataToSend.append("serviceAttachments", file);
       });
 
-      const response = await serviceApi.post("/manual-service-request", formDataToSend, {
-        headers: {
-          "Content-Type": "multipart/form-data",
+      const response = await serviceApi.post(
+        "/manual-service-request",
+        formDataToSend,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         },
-      });
+      );
 
       if (response.data.success) {
         toast.success("Manual service request created successfully");
@@ -130,7 +160,9 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
         if (onSuccess) onSuccess();
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to create service request");
+      toast.error(
+        error.response?.data?.message || "Failed to create service request",
+      );
       console.error(error);
     } finally {
       setLoading(false);
@@ -151,6 +183,7 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
       systemType: "av&edtech",
       followUpDate: "",
       salesPerson: "",
+      vendor: "",
     });
     setAttachments([]);
     setFileError("");
@@ -158,7 +191,13 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   return (
-    <Modal show={isOpen} onHide={handleClose} size="lg" centered backdrop="static">
+    <Modal
+      show={isOpen}
+      onHide={handleClose}
+      size="lg"
+      centered
+      backdrop="static"
+    >
       <div
         style={{
           borderRadius: "1px",
@@ -176,7 +215,14 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
             boxShadow: "0 4px 15px rgba(0, 0, 0, 0.2)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "14px", width: "100%" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+              width: "100%",
+            }}
+          >
             <div
               style={{
                 width: "48px",
@@ -192,10 +238,24 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
               <FileText size={24} color="white" />
             </div>
             <div style={{ flex: 1 }}>
-              <Modal.Title style={{ margin: 0, fontSize: "1.5rem", fontWeight: "700", color: "white" }}>
+              <Modal.Title
+                style={{
+                  margin: 0,
+                  fontSize: "1.5rem",
+                  fontWeight: "700",
+                  color: "white",
+                }}
+              >
                 Manual Service Request
               </Modal.Title>
-              <p style={{ margin: "4px 0 0 0", color: "rgba(255, 255, 255, 0.9)", fontSize: "0.9rem", fontWeight: "400" }}>
+              <p
+                style={{
+                  margin: "4px 0 0 0",
+                  color: "rgba(255, 255, 255, 0.9)",
+                  fontSize: "0.9rem",
+                  fontWeight: "400",
+                }}
+              >
                 Create service request without order
               </p>
             </div>
@@ -218,10 +278,12 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                 transition: "background 0.2s ease",
               }}
               onMouseEnter={(e) => {
-                if (!loading) e.target.style.background = "rgba(255, 255, 255, 0.3)";
+                if (!loading)
+                  e.target.style.background = "rgba(255, 255, 255, 0.3)";
               }}
               onMouseLeave={(e) => {
-                if (!loading) e.target.style.background = "rgba(255, 255, 255, 0.2)";
+                if (!loading)
+                  e.target.style.background = "rgba(255, 255, 255, 0.2)";
               }}
             >
               <X size={20} />
@@ -238,7 +300,8 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
           }}
         >
           <Alert variant="info" style={{ marginBottom: "20px" }}>
-            <strong>Note:</strong> This form is for creating service requests without an existing order. All fields marked with * are required.
+            <strong>Note:</strong> This form is for creating service requests
+            without an existing order. All fields marked with * are required.
           </Alert>
 
           <Form>
@@ -252,12 +315,25 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                 border: "1px solid #e2e8f0",
               }}
             >
-              <h6 style={{ fontWeight: "600", color: "#374151", fontSize: "0.875rem", marginBottom: "12px" }}>
+              <h6
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  fontSize: "0.875rem",
+                  marginBottom: "12px",
+                }}
+              >
                 Customer Details
               </h6>
 
               <Form.Group className="mb-3">
-                <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                <Form.Label
+                  style={{
+                    fontWeight: "500",
+                    color: "#374151",
+                    fontSize: "0.875rem",
+                  }}
+                >
                   Customer Name <span style={{ color: "#ef4444" }}>*</span>
                 </Form.Label>
                 <Form.Control
@@ -265,13 +341,29 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                   value={formData.customerName}
                   onChange={(e) => handleChange("customerName", e.target.value)}
                   placeholder="Enter customer name"
-                  style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
+                  style={{
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    fontSize: "0.875rem",
+                  }}
                 />
               </Form.Group>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "12px",
+                }}
+              >
                 <Form.Group>
-                  <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                  <Form.Label
+                    style={{
+                      fontWeight: "500",
+                      color: "#374151",
+                      fontSize: "0.875rem",
+                    }}
+                  >
                     Mobile Number <span style={{ color: "#ef4444" }}>*</span>
                   </Form.Label>
                   <Form.Control
@@ -285,7 +377,11 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                     }}
                     placeholder="Enter 10 digit mobile"
                     maxLength={10}
-                    style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
+                    style={{
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      fontSize: "0.875rem",
+                    }}
                   />
                   {formData.contactNo && formData.contactNo.length < 10 && (
                     <small style={{ color: "#ef4444", fontSize: "0.75rem" }}>
@@ -295,7 +391,13 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                 </Form.Group>
 
                 <Form.Group>
-                  <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                  <Form.Label
+                    style={{
+                      fontWeight: "500",
+                      color: "#374151",
+                      fontSize: "0.875rem",
+                    }}
+                  >
                     Email
                   </Form.Label>
                   <Form.Control
@@ -303,13 +405,23 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                     value={formData.email}
                     onChange={(e) => handleChange("email", e.target.value)}
                     placeholder="Enter email"
-                    style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
+                    style={{
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      fontSize: "0.875rem",
+                    }}
                   />
                 </Form.Group>
               </div>
 
               <Form.Group className="mb-0 mt-3">
-                <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                <Form.Label
+                  style={{
+                    fontWeight: "500",
+                    color: "#374151",
+                    fontSize: "0.875rem",
+                  }}
+                >
                   Address
                 </Form.Label>
                 <Form.Control
@@ -318,13 +430,31 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                   value={formData.address}
                   onChange={(e) => handleChange("address", e.target.value)}
                   placeholder="Enter customer address"
-                  style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem", resize: "vertical" }}
+                  style={{
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    fontSize: "0.875rem",
+                    resize: "vertical",
+                  }}
                 />
               </Form.Group>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "12px" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "12px",
+                  marginTop: "12px",
+                }}
+              >
                 <Form.Group>
-                  <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                  <Form.Label
+                    style={{
+                      fontWeight: "500",
+                      color: "#374151",
+                      fontSize: "0.875rem",
+                    }}
+                  >
                     City
                   </Form.Label>
                   <Form.Control
@@ -332,12 +462,22 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                     value={formData.city}
                     onChange={(e) => handleChange("city", e.target.value)}
                     placeholder="Enter city"
-                    style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
+                    style={{
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      fontSize: "0.875rem",
+                    }}
                   />
                 </Form.Group>
 
                 <Form.Group>
-                  <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                  <Form.Label
+                    style={{
+                      fontWeight: "500",
+                      color: "#374151",
+                      fontSize: "0.875rem",
+                    }}
+                  >
                     State
                   </Form.Label>
                   <Form.Control
@@ -345,7 +485,11 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                     value={formData.state}
                     onChange={(e) => handleChange("state", e.target.value)}
                     placeholder="Enter state"
-                    style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
+                    style={{
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      fontSize: "0.875rem",
+                    }}
                   />
                 </Form.Group>
               </div>
@@ -361,33 +505,69 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                 border: "1px solid #e2e8f0",
               }}
             >
-              <h6 style={{ fontWeight: "600", color: "#374151", fontSize: "0.875rem", marginBottom: "12px" }}>
+              <h6
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  fontSize: "0.875rem",
+                  marginBottom: "12px",
+                }}
+              >
                 Service Details
               </h6>
 
               <Form.Group className="mb-3">
-                <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                <Form.Label
+                  style={{
+                    fontWeight: "500",
+                    color: "#374151",
+                    fontSize: "0.875rem",
+                  }}
+                >
                   System <span style={{ color: "#ef4444" }}>*</span>
                 </Form.Label>
                 <Form.Select
                   value={formData.systemType}
                   onChange={(e) => handleChange("systemType", e.target.value)}
-                  style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
+                  style={{
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    fontSize: "0.875rem",
+                  }}
                 >
                   <option value="av&edtech">📺 AV & EdTech</option>
                   <option value="furniture">🪑 Furniture</option>
                 </Form.Select>
               </Form.Group>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "12px",
+                  marginBottom: "16px",
+                }}
+              >
                 <Form.Group>
-                  <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                  <Form.Label
+                    style={{
+                      fontWeight: "500",
+                      color: "#374151",
+                      fontSize: "0.875rem",
+                    }}
+                  >
                     Warranty Status <span style={{ color: "#ef4444" }}>*</span>
                   </Form.Label>
                   <Form.Select
                     value={formData.warrantyStatus}
-                    onChange={(e) => handleChange("warrantyStatus", e.target.value)}
-                    style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
+                    onChange={(e) =>
+                      handleChange("warrantyStatus", e.target.value)
+                    }
+                    style={{
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      fontSize: "0.875rem",
+                    }}
                   >
                     <option value="">Select Warranty</option>
                     <option value="In Warranty">✅ In Warranty</option>
@@ -396,24 +576,42 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                 </Form.Group>
 
                 <Form.Group>
-                  <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                  <Form.Label
+                    style={{
+                      fontWeight: "500",
+                      color: "#374151",
+                      fontSize: "0.875rem",
+                    }}
+                  >
                     Call Type
                   </Form.Label>
                   <Form.Select
                     value={formData.callType}
                     onChange={(e) => handleChange("callType", e.target.value)}
-                    style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
+                    style={{
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      fontSize: "0.875rem",
+                    }}
                   >
                     <option value="">Select Type</option>
                     {CALL_TYPE_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.icon} {opt.label}</option>
+                      <option key={opt.value} value={opt.value}>
+                        {opt.icon} {opt.label}
+                      </option>
                     ))}
                   </Form.Select>
                 </Form.Group>
               </div>
 
               <Form.Group className="mb-3">
-                <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                <Form.Label
+                  style={{
+                    fontWeight: "500",
+                    color: "#374151",
+                    fontSize: "0.875rem",
+                  }}
+                >
                   Issue Description <span style={{ color: "#ef4444" }}>*</span>
                 </Form.Label>
                 <Form.Control
@@ -422,31 +620,66 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                   value={formData.issue}
                   onChange={(e) => handleChange("issue", e.target.value)}
                   placeholder="Describe the issue in detail..."
-                  style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem", resize: "vertical" }}
+                  style={{
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    fontSize: "0.875rem",
+                    resize: "vertical",
+                  }}
                 />
               </Form.Group>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "12px",
+                }}
+              >
                 <Form.Group className="mb-0">
-                  <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                  <Form.Label
+                    style={{
+                      fontWeight: "500",
+                      color: "#374151",
+                      fontSize: "0.875rem",
+                    }}
+                  >
                     Follow-up Date <span style={{ color: "#ef4444" }}>*</span>
                   </Form.Label>
                   <Form.Control
                     type="date"
                     value={formData.followUpDate}
-                    onChange={(e) => handleChange("followUpDate", e.target.value)}
-                    style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
+                    onChange={(e) =>
+                      handleChange("followUpDate", e.target.value)
+                    }
+                    style={{
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      fontSize: "0.875rem",
+                    }}
                   />
                 </Form.Group>
 
                 <Form.Group className="mb-0">
-                  <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                  <Form.Label
+                    style={{
+                      fontWeight: "500",
+                      color: "#374151",
+                      fontSize: "0.875rem",
+                    }}
+                  >
                     Salesperson
                   </Form.Label>
                   <Form.Select
                     value={formData.salesPerson}
-                    onChange={(e) => handleChange("salesPerson", e.target.value)}
-                    style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
+                    onChange={(e) =>
+                      handleChange("salesPerson", e.target.value)
+                    }
+                    style={{
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      fontSize: "0.875rem",
+                    }}
                   >
                     <option value="">Select Salesperson</option>
                     {salespersons.map((sp) => (
@@ -459,6 +692,80 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
               </div>
             </div>
 
+            {/* Additional Fields */}
+            <div
+              style={{
+                marginBottom: "24px",
+                padding: "16px",
+                background: "#f8fafc",
+                borderRadius: "8px",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <h6
+                style={{
+                  fontWeight: "600",
+                  color: "#374151",
+                  fontSize: "0.875rem",
+                  marginBottom: "12px",
+                }}
+              >
+                Additional Details (Optional)
+              </h6>
+              <Form.Group className="mb-3">
+                <Form.Label
+                  style={{
+                    fontWeight: "500",
+                    color: "#374151",
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  Vendor
+                </Form.Label>
+                <select
+                  value={formData.vendor}
+                  onChange={(e) =>
+                    setFormData({ ...formData, vendor: e.target.value })
+                  }
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    borderRadius: "8px",
+                    border: "1px solid #d1d5db",
+                    padding: "10px 12px",
+                    fontSize: "0.875rem",
+                    background: "white",
+                    color: formData.vendor ? "#1f2937" : "#6b7280",
+                    outline: "none",
+                    cursor: "pointer",
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 12px center",
+                    paddingRight: "36px",
+                    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = "#10b981";
+                    e.target.style.boxShadow = "0 0 0 3px rgba(16, 185, 129, 0.1)";
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = "#d1d5db";
+                    e.target.style.boxShadow = "none";
+                  }}
+                >
+                  <option value="">Select Vendor</option>
+                  {vendors.map((vendor) => (
+                    <option key={vendor.name} value={vendor.name}>
+                      {vendor.name}
+                    </option>
+                  ))}
+                </select>
+              </Form.Group>
+            </div>
+
             {/* Service Attachment */}
             <div
               style={{
@@ -469,11 +776,24 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                 border: "1px solid #bfdbfe",
               }}
             >
-              <h6 style={{ fontWeight: "600", color: "#1e40af", fontSize: "0.875rem", marginBottom: "12px" }}>
+              <h6
+                style={{
+                  fontWeight: "600",
+                  color: "#1e40af",
+                  fontSize: "0.875rem",
+                  marginBottom: "12px",
+                }}
+              >
                 📎 Service Attachment (Optional)
               </h6>
               <Form.Group className="mb-0">
-                <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
+                <Form.Label
+                  style={{
+                    fontWeight: "500",
+                    color: "#374151",
+                    fontSize: "0.875rem",
+                  }}
+                >
                   Upload Document/Image
                 </Form.Label>
                 <Form.Control
@@ -481,18 +801,44 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                   multiple
                   onChange={handleFileChange}
                   accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
-                  style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
+                  style={{
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    fontSize: "0.875rem",
+                  }}
                 />
-                <small style={{ color: "#6b7280", fontSize: "0.75rem", display: "block", marginTop: "6px" }}>
-                  Allowed: JPG, PNG, PDF, DOC, DOCX, XLS, XLSX (Max 10MB, Max 10 files)
+                <small
+                  style={{
+                    color: "#6b7280",
+                    fontSize: "0.75rem",
+                    display: "block",
+                    marginTop: "6px",
+                  }}
+                >
+                  Allowed: JPG, PNG, PDF, DOC, DOCX, XLS, XLSX (Max 10MB, Max 10
+                  files)
                 </small>
                 {fileError && (
-                  <Alert variant="danger" style={{ marginTop: "8px", padding: "8px 12px", fontSize: "0.75rem" }}>
+                  <Alert
+                    variant="danger"
+                    style={{
+                      marginTop: "8px",
+                      padding: "8px 12px",
+                      fontSize: "0.75rem",
+                    }}
+                  >
                     {fileError}
                   </Alert>
                 )}
                 {attachments.length > 0 && (
-                  <div style={{ marginTop: "12px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  <div
+                    style={{
+                      marginTop: "12px",
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "8px",
+                    }}
+                  >
                     {attachments.map((file, index) => (
                       <div
                         key={index}
@@ -508,7 +854,14 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                           color: "#065f46",
                         }}
                       >
-                        <span style={{ maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <span
+                          style={{
+                            maxWidth: "150px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
                           {file.name}
                         </span>
                         <button

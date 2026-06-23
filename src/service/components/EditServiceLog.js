@@ -27,6 +27,7 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
   const [salesPerson, setSalesPerson] = useState("");
   const [address, setAddress] = useState("");
   const [shippingAddress, setShippingAddress] = useState(""); // New shipping address state
+  const [vendor, setVendor] = useState("");
   const [replacementPartReceived, setReplacementPartReceived] = useState("No");
   const [serviceAttachments, setServiceAttachments] = useState([]); // New service files
   const [partAttachments, setPartAttachments] = useState([]); // New part files
@@ -214,6 +215,7 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
       setHardwareItems(log.hardwareItems || [{ description: "", quantity: "", price: "" }]);
       setSalesPerson(log.orderDetails?.salesPerson || log.salesPerson || "");
       setReplacementPartReceived(log.replacementPartReceived || "No");
+      setVendor(log.vendor || "");
       setExistingPartAttachments(log.attachments || []);
       setExistingServiceAttachments(log.serviceAttachments || []);
       setPartAttachments([]);
@@ -264,6 +266,7 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
       formData.append("assignedEngineers", JSON.stringify(assignedEngineers));
       formData.append("hardwareItems", JSON.stringify(callType === "Hardware" ? hardwareItems.filter(item => item.description && item.description.trim()) : []));
       formData.append("salesPerson", salesPerson);
+      formData.append("vendor", vendor);
       formData.append("deletedAttachments", JSON.stringify(deletedAttachments));
       
       // Append new service attachments
@@ -314,6 +317,7 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
     setAssignedEngineers(log?.assignedEngineers || []);
     setHardwareItems(log?.hardwareItems || [{ description: "", quantity: "", price: "" }]);
     setSalesPerson(log?.orderDetails?.salesPerson || log?.salesPerson || "");
+    setVendor(log?.vendor || "");
     setExistingPartAttachments(log?.attachments || []);
     setExistingServiceAttachments(log?.serviceAttachments || []);
     setPartAttachments([]);
@@ -549,6 +553,8 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
                   </Form.Select>
                 </Form.Group>
               </div>
+
+            
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
                 <Form.Group>
@@ -819,6 +825,54 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
                   fontSize: "0.875rem",
                   marginBottom: "6px"
                 }}>
+                  Vendor
+                </Form.Label>
+                <select
+                  value={vendor}
+                  onChange={(e) => setVendor(e.target.value)}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    borderRadius: "8px",
+                    border: "1px solid #d1d5db",
+                    padding: "10px 12px",
+                    fontSize: "0.875rem",
+                    background: "white",
+                    color: vendor ? "#1f2937" : "#6b7280",
+                    outline: "none",
+                    cursor: "pointer",
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 12px center",
+                    paddingRight: "36px",
+                    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = "#f59e0b";
+                    e.target.style.boxShadow = "0 0 0 3px rgba(245, 158, 11, 0.1)";
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = "#d1d5db";
+                    e.target.style.boxShadow = "none";
+                  }}
+                >
+                  <option value="">Select Vendor</option>
+                  <option value="Promark">Promark</option>
+                  <option value="DLS">DLS</option>
+                  <option value="TrueView">TrueView</option>
+                  <option value="Newline">Newline</option>
+                </select>
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label style={{ 
+                  fontWeight: "500", 
+                  color: "#374151",
+                  fontSize: "0.875rem",
+                  marginBottom: "6px"
+                }}>
                   Issue Description
                 </Form.Label>
                 <Form.Control
@@ -881,8 +935,8 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
             </div>
 
             <Form.Group className="mb-3">
-              <Form.Label style={{ 
-                fontWeight: "500", 
+              <Form.Label style={{
+                fontWeight: "500",
                 color: "#374151",
                 fontSize: "0.875rem",
                 marginBottom: "6px"

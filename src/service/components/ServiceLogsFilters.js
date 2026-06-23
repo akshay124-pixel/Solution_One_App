@@ -23,11 +23,13 @@ const ServiceLogsFilters = ({
   filteredCount,
   salespersons = [],
   salesPersonFilter,
-  setSalesPersonFilter
+  setSalesPersonFilter,
+  vendorFilter,
+  setVendorFilter
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
-  const hasActiveFilters = serviceLogsSearch || statusFilter || callTypeFilter || systemTypeFilter || stateFilter || partReplacementStatusFilter || salesPersonFilter || startDate || endDate;
+  const hasActiveFilters = serviceLogsSearch || statusFilter || callTypeFilter || systemTypeFilter || stateFilter || partReplacementStatusFilter || salesPersonFilter || vendorFilter || startDate || endDate;
 
   const clearAllFilters = () => {
     setServiceLogsSearch("");
@@ -39,6 +41,7 @@ const ServiceLogsFilters = ({
     setStartDate("");
     setEndDate("");
     setSalesPersonFilter("");
+    if (setVendorFilter) setVendorFilter("");
   };
 
   const handleSalespersonSelect = (value) => {
@@ -201,6 +204,29 @@ const ServiceLogsFilters = ({
             <option value="In Stock">In Stock</option>
             <option value="Partial Stock">Partial Stock</option>
             <option value="Dispatched">Dispatched</option>
+          </select>
+        </div>
+
+        {/* Vendor Filter */}
+        <div style={{ flex: "0 0 auto" }}>
+          <select
+            value={vendorFilter || ""}
+            onChange={(e) => setVendorFilter && setVendorFilter(e.target.value)}
+            style={{
+              padding: "10px 12px",
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+              fontSize: "0.875rem",
+              background: "white",
+              minWidth: "140px",
+              cursor: "pointer"
+            }}
+          >
+            <option value="">All Vendors</option>
+            <option value="Promark">🏭 Promark</option>
+            <option value="DLS">🏭 DLS</option>
+            <option value="TrueView">🏭 TrueView</option>
+            <option value="Newline">🏭 Newline</option>
           </select>
         </div>
 
@@ -457,6 +483,18 @@ const ServiceLogsFilters = ({
                 fontWeight: "500"
               }}>
                 Part Status: {partReplacementStatusFilter}
+              </span>
+            )}
+            {vendorFilter && (
+              <span style={{
+                padding: "4px 10px",
+                background: "#1e293b",
+                color: "white",
+                borderRadius: "6px",
+                fontSize: "0.75rem",
+                fontWeight: "500"
+              }}>
+                🏭 Vendor: {vendorFilter}
               </span>
             )}
             {salesPersonFilter && (

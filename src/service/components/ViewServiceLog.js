@@ -813,6 +813,41 @@ const ViewServiceLog = ({ isOpen, onClose, log }) => {
                     {log.emailSent ? "Yes" : "No"}
                   </Badge>
                 </div>
+
+                {log.vendor && (() => {
+                  const vendorColors = {
+                    "Promark":  { bg: "#dbeafe", color: "#1d4ed8", border: "#93c5fd" },
+                    "DLS":      { bg: "#dcfce7", color: "#15803d", border: "#86efac" },
+                    "TrueView": { bg: "#fef3c7", color: "#b45309", border: "#fcd34d" },
+                    "Newline":  { bg: "#f3e8ff", color: "#7e22ce", border: "#d8b4fe" },
+                  };
+                  const vc = vendorColors[log.vendor] || { bg: "#f1f5f9", color: "#475569", border: "#cbd5e1" };
+                  return (
+                    <div style={{ 
+                      padding: "16px",
+                      background: "#f8fafc",
+                      borderRadius: "8px",
+                      border: "1px solid #e2e8f0"
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                        <strong style={{ color: "#374151", fontSize: "0.875rem" }}>Vendor:</strong>
+                      </div>
+                      <span style={{
+                        display: "inline-block",
+                        padding: "5px 14px",
+                        background: vc.bg,
+                        color: vc.color,
+                        border: `1px solid ${vc.border}`,
+                        borderRadius: "6px",
+                        fontSize: "0.8rem",
+                        fontWeight: "700",
+                        letterSpacing: "0.2px"
+                      }}>
+                        {log.vendor}
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Assigned Engineers Section */}

@@ -59,6 +59,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   const [partReplacementStatusFilter, setPartReplacementStatusFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [vendorFilter, setVendorFilter] = useState("");
   const [stats, setStats] = useState({
     open: 0,
     inProgress: 0,
@@ -153,7 +154,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   // Reset pagination when filters change
   useEffect(() => {
     setServicePage(1);
-  }, [debouncedServiceLogsSearch, statusFilter, callTypeFilter, systemTypeFilter, stateFilter, partReplacementStatusFilter, salesPersonFilter, startDate, endDate]);
+  }, [debouncedServiceLogsSearch, statusFilter, callTypeFilter, systemTypeFilter, stateFilter, partReplacementStatusFilter, salesPersonFilter, vendorFilter, startDate, endDate]);
 
   useEffect(() => {
     setReplacementPage(1);
@@ -196,7 +197,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   // Fetch service logs on mount and when filters/pagination change
   useEffect(() => {
     fetchServiceLogs();
-  }, [servicePage, serviceLimit, debouncedServiceLogsSearch, statusFilter, callTypeFilter, systemTypeFilter, stateFilter, partReplacementStatusFilter, salesPersonFilter, startDate, endDate]);
+  }, [servicePage, serviceLimit, debouncedServiceLogsSearch, statusFilter, callTypeFilter, systemTypeFilter, stateFilter, partReplacementStatusFilter, salesPersonFilter, vendorFilter, startDate, endDate]);
 
   useEffect(() => {
     fetchReplacementDemoLogs();
@@ -231,6 +232,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
           state: stateFilter,
           partReplacementStatus: partReplacementStatusFilter,
           salesPerson: salesPersonFilter,
+          vendor: vendorFilter,
           startDate: startDate,
           endDate: endDate
         },
@@ -594,6 +596,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
           systemType: systemTypeFilter,
           state: stateFilter,
           partReplacementStatus: partReplacementStatusFilter,
+          vendor: vendorFilter,
           startDate: startDate,
           endDate: endDate
         },
@@ -1001,6 +1004,8 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
               salespersons={salespersons}
               salesPersonFilter={salesPersonFilter}
               setSalesPersonFilter={setSalesPersonFilter}
+              vendorFilter={vendorFilter}
+              setVendorFilter={setVendorFilter}
             />
             
             <ServiceLogsTable

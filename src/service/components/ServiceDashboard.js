@@ -596,6 +596,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
           systemType: systemTypeFilter,
           state: stateFilter,
           partReplacementStatus: partReplacementStatusFilter,
+          salesPerson: salesPersonFilter,
           vendor: vendorFilter,
           startDate: startDate,
           endDate: endDate

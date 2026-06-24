@@ -1255,6 +1255,7 @@ export const paymentTermsOptions = [
 ];
 export const salesPersonlist = [
   { label: "Abhay Pratap Singh", value: "Abhay Pratap Singh" },
+  { label: "Aditya Pratap Singh", value: "Aditya Pratap Singh" },
   { label: "Abhay Bhardwaj", value: "Abhay Bhardwaj" },
   { label: "Abhayjit Sekhon", value: "Abhayjit Sekhon" },
   { label: "Abhishek Kumar Jha", value: "Abhishek Kumar Jha" },

@@ -470,12 +470,11 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
     <Modal
       show={isOpen}
       onHide={onClose}
-      size="xl"
       centered
       backdrop="static"
       keyboard={true}
       aria-labelledby="preview-modal-title"
-      className="font-sans"
+      dialogClassName="custom-preview-modal"
     >
       <style>
         {`
@@ -695,7 +694,7 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
                         {attachments.map((filePath, index) => {
                           const fileName = filePath.split("/").pop();
                           const fileExt = fileName.includes(".") ? fileName.split(".").pop().toLowerCase() : "";
-                          
+
                           // Get document type label based on extension
                           const getDocumentTypeLabel = () => {
                             if (["pdf"].includes(fileExt)) return "PDF Document";
@@ -704,9 +703,9 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
                             if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt)) return "Image Document";
                             return "Attachment File";
                           };
-                          
+
                           const documentLabel = getDocumentTypeLabel();
-                          
+
                           return (
                             <div key={index} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", padding: "0.5rem 0.75rem", background: "#f1f5f9", borderRadius: "0.5rem" }}>
                               <span style={{ fontSize: "0.9rem", color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

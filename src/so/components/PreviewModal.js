@@ -6,7 +6,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { salesPersonlist } from "./Options";
 // 🔥 EDIT HISTORY: Import the timeline component
 import EditHistoryTimeline from "./EditHistoryTimeline";
-
+import "../../App.css";
 // Helper function to get salesperson label from value
 const getSalesPersonLabel = (value) => {
   if (!value) return "N/A";
@@ -23,10 +23,10 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
     return isNaN(date.getTime())
       ? "N/A"
       : date.toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        });
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
   };
   const isValidPoFilePath = (filePath) => {
     return (
@@ -236,27 +236,23 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
                   <div>
                     <div class="mb-2">
                       <strong class="text-gray-700">Order Date</strong>
-                      <span class="text-gray-900">${
-                        formatDate(entry.soDate) || "N/A"
-                      }</span>
+                      <span class="text-gray-900">${formatDate(entry.soDate) || "N/A"
+      }</span>
                     </div>
                     <div class="mb-2">
                       <strong class="text-gray-700">Customer's/Partner Company Name:</strong>
-                      <span class="text-gray-900">${
-                        entry.customername || "N/A"
-                      }</span>
+                      <span class="text-gray-900">${entry.customername || "N/A"
+      }</span>
                     </div>
                     <div class="mb-2">
                       <strong class="text-gray-700">Customer's/Partner's Billing Address:</strong>
-                      <span class="text-gray-900">${
-                        entry.billingAddress || "N/A"
-                      }</span>
+                      <span class="text-gray-900">${entry.billingAddress || "N/A"
+      }</span>
                     </div>
                     <div class="mb-2">
                       <strong class="text-gray-700">Customer's/Partner's Shipping Address:</strong>
-                      <span class="text-gray-900">${
-                        entry.shippingAddress || "N/A"
-                      }</span>
+                      <span class="text-gray-900">${entry.shippingAddress || "N/A"
+      }</span>
                     </div>
                   </div>
                   <div>
@@ -270,15 +266,13 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
                     </div>
                     <div class="mb-2">
                       <strong class="text-gray-700">Contact No:</strong>
-                      <span class="text-gray-900">${
-                        entry.contactNo || "N/A"
-                      }</span>
+                      <span class="text-gray-900">${entry.contactNo || "N/A"
+      }</span>
                     </div>
                     <div class="mb-2">
                       <strong class="text-gray-700">Mail ID of Partner/Customer:</strong>
-                      <span class="text-gray-900">${
-                        entry.customerEmail || "N/A"
-                      }</span>
+                      <span class="text-gray-900">${entry.customerEmail || "N/A"
+      }</span>
                     </div>
                   </div>
                 </div>
@@ -289,47 +283,40 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
                   <div>
                   <div class="mb-2">
                       <strong class="text-gray-700">Company:</strong>
-                      <span class="text-gray-900">${
-                        entry.company || "N/A"
-                      }</span>
+                      <span class="text-gray-900">${entry.company || "N/A"
+      }</span>
                     </div>
                     <div class="mb-2">
                       <strong class="text-gray-700">Transporter:</strong>
-                      <span class="text-gray-900">${
-                        entry.transporter || "N/A"
-                      }</span>
+                      <span class="text-gray-900">${entry.transporter || "N/A"
+      }</span>
                     </div>
                     <div class="mb-2">
                       <strong class="text-gray-700">Transporter Details:</strong>
-                      <span class="text-gray-900">${
-                        entry.transporterRemarks || "N/A"
-                      }</span>
+                      <span class="text-gray-900">${entry.transporterRemarks || "N/A"
+      }</span>
                     </div>
                     <div class="mb-2">
                       <strong class="text-gray-700">Order Type:</strong>
-                      <span class="text-gray-900">${
-                        entry.orderType || "N/A"
-                      }</span>
+                      <span class="text-gray-900">${entry.orderType || "N/A"
+      }</span>
                     </div>
                   </div>
                   <div>
                     <div class="mb-2">
                       <strong class="text-gray-700">Dispatch From:</strong>
-                      <span class="text-gray-900">${
-                        entry.dispatchFrom || "N/A"
-                      }</span>
+                      <span class="text-gray-900">${entry.dispatchFrom || "N/A"
+      }</span>
                     </div>
                     <div class="mb-2">
                       <strong class="text-gray-700">Name of the Sales Person:</strong>
-                      <span class="text-gray-900">${
-                        getSalesPersonLabel(entry.salesPerson)
-                      }</span>
+                      <span class="text-gray-900">${getSalesPersonLabel(entry.salesPerson)
+      }</span>
                     </div>
                     <div class="mb-2">
                       <strong class="text-gray-700">Remarks By SalesPerson:</strong>
-                      <span class="text-gray-900">${
-                        entry.remarks || "N/A"
-                      }</span>
+                      <span class="text-gray-900">${entry.remarks || "N/A"
+      }</span>
                     </div>
                   </div>
                 </div>
@@ -341,75 +328,68 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
                     <div class="mb-2">
                       <strong class="text-gray-700">Invoice Date:</strong>
                       <span class="text-gray-900">${formatDate(
-                        entry.invoiceDate,
-                      )}</span>
+        entry.invoiceDate,
+      )}</span>
                     </div>
                     <div class="mb-2">
                       <strong class="text-gray-700">Bill Number:</strong>
-                      <span class="text-gray-900">${
-                        entry.billNumber || "N/A"
-                      }</span>
+                      <span class="text-gray-900">${entry.billNumber || "N/A"
+      }</span>
                     </div>
                     <div class="mb-2">
                       <strong class="text-gray-700">PI Number:</strong>
-                      <span class="text-gray-900">${
-                        entry.piNumber || "N/A"
-                      }</span>
+                      <span class="text-gray-900">${entry.piNumber || "N/A"
+      }</span>
                     </div>
                   </div>
                   <div>
                     <div class="mb-2">
                       <strong class="text-gray-700">Payment Terms:</strong>
-                      <span class="badge-custom" style="background: ${
-                        entry.paymentTerms === "100% Advance"
-                          ? "#2196f3"
-                          : entry.paymentTerms === "Partial Advance"
-                            ? "#3b82f6"
-                            : entry.paymentTerms === "Credit"
-                              ? "#eab308"
-                              : "#6b7280"
-                      };">${entry.paymentTerms || "N/A"}</span>
+                      <span class="badge-custom" style="background: ${entry.paymentTerms === "100% Advance"
+        ? "#2196f3"
+        : entry.paymentTerms === "Partial Advance"
+          ? "#3b82f6"
+          : entry.paymentTerms === "Credit"
+            ? "#eab308"
+            : "#6b7280"
+      };">${entry.paymentTerms || "N/A"}</span>
                     </div>
                     <div class="mb-2">
                       <strong class="text-gray-700">Payment Method:</strong>
-                      <span class="badge-custom" style="background: ${
-                        entry.paymentMethod === "Cash"
-                          ? "#2196f3"
-                          : entry.paymentMethod === "NEFT"
-                            ? "#3b82f6"
-                            : entry.paymentMethod === "RTGS"
-                              ? "#9333ea"
-                              : entry.paymentMethod === "Cheque"
-                                ? "#eab308"
-                                : "#6b7280"
-                      };">${entry.paymentMethod || "N/A"}</span>
+                      <span class="badge-custom" style="background: ${entry.paymentMethod === "Cash"
+        ? "#2196f3"
+        : entry.paymentMethod === "NEFT"
+          ? "#3b82f6"
+          : entry.paymentMethod === "RTGS"
+            ? "#9333ea"
+            : entry.paymentMethod === "Cheque"
+              ? "#eab308"
+              : "#6b7280"
+      };">${entry.paymentMethod || "N/A"}</span>
                     </div>
                     <div class="mb-2">
                       <strong class="text-gray-700">Credit Days:</strong>
-                      <span class="text-gray-900">${
-                        entry.creditDays || "N/A"
-                      }</span>
+                      <span class="text-gray-900">${entry.creditDays || "N/A"
+      }</span>
                     </div>
-                    ${
-                      entry.neftTransactionId
-                        ? `
+                    ${entry.neftTransactionId
+        ? `
                     <div class="mb-2">
                       <strong class="text-gray-700">NEFT Transaction ID:</strong>
                       <span class="text-gray-900">${entry.neftTransactionId}</span>
                     </div>
                     `
-                        : ""
-                    }
-                    ${
-                      entry.chequeId
-                        ? `
+        : ""
+      }
+                    ${entry.chequeId
+        ? `
                     <div class="mb-2">
                       <strong class="text-gray-700">Cheque ID:</strong>
                       <span class="text-gray-900">${entry.chequeId}</span>
                     </div>
                     `
-                        : ""
-                    }
+        : ""
+      }
                   </div>
                 </div>
               </div>
@@ -427,60 +407,50 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    ${
-                      entry.products && entry.products.length > 0
-                        ? entry.products
-                            .map((product, index) => {
-                              const qty = product.qty || 0;
-                              const unitPrice = product.unitPrice || 0;
-                              const gstRate = parseFloat(product.gst) || 0;
-                              const lineTotal =
-                                (qty * unitPrice * (100 + gstRate)) / 100;
-                              return `
+                    ${entry.products && entry.products.length > 0
+        ? entry.products
+          .map((product, index) => {
+            const qty = product.qty || 0;
+            const unitPrice = product.unitPrice || 0;
+            const gstRate = parseFloat(product.gst) || 0;
+            const lineTotal =
+              (qty * unitPrice * (100 + gstRate)) / 100;
+            return `
                         <tr>
                           <td>${index + 1}</td>
-                          <td><strong>${
-                            product.productType || "N/A"
-                          }</strong><br /><small>Size: ${
-                            product.size || "N/A"
-                          }, Spec: ${product.spec || "N/A"}, Brand: ${
-                            product.brand || "N/A"
-                          }, Warranty: ${product.warranty || "N/A"}${
-                            product.serialNos?.length > 0
-                              ? `, Serial: ${product.serialNos.join(", ")}`
-                              : ""
-                          }${
-                            product.modelNos?.length > 0
-                              ? `, Model: ${product.modelNos.join(", ")}`
-                              : ""
-                          }</small></td>
+                          <td><strong>${product.productType || "N/A"
+              }</strong><br /><small>Size: ${product.size || "N/A"
+              }, Spec: ${product.spec || "N/A"}, Brand: ${product.brand || "N/A"
+              }, Warranty: ${product.warranty || "N/A"}${product.serialNos?.length > 0
+                ? `, Serial: ${product.serialNos.join(", ")}`
+                : ""
+              }${product.modelNos?.length > 0
+                ? `, Model: ${product.modelNos.join(", ")}`
+                : ""
+              }</small></td>
                           <td>${qty}</td>
                           <td>₹${unitPrice.toFixed(2)}</td>
                           <td>${gstRate.toFixed(2)}%</td>
                           <td>₹${lineTotal.toFixed(2)}</td>
                         </tr>
                       `;
-                            })
-                            .join("")
-                        : '<tr><td colspan="6" style="text-align: center; font-style: italic;">No products available.</td></tr>'
-                    }
+          })
+          .join("")
+        : '<tr><td colspan="6" style="text-align: center; font-style: italic;">No products available.</td></tr>'
+      }
                   </tbody>
                 </table>
               </div>
               <div class="totals-section">
                 <div class="text-gray-700 space-y-1">
-                  <p><strong>Freight Status:</strong> ${
-                    entry.freightstatus || "N/A"
-                  }</p>
-                  <p><strong>Installation Status:</strong> ${
-                    entry.installchargesstatus || "N/A"
-                  }</p>
-                  <p><strong>Freight Charges:</strong> ₹${
-                    entry.actualFreight?.toFixed(2) || entry.freightcs || "N/A"
-                  }</p>
-                  <p><strong>Installation Charges:</strong> ${
-                    entry.installation || "N/A"
-                  }</p>
+                  <p><strong>Freight Status:</strong> ${entry.freightstatus || "N/A"
+      }</p>
+                  <p><strong>Installation Status:</strong> ${entry.installchargesstatus || "N/A"
+      }</p>
+                  <p><strong>Freight Charges:</strong> ₹${entry.actualFreight?.toFixed(2) || entry.freightcs || "N/A"
+      }</p>
+                  <p><strong>Installation Charges:</strong> ${entry.installation || "N/A"
+      }</p>
                 </div>
                 <div class="text-gray-700 space-y-1">
                   <p><strong>Subtotal:</strong> ₹${subtotal}</p>
@@ -507,12 +477,11 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
     <Modal
       show={isOpen}
       onHide={onClose}
-      size="xl"
       centered
       backdrop="static"
       keyboard={true}
       aria-labelledby="preview-modal-title"
-      className="font-sans"
+      dialogClassName="custom-preview-modal"
     >
       <style>
         {`
@@ -730,7 +699,7 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
                         {attachments.map((filePath, index) => {
                           const fileName = filePath.split("/").pop();
                           const fileExt = fileName.includes(".") ? fileName.split(".").pop().toLowerCase() : "";
-                          
+
                           // Get document type label based on extension
                           const getDocumentTypeLabel = () => {
                             if (["pdf"].includes(fileExt)) return "PDF Document";
@@ -739,9 +708,9 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
                             if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt)) return "Image Document";
                             return "Attachment File";
                           };
-                          
+
                           const documentLabel = getDocumentTypeLabel();
-                          
+
                           return (
                             <div key={index} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", padding: "0.5rem 0.75rem", background: "#f1f5f9", borderRadius: "0.5rem" }}>
                               <span style={{ fontSize: "0.9rem", color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -1051,7 +1020,7 @@ const PreviewModal = ({ isOpen, onClose, entry }) => {
               </p>
             </div>
           </div>
-          
+
           {/* 🔥 EDIT HISTORY SECTION */}
           <div className="invoice-section">
             <h4 className="text-lg mb-3">📝 Edit History</h4>

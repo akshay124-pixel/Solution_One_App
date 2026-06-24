@@ -924,3 +924,12 @@ background: linear-gradient(135deg, #2575fc, #6a11cb);
 .attendance-button:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); }
+
+
+
+
+/* Preview Modal View Size */
+ .custom-preview-modal {
+  max-width: 80vw !important;
+  width: 80vw !important;
+}

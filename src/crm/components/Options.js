@@ -55,6 +55,8 @@ export const statesAndCities = {
   Bihar: [
     "Chapra",
     "Siwan",
+    "Supaul ",
+    "Saharsa",
     "Gopalganj",
     "Bettiah",
     "Motihari",
@@ -713,7 +715,7 @@ export const statesAndCities = {
     "Ranaghat",
     "Bishnupur",
     "Jangipur",
-    "Baharampur"
+    "Baharampur",
   ],
   "Andaman and Nicobar Islands": [
     "Port Blair",

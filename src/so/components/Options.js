@@ -425,7 +425,8 @@ export const statesAndCities = {
   Bihar: [
     "Chapra",
     "Siwan",
-    "Supaul",
+    "Supaul ",
+    "Saharsa",
     "Gopalganj",
     "Bettiah",
     "Motihari",
@@ -912,6 +913,7 @@ export const statesAndCities = {
     "Chennai",
     "Coimbatore",
     "Madurai",
+    "Virudhunagar",
     "Tiruchirappalli",
     "Salem",
     "Erode",

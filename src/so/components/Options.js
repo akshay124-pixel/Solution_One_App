@@ -1049,6 +1049,7 @@ export const statesAndCities = {
     "Rishikesh",
     "Mussoorie",
     "Almora",
+    "Udhamsingh Nagar",
     "Pithoragarh",
     "Haldwani",
     "Rudrapur",

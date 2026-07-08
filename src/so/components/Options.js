@@ -839,6 +839,7 @@ export const statesAndCities = {
     "Lodhipur",
     "Ferozepur",
     "Gurdaspur",
+    "Govind Garh Mandi",
     "Hoshiarpur",
     "Jalandhar",
     "Kapurthala",

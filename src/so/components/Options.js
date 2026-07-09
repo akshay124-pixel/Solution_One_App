@@ -1315,6 +1315,7 @@ export const salesPersonlist = [
   { label: "Rajeev Pal Singh", value: "Rajeev Pal Singh" },
   { label: "Riya Rana", value: "Riya Rana" },
   { label: "Rohit Kumar", value: "Rohit Kumar" },
+  { label: "Rajarshri Shailendra Kumar", value: "Rajarshri Shailendra Kumar" },
   { label: "Ramkumar Singh", value: "Ramkumar Singh" },
   { label: "Ranbeer Kaur", value: "Ranbeer Kaur" },
   { label: "Rachit Arya", value: "Rachit Arya" },

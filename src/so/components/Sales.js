@@ -1404,6 +1404,19 @@ const Sales = () => {
     });
 
     socket.on("notification", (notif) => {
+      // Role-based ownership guard:
+      // GlobalAdmin / SuperAdmin / Watch see all notifications (broadcast to "admins" room is intentional).
+      // Admin must only see notifications for orders they own — filter by orderCreatedBy.
+      // Salesperson is never in the "admins" room so this guard is a no-op for them.
+      const normalizedRole = (userRole || "").toLowerCase();
+      const isFullAccess =
+        normalizedRole === "globaladmin" ||
+        normalizedRole === "superadmin" ||
+        normalizedRole === "watch";
+      if (!isFullAccess && notif?.orderCreatedBy && String(notif.orderCreatedBy) !== String(userId)) {
+        return; // Admin: discard notifications that don't belong to this user
+      }
+
       setNotifications((prev) => {
         if (notif?._id && prev.some((n) => n._id === notif._id)) return prev;
         return [notif, ...prev].slice(0, 50);

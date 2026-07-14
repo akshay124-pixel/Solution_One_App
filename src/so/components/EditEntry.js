@@ -3596,6 +3596,7 @@ function EditEntry({ isOpen, onClose, onEntryUpdated, entryToEdit }) {
                 <option value="Pending">Pending</option>
                 <option value="Under Process">Under Process</option>
                 <option value="Partial Dispatch">Partial Dispatch</option>
+                <option value ="Not In Stock">Not In Stock</option>
                 <option value="Fulfilled">Fulfilled</option>
               </Form.Select>
             )}

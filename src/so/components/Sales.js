@@ -9,7 +9,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import soApi from "../../so/axiosSetup";
 import { toast } from "react-toastify";
 import { exportToExcel, readExcelFile } from "../../utils/excelHelper";
-import { BarChart2, Upload, Download,Users } from "lucide-react";
+import { BarChart2, Upload, Download, Users } from "lucide-react";
 import {
   createAuthenticatedSocket,
   bindJoinOnConnect,
@@ -430,7 +430,7 @@ const Row = React.memo(({ index, style, data }) => {
     if (isOrderComplete(order)) return "#ffffff";
 
     const hasAttachments = order.poFilePath || (order.attachments && order.attachments.length > 0);
-    
+
     if (order.sostatus === "Approved") {
       if (hasAttachments) {
         return "#d4f4e6";
@@ -1002,7 +1002,10 @@ const Row = React.memo(({ index, style, data }) => {
                         ? "linear-gradient(135deg, #00c6ff, #0072ff)"
                         : order.fulfillingStatus === "Fulfilled"
                           ? "linear-gradient(135deg, #28a745, #4cd964)"
-                          : "linear-gradient(135deg, #6c757d, #a9a9a9)",
+                          : order.fulfillingStatus === "Not In Stock"
+                            ? "linear-gradient(135deg, #dc3545, #ff6b6b)"
+                            : "linear-gradient(135deg, #6c757d, #a9a9a9)",
+                color: "#fff",
               }}
             >
               {order.fulfillingStatus || "Pending"}
@@ -1090,7 +1093,7 @@ const Row = React.memo(({ index, style, data }) => {
                 ? order.createdBy
                 : "-",
         },
-       
+
       ].map((cell, idx) => (
         <td
           key={idx}
@@ -1472,10 +1475,10 @@ const Sales = () => {
       filterEffectMounted.current = true;
       return;
     }
-    
+
     // Reset to page 1 when any filter changes
     setCurrentPage(1);
-    
+
     // Fetch with updated filters - always pass financialYear regardless of trackerFilter
     fetchOrders({
       page: 1,
@@ -1490,7 +1493,7 @@ const Sales = () => {
       endDate,
       dashboardFilter: trackerFilter,
     });
-    
+
     // Update dashboard counts with current financial year
     fetchDashboardCounts(financialYearFilter);
   }, [
@@ -1680,38 +1683,14 @@ const Sales = () => {
 
         const newEntries = parsedData.map((entry) => {
 
-            let products = [];
-            if (entry.products) {
-              try {
-                products = JSON.parse(entry.products);
-                if (!Array.isArray(products)) {
-                  products = [products];
-                }
-              } catch {
-                products = [
-                  {
-                    productType: String(entry.producttype || "Unknown").trim(),
-                    size: String(entry.size || "N/A").trim(),
-                    spec: String(entry.spec || "N/A").trim(),
-                    qty: Number(entry.qty) || 1,
-                    unitPrice: Number(entry.unitprice) || 0,
-                    serialNos: entry.serialnos
-                      ? String(entry.serialnos)
-                        .split(",")
-                        .map((s) => s.trim())
-                        .filter(Boolean)
-                      : [],
-                    modelNos: entry.modelnos
-                      ? String(entry.modelnos)
-                        .split(",")
-                        .map((m) => m.trim())
-                        .filter(Boolean)
-                      : [],
-                    gst: String(entry.gst || "18").trim(),
-                  },
-                ];
+          let products = [];
+          if (entry.products) {
+            try {
+              products = JSON.parse(entry.products);
+              if (!Array.isArray(products)) {
+                products = [products];
               }
-            } else {
+            } catch {
               products = [
                 {
                   productType: String(entry.producttype || "Unknown").trim(),
@@ -1735,124 +1714,148 @@ const Sales = () => {
                 },
               ];
             }
-
-            return {
-              soDate:
-                parseExcelDate(entry.sodate) ||
-                new Date().toISOString().slice(0, 10),
-              dispatchFrom: String(entry.dispatchfrom || "").trim(),
-              dispatchDate: parseExcelDate(entry.dispatchdate) || "",
-              name: String(entry.name || "").trim(),
-              city: String(entry.city || "").trim(),
-              state: String(entry.state || "").trim(),
-              pinCode: String(entry.pincode || "").trim(),
-              contactNo: String(entry.contactno || "").trim(),
-              customerEmail: String(entry.customeremail || "").trim(),
-              customername: String(entry.customername || "").trim(),
-              products,
-              total: Number(entry.total) || 0,
-              paymentCollected: String(entry.paymentcollected || "").trim(),
-              paymentMethod: String(entry.paymentmethod || "").trim(),
-              paymentDue: String(entry.paymentdue || "").trim(),
-              paymentTerms: String(entry.paymentterms || "").trim(),
-              creditDays: String(entry.creditdays || "").trim(),
-              neftTransactionId: String(entry.nefttransactionid || "").trim(),
-              chequeId: String(entry.chequeid || "").trim(),
-              freightcs: String(entry.freightcs || "").trim(),
-              freightstatus: String(entry.freightstatus || "Extra").trim(),
-              installchargesstatus: String(
-                entry.installchargesstatus || "Extra"
-              ).trim(),
-              orderType: String(entry.ordertype || "B2C").trim(),
-              gemOrderNumber: String(entry.gemordernumber || "").trim(),
-              deliveryDate: parseExcelDate(entry.deliverydate) || "",
-              installation: String(entry.installation || "").trim(),
-              installationStatus: String(
-                entry.installationstatus || "Pending"
-              ).trim(),
-              remarksByInstallation: String(
-                entry.remarksbyinstallation || ""
-              ).trim(),
-              dispatchStatus: String(
-                entry.dispatchstatus || "Not Dispatched"
-              ).trim(),
-              salesPerson: String(entry.salesperson || "").trim(),
-              report: String(entry.report || "").trim(),
-              company: String(entry.company || "Promark").trim(),
-              transporter: String(entry.transporter || "").trim(),
-              transporterDetails: String(entry.transporterdetails || "").trim(),
-              docketNo: String(entry.docketno || "").trim(),
-              receiptDate: parseExcelDate(entry.receiptdate) || "",
-              shippingAddress: String(entry.shippingaddress || "").trim(),
-              billingAddress: String(entry.billingaddress || "").trim(),
-              invoiceNo: String(entry.invoiceno || "").trim(),
-              invoiceDate: parseExcelDate(entry.invoicedate) || "",
-              fulfillingStatus: String(
-                entry.fulfillingstatus || "Pending"
-              ).trim(),
-              remarksByProduction: String(
-                entry.remarksbyproduction || ""
-              ).trim(),
-              remarksByAccounts: String(entry.remarksbyaccounts || "").trim(),
-              paymentReceived: String(
-                entry.paymentreceived || "Not Received"
-              ).trim(),
-              billNumber: String(entry.billnumber || "").trim(),
-              piNumber: String(entry.pinumber || "").trim(),
-              remarksByBilling: String(entry.remarksbybilling || "").trim(),
-              verificationRemarks: String(
-                entry.verificationremarks || ""
-              ).trim(),
-              billStatus: String(entry.billstatus || "Pending").trim(),
-              completionStatus: String(
-                entry.completionstatus || "In Progress"
-              ).trim(),
-              fulfillmentDate: parseExcelDate(entry.fulfillmentdate) || "",
-              remarks: String(entry.remarks || "").trim(),
-              sostatus: String(entry.sostatus || "Pending for Approval").trim(),
-              gstno: String(entry.gstno || "").trim(),
-            };
-          });
-
-          const response = await soApi.post(
-            `/api/bulk-orders`,
-            newEntries,
-            {
-              headers: { "Content-Type": "application/json" },
-            }
-          );
-
-          await fetchOrders(); // Reload orders to reflect bulk upload properly (safest for pagination)
-          /*
-          setOrders((prev) => {
-            const updatedOrders = [...prev, ...response.data.data];
-             // we removed filterOrders, so just return
-             return updatedOrders;
-          });
-          */
-          fetchDashboardCounts(); // Refresh counts after bulk upload
-          toast.success(
-            `Successfully uploaded ${response.data.data.length} orders!`
-          );
-        } catch (error) {
-          console.error("Error uploading entries:", error);
-
-          let friendlyMessage =
-            "Sorry, we couldn't upload your data. Please check your file and try again.";
-
-          if (error.response?.data?.details) {
-            friendlyMessage =
-              "Please fix the following issues in your file: " +
-              error.response.data.details.join(", ");
-          } else if (error.response?.data?.message) {
-            friendlyMessage = error.response.data.message;
+          } else {
+            products = [
+              {
+                productType: String(entry.producttype || "Unknown").trim(),
+                size: String(entry.size || "N/A").trim(),
+                spec: String(entry.spec || "N/A").trim(),
+                qty: Number(entry.qty) || 1,
+                unitPrice: Number(entry.unitprice) || 0,
+                serialNos: entry.serialnos
+                  ? String(entry.serialnos)
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                  : [],
+                modelNos: entry.modelnos
+                  ? String(entry.modelnos)
+                    .split(",")
+                    .map((m) => m.trim())
+                    .filter(Boolean)
+                  : [],
+                gst: String(entry.gst || "18").trim(),
+              },
+            ];
           }
 
-          toast.error(friendlyMessage, {
-            position: "top-right",
-            autoClose: 7000,
-          });
+          return {
+            soDate:
+              parseExcelDate(entry.sodate) ||
+              new Date().toISOString().slice(0, 10),
+            dispatchFrom: String(entry.dispatchfrom || "").trim(),
+            dispatchDate: parseExcelDate(entry.dispatchdate) || "",
+            name: String(entry.name || "").trim(),
+            city: String(entry.city || "").trim(),
+            state: String(entry.state || "").trim(),
+            pinCode: String(entry.pincode || "").trim(),
+            contactNo: String(entry.contactno || "").trim(),
+            customerEmail: String(entry.customeremail || "").trim(),
+            customername: String(entry.customername || "").trim(),
+            products,
+            total: Number(entry.total) || 0,
+            paymentCollected: String(entry.paymentcollected || "").trim(),
+            paymentMethod: String(entry.paymentmethod || "").trim(),
+            paymentDue: String(entry.paymentdue || "").trim(),
+            paymentTerms: String(entry.paymentterms || "").trim(),
+            creditDays: String(entry.creditdays || "").trim(),
+            neftTransactionId: String(entry.nefttransactionid || "").trim(),
+            chequeId: String(entry.chequeid || "").trim(),
+            freightcs: String(entry.freightcs || "").trim(),
+            freightstatus: String(entry.freightstatus || "Extra").trim(),
+            installchargesstatus: String(
+              entry.installchargesstatus || "Extra"
+            ).trim(),
+            orderType: String(entry.ordertype || "B2C").trim(),
+            gemOrderNumber: String(entry.gemordernumber || "").trim(),
+            deliveryDate: parseExcelDate(entry.deliverydate) || "",
+            installation: String(entry.installation || "").trim(),
+            installationStatus: String(
+              entry.installationstatus || "Pending"
+            ).trim(),
+            remarksByInstallation: String(
+              entry.remarksbyinstallation || ""
+            ).trim(),
+            dispatchStatus: String(
+              entry.dispatchstatus || "Not Dispatched"
+            ).trim(),
+            salesPerson: String(entry.salesperson || "").trim(),
+            report: String(entry.report || "").trim(),
+            company: String(entry.company || "Promark").trim(),
+            transporter: String(entry.transporter || "").trim(),
+            transporterDetails: String(entry.transporterdetails || "").trim(),
+            docketNo: String(entry.docketno || "").trim(),
+            receiptDate: parseExcelDate(entry.receiptdate) || "",
+            shippingAddress: String(entry.shippingaddress || "").trim(),
+            billingAddress: String(entry.billingaddress || "").trim(),
+            invoiceNo: String(entry.invoiceno || "").trim(),
+            invoiceDate: parseExcelDate(entry.invoicedate) || "",
+            fulfillingStatus: String(
+              entry.fulfillingstatus || "Pending"
+            ).trim(),
+            remarksByProduction: String(
+              entry.remarksbyproduction || ""
+            ).trim(),
+            remarksByAccounts: String(entry.remarksbyaccounts || "").trim(),
+            paymentReceived: String(
+              entry.paymentreceived || "Not Received"
+            ).trim(),
+            billNumber: String(entry.billnumber || "").trim(),
+            piNumber: String(entry.pinumber || "").trim(),
+            remarksByBilling: String(entry.remarksbybilling || "").trim(),
+            verificationRemarks: String(
+              entry.verificationremarks || ""
+            ).trim(),
+            billStatus: String(entry.billstatus || "Pending").trim(),
+            completionStatus: String(
+              entry.completionstatus || "In Progress"
+            ).trim(),
+            fulfillmentDate: parseExcelDate(entry.fulfillmentdate) || "",
+            remarks: String(entry.remarks || "").trim(),
+            sostatus: String(entry.sostatus || "Pending for Approval").trim(),
+            gstno: String(entry.gstno || "").trim(),
+          };
+        });
+
+        const response = await soApi.post(
+          `/api/bulk-orders`,
+          newEntries,
+          {
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+
+        await fetchOrders(); // Reload orders to reflect bulk upload properly (safest for pagination)
+        /*
+        setOrders((prev) => {
+          const updatedOrders = [...prev, ...response.data.data];
+           // we removed filterOrders, so just return
+           return updatedOrders;
+        });
+        */
+        fetchDashboardCounts(); // Refresh counts after bulk upload
+        toast.success(
+          `Successfully uploaded ${response.data.data.length} orders!`
+        );
+      } catch (error) {
+        console.error("Error uploading entries:", error);
+
+        let friendlyMessage =
+          "Sorry, we couldn't upload your data. Please check your file and try again.";
+
+        if (error.response?.data?.details) {
+          friendlyMessage =
+            "Please fix the following issues in your file: " +
+            error.response.data.details.join(", ");
+        } else if (error.response?.data?.message) {
+          friendlyMessage = error.response.data.message;
         }
+
+        toast.error(friendlyMessage, {
+          position: "top-right",
+          autoClose: 7000,
+        });
+      }
     },
     [
       parseExcelDate,
@@ -1873,11 +1876,11 @@ const Sales = () => {
               orderType: orderTypeFilter,
               dispatch: dispatchFilter,
               salesPerson: salesPersonFilter,
-      dispatchFrom: dispatchFromFilter,
-      financialYear: financialYearFilter,
-      startDate: startDate ? startDate.toISOString() : undefined,
-      endDate: endDate ? endDate.toISOString() : undefined,
-      dashboardFilter: trackerFilter,
+              dispatchFrom: dispatchFromFilter,
+              financialYear: financialYearFilter,
+              startDate: startDate ? startDate.toISOString() : undefined,
+              endDate: endDate ? endDate.toISOString() : undefined,
+              dashboardFilter: trackerFilter,
             },
             responseType: "blob",
           }
@@ -2425,7 +2428,7 @@ const Sales = () => {
             flexWrap: "wrap",
           }}
         >
-          
+
           {(userRole === "Admin" || userRole === "GlobalAdmin" || userRole === "SuperAdmin" || userRole === "salesperson") && (
             <label
               style={{
@@ -2520,7 +2523,7 @@ const Sales = () => {
               Add Order
             </Button>
           )}
-         
+
           {(userRole === "Admin" ||
             userRole === "GlobalAdmin" ||
             userRole === "SuperAdmin" ||
@@ -2574,7 +2577,7 @@ const Sales = () => {
                 e.target.style.boxShadow = "0 6px 16px rgba(0,0,0,0.25)";
               }}
             >
-             <Users size={18} />
+              <Users size={18} />
               Manage Team
             </Button>
           )}

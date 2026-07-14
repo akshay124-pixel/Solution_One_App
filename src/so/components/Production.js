@@ -157,7 +157,7 @@ const Production = () => {
   const [orderTypeFilter, setOrderTypeFilter] = useState("All");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const pdfRef = useRef(null);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageLimit, setPageLimit] = useState(50);
@@ -179,14 +179,14 @@ const Production = () => {
         page: page.toString(),
         limit: limit.toString(),
       });
-      
+
       // Add filters to query params
       if (searchQuery) params.append('search', searchQuery);
       if (startDate) params.append('startDate', startDate.toISOString());
       if (endDate) params.append('endDate', endDate.toISOString());
       if (statusFilter && statusFilter !== 'All') params.append('status', statusFilter);
       if (orderTypeFilter && orderTypeFilter !== 'All') params.append('orderType', orderTypeFilter);
-      
+
       const response = await soApi.get(`/api/production-orders?${params.toString()}`);
       if (response.data.success) {
         setOrders(response.data.data);
@@ -217,7 +217,7 @@ const Production = () => {
       setLoading(false);
     }
   }, [currentPage, pageLimit, searchQuery, startDate, endDate, statusFilter, orderTypeFilter]);
-  
+
   useEffect(() => {
     fetchOrders(currentPage, pageLimit);
   }, [fetchOrders]);
@@ -238,6 +238,7 @@ const Production = () => {
     "Under Process",
     "Pending",
     "Partial Dispatch",
+    "Not In Stock",
     "Fulfilled",
     ...new Set(
       orders
@@ -248,6 +249,7 @@ const Production = () => {
               "Under Process",
               "Pending",
               "Partial Dispatch",
+              "Not In Stock",
               "Fulfilled",
             ].includes(status)
         )
@@ -608,23 +610,23 @@ const Production = () => {
   const handleExportExcel = useCallback(async () => {
     try {
       toast.info("Preparing export, please wait...", { position: "top-right", autoClose: 2000 });
-      
+
       // Build query params with all active filters for export
       const params = new URLSearchParams({ export: 'true' });
-      
+
       // Add all active filters to export query
       if (searchQuery) params.append('search', searchQuery);
       if (startDate) params.append('startDate', startDate.toISOString());
       if (endDate) params.append('endDate', endDate.toISOString());
       if (statusFilter && statusFilter !== 'All') params.append('status', statusFilter);
       if (orderTypeFilter && orderTypeFilter !== 'All') params.append('orderType', orderTypeFilter);
-      
+
       // Fetch ALL filtered records (no pagination) for export
       const response = await soApi.get(`/api/production-orders?${params.toString()}`);
       if (!response.data.success) throw new Error("Export fetch failed");
 
       const allOrders = Array.isArray(response.data.data) ? response.data.data : [];
-      
+
       const exportData = allOrders.map((order) => {
         const firstProduct =
           Array.isArray(order.products) && order.products.length > 0
@@ -663,7 +665,7 @@ const Production = () => {
           "Total Quantity": totalQty,
         };
       });
-      
+
       await exportToExcel(exportData, "Production Orders", `Production_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
       toast.success(`Exported ${allOrders.length} records successfully!`, { position: "top-right", autoClose: 3000 });
     } catch (err) {
@@ -1561,12 +1563,13 @@ const Production = () => {
                                     ? "linear-gradient(135deg, #f39c12, #f7c200)"
                                     : order.fulfillingStatus === "Pending"
                                       ? "linear-gradient(135deg, #ff6b6b, #ff8787)"
-                                      : order.fulfillingStatus ===
-                                        "Partial Dispatch"
+                                      : order.fulfillingStatus === "Partial Dispatch"
                                         ? "linear-gradient(135deg, #00c6ff, #0072ff)"
                                         : order.fulfillingStatus === "Fulfilled"
                                           ? "linear-gradient(135deg, #28a745, #4cd964)"
-                                          : "linear-gradient(135deg, #6c757d, #a9a9a9)",
+                                          : order.fulfillingStatus === "Not In Stock"
+                                            ? "linear-gradient(135deg, #dc3545, #ff6b6b)"
+                                            : "linear-gradient(135deg, #6c757d, #a9a9a9)",
                                 color: "#fff",
                                 padding: "5px 10px",
                                 borderRadius: "12px",
@@ -1667,7 +1670,7 @@ const Production = () => {
                   </tbody>
                 </table>
               </div>
-              
+
               {/* Pagination Component */}
               <Pagination
                 currentPage={pagination.currentPage}
@@ -1746,6 +1749,7 @@ const Production = () => {
                   <option value="Under Process">Under Process</option>
                   <option value="Pending">Pending</option>
                   <option value="Partial Dispatch">Partial Dispatch</option>
+                  <option value="Not In Stock">Not In Stock</option>
                   <option value="Fulfilled">Completed</option>
                 </Form.Select>
               </Form.Group>
@@ -2186,7 +2190,7 @@ const Production = () => {
                         <strong>Shipping Address:</strong>{" "}
                         {viewOrder.shippingAddress || "N/A"}
                       </div>
-                       <div className="pdf-item" style={{ gridColumn: "span 2" }}>
+                      <div className="pdf-item" style={{ gridColumn: "span 2" }}>
                         <strong>Pincode:</strong>{" "}
                         {viewOrder.pinCode || "N/A"}
                       </div>
@@ -2543,16 +2547,16 @@ const Production = () => {
 
                     return (
                       <div style={{ marginTop: "1.5rem", padding: "1rem 1.5rem", background: "#fff", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.08)" }}>
-                        <div style={{ 
-                          display: "flex", 
-                          alignItems: "center", 
+                        <div style={{
+                          display: "flex",
+                          alignItems: "center",
                           justifyContent: "space-between",
-                          marginBottom: "1rem" 
+                          marginBottom: "1rem"
                         }}>
-                          <span style={{ 
-                            fontSize: "0.875rem", 
-                            fontWeight: 600, 
-                            color: "#374151" 
+                          <span style={{
+                            fontSize: "0.875rem",
+                            fontWeight: 600,
+                            color: "#374151"
                           }}>
                             📎 Attachments ({attachments.length})
                           </span>
@@ -2561,7 +2565,7 @@ const Production = () => {
                           {attachments.map((filePath, index) => {
                             const fileName = filePath.split("/").pop();
                             const fileExt = fileName.includes(".") ? fileName.split(".").pop().toLowerCase() : "";
-                            
+
                             // Get document type label based on extension
                             const getDocumentTypeLabel = () => {
                               if (["pdf"].includes(fileExt)) return "PDF Document";
@@ -2570,7 +2574,7 @@ const Production = () => {
                               if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt)) return "Image Document";
                               return "Attachment File";
                             };
-                            
+
                             // Get file icon based on extension
                             const getFileIcon = () => {
                               if (["pdf"].includes(fileExt)) {
@@ -2787,6 +2791,8 @@ const InstallStatusBadge = ({ status }) => {
       case "Pending":
       case "Not Dispatched":
       case "Docket Awaited Dispatched":
+        return { background: "linear-gradient(135deg, #ff6b6b, #ff8787)" };
+      case "Not In Stock":
         return { background: "linear-gradient(135deg, #ff6b6b, #ff8787)" };
       case "In Progress":
       case "Under Process":

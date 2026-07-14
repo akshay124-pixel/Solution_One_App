@@ -31,6 +31,7 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
     { name: "DLS" },
     { name: "TrueView" },
     { name: "Newline" },
+    { name: "RINL"}
   ];
 
   useEffect(() => {

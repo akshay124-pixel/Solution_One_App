@@ -1287,6 +1287,7 @@ export const salesPersonlist = [
   { label: "Harish Kumar", value: "Harish Kumar" },
   { label: "Heena Mehra", value: "Heena Mehra" },
   { label: "Harpreet Singh", value: "Harpeet Singh" }, // Old DB value (typo)
+  { label: "Ishan Rathor", value: "Ishan Rathor" }, 
   { label: "J P Sharma", value: "J P Sharma" },
   { label: "Jagan Lal", value: "Jagan Lal" },
   { label: "Jyoti Rani", value: "Jyoti Rani" },

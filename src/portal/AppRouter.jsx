@@ -13,6 +13,7 @@ import FurniApp from "./FurniApp";
 import ServiceApp from "./ServiceApp";
 import IdentityManager from "./admin/IdentityManager";
 import AdminPanel from "./admin/AdminPanel";
+import AdminCreateUserPanel from "./admin/AdminCreateUserPanel";
 import PasswordExpiredScreen from "./PasswordExpiredScreen";
 
 const Unauthorized = () => (
@@ -140,13 +141,25 @@ const AppRouter = () => (
       }
     />
 
-    {/* Admin Panel — full user management */}
+    {/* Admin Panel — full user management (globaladmin only) */}
     <Route
       path="/admin/*"
       element={
         <ProtectedRoute roles={["globaladmin"]}>
           <PasswordCheckWrapper>
             <AdminPanel />
+          </PasswordCheckWrapper>
+        </ProtectedRoute>
+      }
+    />
+
+    {/* Admin Portal — user creation for admin role */}
+    <Route
+      path="/admin-portal"
+      element={
+        <ProtectedRoute roles={["admin"]}>
+          <PasswordCheckWrapper>
+            <AdminCreateUserPanel />
           </PasswordCheckWrapper>
         </ProtectedRoute>
       }

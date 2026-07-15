@@ -13,10 +13,11 @@ import { toast } from "react-toastify";
 const FONT = "'Inter','Segoe UI',system-ui,sans-serif";
 const GRAD = "linear-gradient(135deg,#2575fc 0%,#6a11cb 100%)";
 const MOD  = {
-  crm:   { color:"#3b82f6", bg:"#eff6ff", label:"CRM" },
-  so:    { color:"#22c55e", bg:"#f0fdf4", label:"SO" },
-  dms:   { color:"#a855f7", bg:"#fdf4ff", label:"DMS" },
-  furni: { color:"#f97316", bg:"#fff7ed", label:"Furni" },
+  crm:     { color:"#3b82f6", bg:"#eff6ff", label:"CRM" },
+  so:      { color:"#22c55e", bg:"#f0fdf4", label:"SO" },
+  dms:     { color:"#a855f7", bg:"#fdf4ff", label:"DMS" },
+  furni:   { color:"#f97316", bg:"#fff7ed", label:"Furni" },
+  service: { color:"#06b6d4", bg:"#ecfeff", label:"Service" },
 };
 
 const ROLE_OPTIONS = [
@@ -262,19 +263,48 @@ const OverviewTab = ({ onTabChange }) => {
 
 // ── Edit User Modal ───────────────────────────────────────────────────────────
 const EditUserModal = ({ user, onClose, onSaved }) => {
+  // Parse current app_module into checkbox state
+  const currentModules = (user.app_module || "").split("+").filter(Boolean);
+  const initialModules = {};
+  ["crm", "so", "dms", "furni", "service"].forEach(mod => {
+    initialModules[mod] = currentModules.includes(mod);
+  });
+
   const [form, setForm] = useState({
     username:   user.username || "",
     role:       user.role || "salesperson",
-    app_module: user.app_module || "crm+so+furni",
+    modules:    initialModules,
     dms:        !!user.dms,
   });
   const [busy, setBusy] = useState(false);
 
+  const toggleModule = (mod) => setForm(f => ({
+    ...f, modules: { ...f.modules, [mod]: !f.modules[mod] }
+  }));
+
   const save = async (e) => {
     e.preventDefault();
+
+    // Convert modules object to app_module string (alphabetically sorted)
+    const selectedModules = Object.keys(form.modules)
+      .filter(mod => form.modules[mod])
+      .sort();
+    
+    if (selectedModules.length === 0) {
+      toast.warning("Please select at least one module.");
+      return;
+    }
+
+    const app_module = selectedModules.join("+");
+
     setBusy(true);
     try {
-      await portalApi.put(`/api/admin/users/${user._id}`, form);
+      await portalApi.put(`/api/admin/users/${user._id}`, {
+        username: form.username,
+        role: form.role,
+        app_module,
+        dms: form.dms,
+      });
       toast.success("User updated!");
       onSaved();
     } catch (err) {
@@ -307,18 +337,53 @@ const EditUserModal = ({ user, onClose, onSaved }) => {
               ))}
             </select>
           </div>
+
+          {/* Module selector with checkboxes */}
           <div style={{ marginBottom:14 }}>
             <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase",
-              letterSpacing:.5, color:"#94a3b8", marginBottom:6 }}>App Module</div>
-            <select className="ap-input ap-select" value={form.app_module}
-              onChange={e => setForm(f => ({ ...f, app_module: e.target.value }))}>
-              {MODULE_COMBOS.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
+              letterSpacing:.5, color:"#94a3b8", marginBottom:8 }}>Module Access</div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:8,
+              padding:"12px", background:"#f8fafc", borderRadius:9, border:"1px solid #e2e8f0" }}>
+              {["crm","so","dms","furni","service"].map(m => {
+                const config = MOD[m] || { color:"#64748b", bg:"#f1f5f9", label:m };
+                return (
+                  <label key={m} style={{ 
+                    display:"flex", alignItems:"center", gap:8,
+                    cursor:"pointer", fontSize:13, color:"#374151",
+                    padding:"8px 10px", 
+                    background: form.modules[m] ? config.bg : "#fff",
+                    border: `1px solid ${form.modules[m] ? config.color+"33" : "#e2e8f0"}`,
+                    borderRadius:6, transition:"all .15s"
+                  }}>
+                    <input type="checkbox" className="ap-checkbox"
+                      checked={form.modules[m]}
+                      onChange={() => toggleModule(m)} />
+                    <span style={{ fontWeight:600, color: form.modules[m] ? config.color : "#64748b" }}>
+                      {config.label}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            <div style={{ fontSize:11, color:"#64748b", marginTop:6 }}>
+              💡 Select which modules this user can access
+            </div>
           </div>
+
+          {/* Preview */}
+          <div style={{ marginBottom:14, padding:"10px 12px", background:"#eff6ff",
+            borderRadius:8, border:"1px solid #93c5fd", fontSize:12, color:"#1d4ed8" }}>
+            <strong>Selected: </strong>
+            {Object.entries(form.modules)
+              .filter(([,v]) => v)
+              .map(([k]) => MOD[k]?.label || k)
+              .join(", ") || "None"}
+          </div>
+
           <div style={{ marginBottom:20, display:"flex", alignItems:"center", gap:10 }}>
-            <input type="checkbox" className="ap-checkbox" id="dms-flag"
+            <input type="checkbox" className="ap-checkbox" id="edit-dms-flag"
               checked={form.dms} onChange={e => setForm(f => ({ ...f, dms: e.target.checked }))} />
-            <label htmlFor="dms-flag" style={{ fontSize:13, color:"#374151", cursor:"pointer" }}>
+            <label htmlFor="edit-dms-flag" style={{ fontSize:13, color:"#374151", cursor:"pointer" }}>
               DMS flag — SO+DMS access instead of CRM+SO
             </label>
           </div>
@@ -622,23 +687,28 @@ const UsersTab = () => {
 
 // ── Create User Tab ───────────────────────────────────────────────────────────
 const CreateUserTab = ({ onCreated }) => {
+  const { user } = usePortalAuth();
   const [form, setForm] = useState({
     username:"", email:"", password:"", role:"salesperson",
-    dms:false, furniOnly:false,              superadminModules:{ crm:true, so:true, dms:true, furni:true },
+    dms:false, furniOnly:false,
+    superadminModules:{ crm:true, so:true, dms:true, furni:true, service:true },
     activeSection:"crm",
   });
   const [busy, setBusy]   = useState(false);
   const [showPw, setShowPw] = useState(false);
 
   const isSuperadmin    = form.role === "superadmin";
+  const isGlobaladmin   = form.role === "globaladmin";
+  const isAdminOrSales  = form.role === "admin" || form.role === "salesperson";
+  const showModuleSelector = isSuperadmin || isGlobaladmin || isAdminOrSales;
   const isGlobalRole    = ["globaladmin","superadmin","admin","salesperson"].includes(form.role);
   const isSORole        = ["Watch","Production","ProductionApproval","Installation",
                            "Finish","Accounts","Verification","Bill"].includes(form.role);
   const isFurniOnlyRole = form.furniOnly && isSORole;
 
   const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const setSAMod = (k, v) => setForm(f => ({
-    ...f, superadminModules: { ...f.superadminModules, [k]: v }
+  const toggleModule = (k) => setForm(f => ({
+    ...f, superadminModules: { ...f.superadminModules, [k]: !f.superadminModules[k] }
   }));
 
   const submit = async (e) => {
@@ -648,12 +718,21 @@ const CreateUserTab = ({ onCreated }) => {
       const payload = {
         username: form.username, email: form.email, password: form.password,
         role: form.role, dms: form.dms, furniOnly: form.furniOnly,
-        superadminModules: form.superadminModules,
       };
+      // Include module selection for globaladmin, superadmin, admin, salesperson
+      if (showModuleSelector) {
+        if (isSuperadmin) {
+          payload.superadminModules = form.superadminModules;
+        } else if (isGlobaladmin || isAdminOrSales) {
+          // Use same field name for consistency
+          payload.adminModules = form.superadminModules;
+        }
+      }
       await portalApi.post("/api/admin/users", payload);
       toast.success(`User ${form.email} created!`);
       setForm({ username:"", email:"", password:"", role:"salesperson",
-        dms:false, furniOnly:false,                superadminModules:{ crm:true, so:true, dms:true, furni:true },
+        dms:false, furniOnly:false,
+        superadminModules:{ crm:true, so:true, dms:true, furni:true, service:true },
         activeSection:"crm" });
       onCreated?.();
     } catch (err) {
@@ -743,36 +822,41 @@ const CreateUserTab = ({ onCreated }) => {
             </select>
           </div>
 
-          {/* DMS flag — only for admin/salesperson */}
-          {(form.role === "admin" || form.role === "salesperson") && (
-            <div style={{ marginBottom:14, display:"flex", alignItems:"center", gap:10,
-              padding:"12px 14px", background:"#fdf4ff", borderRadius:9,
-              border:"1px solid #d8b4fe" }}>
-              <input type="checkbox" className="ap-checkbox" id="create-dms"
-                checked={form.dms} onChange={e => setField("dms", e.target.checked)} />
-              <label htmlFor="create-dms" style={{ fontSize:13, color:"#7e22ce", cursor:"pointer" }}>
-                DMS user — SO + DMS + Furni access (no CRM)
-              </label>
-            </div>
-          )}
-
-          {/* Superadmin module selection */}
-          {isSuperadmin && (
+          {/* Module selector for globaladmin, superadmin, admin, salesperson */}
+          {showModuleSelector && (
             <div style={{ marginBottom:14, padding:"14px 16px", background:"#eff6ff",
               borderRadius:9, border:"1px solid #93c5fd" }}>
               <div style={{ fontSize:12, fontWeight:700, color:"#1d4ed8", marginBottom:10 }}>
-                Module Access for Superadmin
+                Module Access for {
+                  isGlobaladmin ? "Global Admin" :
+                  isSuperadmin ? "Superadmin" :
+                  form.role === "admin" ? "Admin" : "Salesperson"
+                }
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                {["crm","so","dms","furni"].map(m => (
-                  <label key={m} style={{ display:"flex", alignItems:"center", gap:8,
-                    cursor:"pointer", fontSize:13, color:"#374151" }}>
-                    <input type="checkbox" className="ap-checkbox"
-                      checked={form.superadminModules[m]}
-                      onChange={e => setSAMod(m, e.target.checked)} />
-                    {MOD[m]?.label || m}
-                  </label>
-                ))}
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:8 }}>
+                {["crm","so","dms","furni","service"].map(m => {
+                  const config = MOD[m] || { color:"#64748b", bg:"#f1f5f9", label:m };
+                  return (
+                    <label key={m} style={{ 
+                      display:"flex", alignItems:"center", gap:8,
+                      cursor:"pointer", fontSize:13, color:"#374151",
+                      padding:"8px 10px", 
+                      background: form.superadminModules[m] ? config.bg : "#f8fafc",
+                      border: `1px solid ${form.superadminModules[m] ? config.color+"33" : "#e2e8f0"}`,
+                      borderRadius:6, transition:"all .15s"
+                    }}>
+                      <input type="checkbox" className="ap-checkbox"
+                        checked={form.superadminModules[m]}
+                        onChange={() => toggleModule(m)} />
+                      <span style={{ fontWeight:600, color: form.superadminModules[m] ? config.color : "#64748b" }}>
+                        {config.label}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize:11, color:"#1d4ed8", marginTop:8 }}>
+                💡 Select which modules this user can access
               </div>
             </div>
           )}
@@ -782,8 +866,18 @@ const CreateUserTab = ({ onCreated }) => {
             borderRadius:9, border:"1px solid #e2e8f0", fontSize:12, color:"#64748b" }}>
             <strong style={{ color:"#374151" }}>Preview: </strong>
             Role <strong>{form.role}</strong>
+            {showModuleSelector && (
+              <>
+                {" · "}
+                Modules: <strong>
+                  {Object.entries(form.superadminModules)
+                    .filter(([,v]) => v)
+                    .map(([k]) => MOD[k]?.label || k)
+                    .join(", ") || "None"}
+                </strong>
+              </>
+            )}
             {form.dms ? " · DMS mode" : ""}
-            {isSuperadmin ? ` · modules: ${Object.entries(form.superadminModules).filter(([,v])=>v).map(([k])=>k).join("+")}` : ""}
             {form.furniOnly ? " · Furni only" : ""}
           </div>
 

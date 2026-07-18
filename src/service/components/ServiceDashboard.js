@@ -60,6 +60,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [vendorFilter, setVendorFilter] = useState("");
+  const [availableStates, setAvailableStates] = useState([]);
   const [stats, setStats] = useState({
     open: 0,
     inProgress: 0,
@@ -244,6 +245,9 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
         }
         if (response.data.counts) {
           setStats(response.data.counts);
+        }
+        if (response.data.distinctStates) {
+          setAvailableStates(response.data.distinctStates);
         }
       }
     } catch (error) {
@@ -996,7 +1000,7 @@ const ServiceDashboard = ({ refreshTrigger, onApprovalAction }) => {
               setStateFilter={setStateFilter}
               partReplacementStatusFilter={partReplacementStatusFilter}
               setPartReplacementStatusFilter={setPartReplacementStatusFilter}
-              availableStates={[...new Set(serviceLogs.map(log => log.state).filter(Boolean))]}
+              availableStates={availableStates}
               startDate={startDate}
               setStartDate={setStartDate}
               endDate={endDate}

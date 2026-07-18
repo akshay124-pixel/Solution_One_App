@@ -3,6 +3,7 @@ import { Modal, Form, Button, Alert } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { Phone, User, MessageSquare, Calendar, Send, X, Paperclip } from "lucide-react";
 import serviceApi from "../axiosSetup";
+import { statesAndCities, STATE_LIST } from "../utils/options";
 
 const CallLogModal = ({ isOpen, onClose, order, onSuccess, onIncompleteOrderSelect }) => {
   const [callStatus, setCallStatus] = useState("");
@@ -161,6 +162,8 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess, onIncompleteOrderSele
     setServiceRequestName("");
     setServiceRequestMobile("");
     setServiceRequestEmail("");
+    setCity("");
+    setState("");
     setWarrantyStatus("");
     setIssue("");
     setRemarks("");
@@ -486,13 +489,14 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess, onIncompleteOrderSele
                     fontSize: "0.875rem",
                     marginBottom: "6px"
                   }}>
-                    City
+                    State
                   </Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="Enter city..."
+                  <Form.Select
+                    value={state}
+                    onChange={(e) => {
+                      setState(e.target.value);
+                      setCity("");
+                    }}
                     style={{
                       borderRadius: "8px",
                       border: "1px solid #d1d5db",
@@ -509,7 +513,12 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess, onIncompleteOrderSele
                       e.target.style.borderColor = "#d1d5db";
                       e.target.style.boxShadow = "none";
                     }}
-                  />
+                  >
+                    <option value="">Select State</option>
+                    {STATE_LIST.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </Form.Select>
                 </Form.Group>
 
                 <Form.Group>
@@ -519,20 +528,19 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess, onIncompleteOrderSele
                     fontSize: "0.875rem",
                     marginBottom: "6px"
                   }}>
-                    State
+                    City
                   </Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={state}
-                    onChange={(e) => setState(e.target.value)}
-                    placeholder="Enter state..."
+                  <Form.Select
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    disabled={!state}
                     style={{
                       borderRadius: "8px",
                       border: "1px solid #d1d5db",
                       padding: "10px 12px",
                       fontSize: "0.875rem",
                       transition: "border-color 0.15s ease, box-shadow 0.15s ease",
-                      background: "white",
+                      background: !state ? "#f3f4f6" : "white",
                     }}
                     onFocus={(e) => {
                       e.target.style.borderColor = "#6366f1";
@@ -542,7 +550,15 @@ const CallLogModal = ({ isOpen, onClose, order, onSuccess, onIncompleteOrderSele
                       e.target.style.borderColor = "#d1d5db";
                       e.target.style.boxShadow = "none";
                     }}
-                  />
+                  >
+                    <option value="">
+                      {state ? "Select City" : "Select state first"}
+                    </option>
+                    {state &&
+                      (statesAndCities[state] || []).map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                  </Form.Select>
                 </Form.Group>
               </div>
 

@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { FileText, X, Save } from "lucide-react";
 import serviceApi from "../axiosSetup";
 import { CALL_TYPE_OPTIONS } from "../utils/callTypes";
+import { statesAndCities, STATE_LIST } from "../utils/options";
 
 const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -456,19 +457,25 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                       fontSize: "0.875rem",
                     }}
                   >
-                    City
+                    State
                   </Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => handleChange("city", e.target.value)}
-                    placeholder="Enter city"
+                  <Form.Select
+                    value={formData.state}
+                    onChange={(e) => {
+                      handleChange("state", e.target.value);
+                      handleChange("city", "");
+                    }}
                     style={{
                       borderRadius: "8px",
                       padding: "10px 12px",
                       fontSize: "0.875rem",
                     }}
-                  />
+                  >
+                    <option value="">Select State</option>
+                    {STATE_LIST.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </Form.Select>
                 </Form.Group>
 
                 <Form.Group>
@@ -479,19 +486,27 @@ const ManualServiceRequestModal = ({ isOpen, onClose, onSuccess }) => {
                       fontSize: "0.875rem",
                     }}
                   >
-                    State
+                    City
                   </Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.state}
-                    onChange={(e) => handleChange("state", e.target.value)}
-                    placeholder="Enter state"
+                  <Form.Select
+                    value={formData.city}
+                    onChange={(e) => handleChange("city", e.target.value)}
+                    disabled={!formData.state}
                     style={{
                       borderRadius: "8px",
                       padding: "10px 12px",
                       fontSize: "0.875rem",
+                      background: !formData.state ? "#f3f4f6" : "white",
                     }}
-                  />
+                  >
+                    <option value="">
+                      {formData.state ? "Select City" : "Select state first"}
+                    </option>
+                    {formData.state &&
+                      (statesAndCities[formData.state] || []).map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                  </Form.Select>
                 </Form.Group>
               </div>
             </div>

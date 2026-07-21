@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { FileText, X, Save, Package } from "lucide-react";
 import serviceApi from "../axiosSetup";
 import { getAllowedCategory } from "../../constants/roles";
+import { statesAndCities } from "../utils/options";
 
 const CreateIncompleteOrderModal = ({ isOpen, onClose, onSuccess, initialOrder = null, userRole }) => {
   const allowedCategory = getAllowedCategory(userRole);
@@ -41,12 +42,18 @@ const CreateIncompleteOrderModal = ({ isOpen, onClose, onSuccess, initialOrder =
 
   useEffect(() => {
     if (initialOrder) {
+      const prefilledState = initialOrder.state || "";
+      const prefilledCity = initialOrder.city || "";
+      // Only keep the pre-filled city if it exists in the state's city list
+      const validCities = prefilledState ? (statesAndCities[prefilledState] || []) : [];
+      const resolvedCity = validCities.includes(prefilledCity) ? prefilledCity : "";
+
       setFormData({
         orderId: initialOrder.orderId || "",
         customerName: initialOrder.customername || initialOrder.customerName || "",
         customerAddress: initialOrder.shippingAddress || initialOrder.address || "",
-        city: initialOrder.city || "",
-        state: initialOrder.state || "",
+        city: resolvedCity,
+        state: prefilledState,
         contactNumber: initialOrder.contactNo || initialOrder.contactNumber || "",
         productCategory: allowedCategory || initialOrder.systemType || "av&edtech",
         pendingParts: [],
@@ -424,28 +431,46 @@ const CreateIncompleteOrderModal = ({ isOpen, onClose, onSuccess, initialOrder =
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "12px" }}>
                 <Form.Group>
                   <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
-                    City
+                    State
                   </Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => handleChange("city", e.target.value)}
-                    placeholder="Enter city"
+                  <Form.Select
+                    value={formData.state}
+                    onChange={(e) => {
+                      handleChange("state", e.target.value);
+                      handleChange("city", "");
+                    }}
                     style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
-                  />
+                  >
+                    <option value="">Select state</option>
+                    {Object.keys(statesAndCities).sort().map((state) => (
+                      <option key={state} value={state}>{state}</option>
+                    ))}
+                  </Form.Select>
                 </Form.Group>
 
                 <Form.Group>
                   <Form.Label style={{ fontWeight: "500", color: "#374151", fontSize: "0.875rem" }}>
-                    State
+                    City
                   </Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.state}
-                    onChange={(e) => handleChange("state", e.target.value)}
-                    placeholder="Enter state"
-                    style={{ borderRadius: "8px", padding: "10px 12px", fontSize: "0.875rem" }}
-                  />
+                  <Form.Select
+                    value={formData.city}
+                    onChange={(e) => handleChange("city", e.target.value)}
+                    disabled={!formData.state}
+                    style={{
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      fontSize: "0.875rem",
+                      background: formData.state ? "white" : "#f3f4f6",
+                    }}
+                  >
+                    <option value="">
+                      {formData.state ? "Select city" : "Select state first"}
+                    </option>
+                    {formData.state &&
+                      (statesAndCities[formData.state] || []).sort().map((city) => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                  </Form.Select>
                 </Form.Group>
               </div>
             </div>

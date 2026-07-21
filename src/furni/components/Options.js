@@ -932,6 +932,7 @@ export const salesPersonlist = [
   "Gurnam Bhullar",
   "Heena Mehra",
   "Harpeet Singh",
+  "Ishan Rathor",  
   "J P Sharma",
   "Jagan Lal",
   "Jyoti Rani",

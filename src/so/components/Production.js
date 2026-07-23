@@ -5,6 +5,7 @@ import { Button, Modal, Form, Spinner, Badge } from "react-bootstrap";
 import { FaEye, FaTimes } from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { exportToExcel } from "../../utils/excelHelper";
+import ExcelJS from "exceljs/dist/exceljs.bare.min.js";
 import "../App.css";
 import styled from "styled-components";
 import DatePicker from "react-datepicker";
@@ -627,47 +628,125 @@ const Production = () => {
 
       const allOrders = Array.isArray(response.data.data) ? response.data.data : [];
 
-      const exportData = allOrders.map((order) => {
-        const firstProduct =
-          Array.isArray(order.products) && order.products.length > 0
-            ? order.products[0]
-            : {};
-        const productDetails = Array.isArray(order.products)
-          ? order.products
-            .map((p) => `${p.productType || "N/A"} (${p.qty || "N/A"})`)
-            .join(", ")
+      // ── Build workbook manually so we can set wrapText + row height ──────
+      const LINE_HEIGHT = 18; // px per line in Excel row height units
+      const HEADER_HEIGHT = 20;
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Production Orders");
+
+      // Column definitions
+      const columns = [
+        { header: "Order ID",           key: "orderId",           width: 18 },
+        { header: "SO Date",             key: "soDate",            width: 14 },
+        { header: "Customer Name",       key: "customername",      width: 22 },
+        { header: "Shipping Address",    key: "shippingAddress",   width: 30 },
+        { header: "Customer Email",      key: "customerEmail",     width: 26 },
+        { header: "Contact No",          key: "contactNo",         width: 16 },
+        { header: "Order Type",          key: "orderType",         width: 16 },
+        { header: "Product Type",        key: "productType",       width: 24 },
+        { header: "Qty",                 key: "qty",               width: 10 },
+        { header: "Size",                key: "size",              width: 18 },
+        { header: "Spec",                key: "spec",              width: 28 },
+        { header: "Serial Nos",          key: "serialNos",         width: 30 },
+        { header: "Model Nos",           key: "modelNos",          width: 30 },
+        { header: "Production Status",   key: "fulfillingStatus",  width: 20 },
+        { header: "Total Quantity",      key: "totalQty",          width: 14 },
+      ];
+
+      worksheet.columns = columns;
+
+      // Style header row
+      const headerRow = worksheet.getRow(1);
+      headerRow.height = HEADER_HEIGHT;
+      headerRow.font = { bold: true, size: 11 };
+      headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
+      headerRow.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+
+      // Add one row per order — all products stacked line-by-line inside each cell
+      allOrders.forEach((order) => {
+        const products = Array.isArray(order.products) ? order.products : [];
+        const lineCount = Math.max(products.length, 1);
+
+        const totalQty = products.reduce((sum, p) => sum + (p.qty || 0), 0);
+
+        // Build multi-line strings for each product column — one line per product
+        const productTypeLines = products.length > 0
+          ? products.map((p, i) => `${i + 1}. ${p.productType || "N/A"}`).join("\n")
           : "N/A";
-        const totalQty = Array.isArray(order.products)
-          ? order.products.reduce((sum, p) => sum + (p.qty || 0), 0)
+
+        const qtyLines = products.length > 0
+          ? products.map((p, i) => `${i + 1}. ${p.qty ?? "N/A"}`).join("\n")
           : "N/A";
-        return {
-          "Order ID": order.orderId || "N/A",
-          "So Date": order.soDate
-            ? new Date(order.soDate).toLocaleDateString("en-IN")
-            : "N/A",
-          "Customer Name": order.customername || "N/A",
-          "Shipping Address": order.shippingAddress || "N/A",
-          "Customer Email": order.customerEmail || "N/A",
-          "Contact No": order.contactNo || "N/A",
-          "Order Type": order.orderType || "N/A",
-          "Product Details": productDetails,
-          Size: firstProduct.size || "N/A",
-          Spec: firstProduct.spec || "N/A",
-          "Serial Nos":
-            firstProduct.serialNos?.length > 0
-              ? firstProduct.serialNos.join(", ")
-              : "N/A",
-          "Model Nos":
-            firstProduct.modelNos?.length > 0
-              ? firstProduct.modelNos.join(", ")
-              : "N/A",
-          "Production Status": order.fulfillingStatus || "Pending",
-          "Total Quantity": totalQty,
-        };
+
+        const sizeLines = products.length > 0
+          ? products.map((p, i) => `${i + 1}. ${p.size || "N/A"}`).join("\n")
+          : "N/A";
+
+        const specLines = products.length > 0
+          ? products.map((p, i) => `${i + 1}. ${p.spec || "N/A"}`).join("\n")
+          : "N/A";
+
+        const serialLines = products.length > 0
+          ? products.map((p, i) => {
+              const s = Array.isArray(p.serialNos) && p.serialNos.length > 0
+                ? p.serialNos.join(", ")
+                : "N/A";
+              return `${i + 1}. ${s}`;
+            }).join("\n")
+          : "N/A";
+
+        const modelLines = products.length > 0
+          ? products.map((p, i) => {
+              const m = Array.isArray(p.modelNos) && p.modelNos.length > 0
+                ? p.modelNos.join(", ")
+                : "N/A";
+              return `${i + 1}. ${m}`;
+            }).join("\n")
+          : "N/A";
+
+        const row = worksheet.addRow({
+          orderId:         order.orderId || "N/A",
+          soDate:          order.soDate ? new Date(order.soDate).toLocaleDateString("en-IN") : "N/A",
+          customername:    order.customername || "N/A",
+          shippingAddress: order.shippingAddress || "N/A",
+          customerEmail:   order.customerEmail || "N/A",
+          contactNo:       order.contactNo || "N/A",
+          orderType:       order.orderType || "N/A",
+          productType:     productTypeLines,
+          qty:             qtyLines,
+          size:            sizeLines,
+          spec:            specLines,
+          serialNos:       serialLines,
+          modelNos:        modelLines,
+          fulfillingStatus: order.fulfillingStatus || "Pending",
+          totalQty:        totalQty || "N/A",
+        });
+
+        // Row height — grow with the number of product lines
+        row.height = lineCount * LINE_HEIGHT + 6;
+
+        // Apply wrapText + top-align to every cell in this row
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.alignment = { vertical: "top", wrapText: true };
+        });
       });
 
-      await exportToExcel(exportData, "Production Orders", `Production_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
-      toast.success(`Exported ${allOrders.length} records successfully!`, { position: "top-right", autoClose: 3000 });
+      // Trigger download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Production_Orders_${new Date().toISOString().split("T")[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Exported ${allOrders.length} orders successfully!`, { position: "top-right", autoClose: 3000 });
     } catch (err) {
       console.error("Export error:", err);
       toast.error("Export failed. Please try again.", { position: "top-right", autoClose: 4000 });

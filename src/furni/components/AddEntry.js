@@ -298,9 +298,9 @@ function AddEntry({ onSubmit, onClose }) {
     { label: "State *", name: "state", type: "select", options: Object.keys(statesAndCities), onChange: handleStateChange, required: true, placeholder: "Select State", ariaLabel: "State" },
     { label: "City", name: "city", type: "select", options: selectedState ? statesAndCities[selectedState] : [], onChange: handleCityChange, disabled: !selectedState, required: true, placeholder: "Select City", ariaLabel: "City" },
     { label: "Pin Code *", name: "pinCode", type: "tel", required: true, inputMode: "numeric", placeholder: "e.g. 110001", maxLength: 6, pattern: "[0-9]*", ariaLabel: "Pin Code" },
-    { label: "Billing Address *", name: "billingAddress", type: "text", required: true, placeholder: "Enter Billing Address", ariaLabel: "Billing Address" },
+    { label: "Billing Address *", name: "billingAddress", type: "text", required: true, placeholder: "Enter the full billing address including PIN Code", ariaLabel: "Billing Address" },
     { label: "Same as Billing", name: "sameAddress", type: "checkbox", ariaLabel: "Same as Billing Address" },
-    { label: "Shipping Address *", name: "shippingAddress", disabled: formData.sameAddress, type: "text", required: true, placeholder: "Enter Shipping Address", ariaLabel: "Shipping Address" },
+    { label: "Shipping Address *", name: "shippingAddress", disabled: formData.sameAddress, type: "text", required: true, placeholder: "Enter the full shipping address including PIN Code", ariaLabel: "Shipping Address" },
   ];
 
   const additionalChargesFields = [

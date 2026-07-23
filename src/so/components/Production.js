@@ -608,6 +608,159 @@ const Production = () => {
     }
   };
 
+  const handleViewExportExcel = useCallback(async () => {
+    if (!viewOrder) return;
+    try {
+      toast.info("Preparing export...", { position: "top-right", autoClose: 2000 });
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("New Copy Format");
+
+      // ── Column widths ──────────────────────────────────────────────
+      worksheet.columns = [
+        { key: "date",        width: 14 },
+        { key: "orderId",     width: 16 },
+        { key: "party",       width: 36 },
+        { key: "material",    width: 42 },
+        { key: "qty",         width: 8  },
+        { key: "serialNo",    width: 22 },
+        { key: "salesPerson", width: 18 },
+        { key: "remarks",     width: 22 },
+      ];
+
+      // ── Shared styles ──────────────────────────────────────────────
+      const TITLE_FILL   = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } }; // yellow
+      const HEADER_FILL  = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } }; // yellow
+      const BORDER_THIN  = { style: "thin", color: { argb: "FF000000" } };
+      const ALL_BORDERS  = { top: BORDER_THIN, left: BORDER_THIN, bottom: BORDER_THIN, right: BORDER_THIN };
+      const CENTER_WRAP  = { vertical: "middle", horizontal: "center", wrapText: true };
+      const LEFT_WRAP    = { vertical: "middle", horizontal: "left",   wrapText: true };
+
+      const applyBorders = (row) => {
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.border = ALL_BORDERS;
+        });
+      };
+
+      // ── Row 1: Title ───────────────────────────────────────────────
+      worksheet.addRow(["Product Details", "", "", "", "", "", "", ""]);
+      worksheet.mergeCells("A1:H1");
+      const titleCell = worksheet.getCell("A1");
+      titleCell.value    = "Product Details";
+      titleCell.font     = { bold: true, size: 14 };
+      titleCell.fill     = TITLE_FILL;
+      titleCell.alignment = CENTER_WRAP;
+      titleCell.border   = ALL_BORDERS;
+      worksheet.getRow(1).height = 24;
+
+      // ── Row 2: Headers ─────────────────────────────────────────────
+      const HEADERS = ["DATE", "ORDER ID", "PARTY NAME & SHIPPING ADDRESS", "MATERIAL DESCRIPTION", "QTY", "SERIAL NO", "SALES PERSON", "REMARKS"];
+      const headerRow = worksheet.addRow(HEADERS);
+      headerRow.height = 30;
+      headerRow.eachCell((cell, colNum) => {
+        cell.font      = { bold: true, size: 11 };
+        cell.fill      = HEADER_FILL;
+        cell.alignment = CENTER_WRAP;
+        cell.border    = ALL_BORDERS;
+      });
+
+      // ── Data rows ──────────────────────────────────────────────────
+      const products = Array.isArray(viewOrder.products) ? viewOrder.products : [];
+      const productCount = Math.max(products.length, 1);
+
+      const soDate       = viewOrder.soDate
+        ? new Date(viewOrder.soDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })
+        : "N/A";
+      const orderId      = viewOrder.orderId || "N/A";
+      const partyAddr    = [viewOrder.customername, viewOrder.shippingAddress]
+        .filter(Boolean).join("\n") || "N/A";
+      const salesPerson  = getSalesPersonLabel(viewOrder.salesPerson);
+      const remarks      = viewOrder.remarks || "";
+
+      const dataStartRow = 3; // 1-indexed (row 1 = title, row 2 = headers)
+
+      if (products.length === 0) {
+        // Single empty row
+        const r = worksheet.addRow([soDate, orderId, partyAddr, "N/A", "", "", salesPerson, remarks]);
+        r.height = 20;
+        r.eachCell({ includeEmpty: true }, (cell) => {
+          cell.alignment = CENTER_WRAP;
+          cell.border    = ALL_BORDERS;
+        });
+      } else {
+        // One row per product
+        products.forEach((product, pIdx) => {
+          const materialDesc = [product.productType, product.spec, product.size]
+            .filter(s => s && s !== "N/A").join(": ") || "N/A";
+          const qty = product.qty ?? "";
+          const serialNo = Array.isArray(product.serialNos) && product.serialNos.length > 0
+            ? product.serialNos.join(", ")
+            : "";
+
+          // Alternate: first row carries order-level data; subsequent rows empty for merge
+          const rowData = pIdx === 0
+            ? [soDate, orderId, partyAddr, materialDesc, qty, serialNo, salesPerson, remarks]
+            : ["",     "",      "",        materialDesc, qty, serialNo, "",          ""     ];
+
+          const dataRow = worksheet.addRow(rowData);
+
+          // Row height – grow with spec length
+          const specLen = materialDesc.length;
+          dataRow.height = specLen > 60 ? 50 : specLen > 30 ? 35 : 22;
+
+          dataRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
+            // Material description → left-align; others → center
+            cell.alignment = (colNum === 4) ? LEFT_WRAP : CENTER_WRAP;
+            cell.border    = ALL_BORDERS;
+          });
+
+          // Highlight alternate product rows (yellow tint for odd products, matching image)
+          if (pIdx % 2 === 0) {
+            ["D", "E", "F"].forEach((col) => {
+              const c = worksheet.getCell(`${col}${dataStartRow + pIdx}`);
+              c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFCC" } };
+            });
+          }
+        });
+
+        // ── Merge order-level columns across product rows ───────────
+        if (products.length > 1) {
+          const firstData = dataStartRow;
+          const lastData  = dataStartRow + products.length - 1;
+          ["A", "B", "C", "G", "H"].forEach((col) => {
+            try {
+              worksheet.mergeCells(`${col}${firstData}:${col}${lastData}`);
+              const mergedCell = worksheet.getCell(`${col}${firstData}`);
+              mergedCell.alignment = CENTER_WRAP;
+              mergedCell.border    = ALL_BORDERS;
+            } catch (_) {
+              // skip if already merged
+            }
+          });
+        }
+      }
+
+      // ── Download ───────────────────────────────────────────────────
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob   = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url  = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href  = url;
+      link.download = `SO_${orderId}_ProductDetails.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("Excel exported successfully!", { position: "top-right", autoClose: 3000 });
+    } catch (err) {
+      console.error("View export error:", err);
+      toast.error("Export failed. Please try again.", { position: "top-right", autoClose: 4000 });
+    }
+  }, [viewOrder]);
+
   const handleExportExcel = useCallback(async () => {
     try {
       toast.info("Preparing export, please wait...", { position: "top-right", autoClose: 2000 });
@@ -2141,6 +2294,33 @@ const Production = () => {
               <div
                 style={{ display: "flex", alignItems: "center", gap: "12px" }}
               >
+                <Button
+                  onClick={handleViewExportExcel}
+                  size="sm"
+                  style={{
+                    background: "rgba(255, 255, 255, 0.2)",
+                    border: "1px solid rgba(255, 255, 255, 0.4)",
+                    padding: "6px 15px",
+                    borderRadius: "20px",
+                    color: "#fff",
+                    fontWeight: "600",
+                    fontSize: "0.85rem",
+                    textTransform: "uppercase",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    transition: "all 0.3s ease",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)")
+                  }
+                >
+                  📊 Export Excel
+                </Button>
+
                 <Button
                   onClick={handleExportPDF}
                   disabled={isGeneratingPDF}

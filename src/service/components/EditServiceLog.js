@@ -264,7 +264,7 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
       formData.append("issue", issue);
       formData.append("followUpDate", followUpDate ? new Date(followUpDate).toISOString() : "");
       formData.append("assignedEngineers", JSON.stringify(assignedEngineers));
-      formData.append("hardwareItems", JSON.stringify(callType === "Hardware" ? hardwareItems.filter(item => item.description && item.description.trim()) : []));
+      formData.append("hardwareItems", JSON.stringify((callType === "Hardware" || callType === "Replacement") ? hardwareItems.filter(item => item.description && item.description.trim()) : []));
       formData.append("salesPerson", salesPerson);
       formData.append("vendor", vendor);
       formData.append("deletedAttachments", JSON.stringify(deletedAttachments));
@@ -1123,8 +1123,8 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
                   </Form.Select>
                 </Form.Group>
 
-                {/* Hardware Items - Only show when Call Type is "Hardware" */}
-            {callType === "Hardware" && (
+                {/* Hardware Items - Show when Call Type is "Hardware" or "Replacement" */}
+            {(callType === "Hardware" || callType === "Replacement") && (
               <>
                 <div style={{
                   background: "#fef3c7",

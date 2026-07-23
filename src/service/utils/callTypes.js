@@ -1,7 +1,8 @@
 export const CALL_TYPE_OPTIONS = [
   { value: "Software", label: "Software", icon: "💻", badge: "info" },
   { value: "Hardware", label: "Hardware", icon: "🔧", badge: "warning" },
-  { value: "Visit required", label: "Visit required", icon: "📍", badge: "primary" },
+  { value: "Replacement", label: "Replacement", icon: "🔄", badge: "danger" },
+  { value: "Visit required", label: "Visit required", icon: "📍", badge: "primary" }, 
 ];
 
 export const getCallTypeDisplay = (callType) => {

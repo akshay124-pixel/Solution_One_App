@@ -1102,7 +1102,7 @@ function AddEntry({ onSubmit, onClose }) {
                   label: "Billing Address",
                   name: "billingAddress",
                   type: "text",
-                  placeholder: "e.g. House/Flat No., Street, Locality, City, State - PIN Code",
+                  placeholder: "Enter the full billing address including PIN Code",
                 },
                 {
                   label: "📝 Same as Billing",
@@ -1114,7 +1114,7 @@ function AddEntry({ onSubmit, onClose }) {
                   name: "shippingAddress",
                   type: "text",
                   required: true,
-                  placeholder: "e.g. House/Flat No., Street, Locality, City, State - PIN Code",
+                  placeholder: "Enter the full shipping address including PIN Code",
                   disabled: formData.sameAddress,
                 },
               ].map((field) => (

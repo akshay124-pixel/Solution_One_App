@@ -385,7 +385,12 @@ const Production = () => {
       return acc;
     }, {});
     const products = Object.values(productMap);
-    const submitData = { ...formData, products };
+    // 🔥 AUDIT SOURCE: Mark this edit as coming from Production modal (serial/model nos only)
+    const submitData = { 
+      ...formData, 
+      products,
+      auditSource: "EDIT_PRODUCTION" // Prevents productsEditTimestamp from updating
+    };
     delete submitData.productUnits;
     try {
       const response = await soApi.patch(

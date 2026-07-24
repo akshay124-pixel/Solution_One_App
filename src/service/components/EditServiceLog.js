@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Modal, Form, Button, Alert, Badge } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { Settings, X, Save, FileText } from "lucide-react";
@@ -20,6 +20,8 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
   const [followUpDate, setFollowUpDate] = useState("");
   const [assignedEngineers, setAssignedEngineers] = useState([]);
   const [hardwareItems, setHardwareItems] = useState([{ description: "", quantity: "", price: "" }]);
+  // Track the original hardware items loaded from the log so we can detect removals on save
+  const originalHardwareItemsRef = useRef([]);
   const [serviceAttachment, setServiceAttachment] = useState(null);
   const [fileError, setFileError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -96,7 +98,11 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
   };
 
   const removeHardwareItem = (index) => {
-    setHardwareItems(prev => prev.filter((_, i) => i !== index));
+    setHardwareItems(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      // If all rows removed, reset to one blank row (don't leave an empty array)
+      return updated.length > 0 ? updated : [{ description: "", quantity: "", price: "" }];
+    });
   };
 
   const updateHardwareItem = (index, field, value) => {
@@ -213,6 +219,10 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
       setFollowUpDate(log.followUpDate ? new Date(log.followUpDate).toISOString().split('T')[0] : "");
       setAssignedEngineers(log.assignedEngineers || []);
       setHardwareItems(log.hardwareItems || [{ description: "", quantity: "", price: "" }]);
+      // Snapshot the items that already exist on the server so we can diff on save
+      originalHardwareItemsRef.current = (log.hardwareItems || []).filter(
+        item => item.description && item.description.trim()
+      );
       setSalesPerson(log.orderDetails?.salesPerson || log.salesPerson || "");
       setReplacementPartReceived(log.replacementPartReceived || "No");
       setVendor(log.vendor || "");
@@ -264,7 +274,22 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
       formData.append("issue", issue);
       formData.append("followUpDate", followUpDate ? new Date(followUpDate).toISOString() : "");
       formData.append("assignedEngineers", JSON.stringify(assignedEngineers));
-      formData.append("hardwareItems", JSON.stringify((callType === "Hardware" || callType === "Replacement") ? hardwareItems.filter(item => item.description && item.description.trim()) : []));
+      const currentActiveItems = (callType === "Hardware" || callType === "Replacement")
+        ? hardwareItems.filter(item => item.description && item.description.trim())
+        : [];
+      formData.append("hardwareItems", JSON.stringify(currentActiveItems));
+
+      // Compute which parts were on the server originally but are now removed.
+      // These descriptions are used by the backend to roll back Part Replacement log entries.
+      const currentDescriptions = new Set(
+        currentActiveItems.map(item => item.description.trim().toLowerCase())
+      );
+      const removedParts = originalHardwareItemsRef.current
+        .filter(orig => orig.description && orig.description.trim())
+        .filter(orig => !currentDescriptions.has(orig.description.trim().toLowerCase()))
+        .map(orig => orig.description.trim());
+      formData.append("removedParts", JSON.stringify(removedParts));
+
       formData.append("salesPerson", salesPerson);
       formData.append("vendor", vendor);
       formData.append("deletedAttachments", JSON.stringify(deletedAttachments));
@@ -1234,7 +1259,6 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
                             }}
                           />
                         </Form.Group>
-                        {hardwareItems.length > 1 && (
                           <button
                             type="button"
                             onClick={() => removeHardwareItem(index)}
@@ -1245,13 +1269,16 @@ const EditServiceLog = ({ isOpen, onClose, log, onUpdate }) => {
                               borderRadius: "4px",
                               padding: "8px",
                               cursor: "pointer",
-                              fontSize: "0.75rem"
+                              fontSize: "0.75rem",
+                              // Hide the button only when this is the sole row AND it's already blank
+                              visibility: (hardwareItems.length === 1 && !item.description && !item.quantity && !item.price)
+                                ? "hidden"
+                                : "visible"
                             }}
                             title="Remove item"
                           >
                             ✕
                           </button>
-                        )}
                       </div>
                     </div>
                   ))}
